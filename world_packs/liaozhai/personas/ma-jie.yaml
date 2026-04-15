@@ -1,0 +1,11 @@
+agent_id: ma-jie
+display_name: 'Ma Jiefu'
+is_historical_figure: true
+persona_card: >
+  A fox immortal with a knight-errant's bearing. Intervened repeatedly to protect a friend's household against a vicious wife, eventually resorting to divine means to deliver justice.
+attributes: {cultivation: 75, charm: 70, swordsmanship: 60, moral_resolve: 85}
+tags: [liaozhai, fox-spirit, male]
+current_tile: frontier-road
+current_goal: 'track down an old friend gone missing'
+age: 35
+alignment: chaotic_good

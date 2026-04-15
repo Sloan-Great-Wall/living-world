@@ -1,0 +1,10 @@
+agent_id: tailor-zhao
+display_name: 'Tailor Zhao'
+persona_card: >
+  Old-guard tailor of the west market, has measured half the town. A silent collector of everyone's secrets.
+attributes: {craft: 80, social: 80, memory: 85, stealth: 50}
+tags: [liaozhai, mortal, male]
+current_tile: west-market
+current_goal: 'finish the outfit ordered for the Li family''''s son-in-law'
+age: 55
+alignment: neutral

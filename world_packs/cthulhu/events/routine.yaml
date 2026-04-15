@@ -1,0 +1,81 @@
+events:
+  - event_kind: daily-chat
+    description: Street-level pleasantries.
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    cooldown_days: 0
+    base_importance: 0.04
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} and ${b} exchanged brief greetings about the weather."
+  - event_kind: reading
+    description: Quiet archive reading.
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [academic]}
+    cooldown_days: 0
+    base_importance: 0.05
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} read through a folder of ordinary correspondence."
+  - event_kind: training
+    description: Sheriff's office marksmanship.
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [law-enforcement]}
+    cooldown_days: 0
+    base_importance: 0.05
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} ran a short marksmanship drill at the range."
+  - event_kind: chore
+    description: Mundane housekeeping.
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} tidied a desk that had begun to resemble a fire hazard."
+  - event_kind: meal-break
+    description: A modest meal.
+    trigger_conditions: {min_participants: 1, max_participants: 2}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} and ${b} shared a bowl of chowder at the diner."
+  - event_kind: patrol
+    description: Routine beat.
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [law-enforcement]}
+    cooldown_days: 0
+    base_importance: 0.04
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} completed an uneventful patrol of the precinct streets."
+  - event_kind: letter-writing
+    description: Correspondence.
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.04
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} wrote a letter whose contents were perfectly ordinary."
+  - event_kind: harbor-errand
+    description: Dockside chores.
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} ran a delivery along the wharves. Gulls followed."
+  - event_kind: sleep-shift
+    description: Sleep.
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.02
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} turned in early."
+  - event_kind: town-hall-meeting
+    description: Unremarkable civic meeting.
+    trigger_conditions: {min_participants: 2, max_participants: 3}
+    cooldown_days: 0
+    base_importance: 0.05
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} and ${b} attended a town meeting about road repairs."

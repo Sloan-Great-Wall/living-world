@@ -1,0 +1,81 @@
+events:
+  - event_kind: daily-chat
+    description: 两人日常见礼。
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    cooldown_days: 0
+    base_importance: 0.04
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 檐下拱手, 寒暄数语而别。"
+  - event_kind: reading
+    description: 独自苦读。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [scholar]}
+    cooldown_days: 0
+    base_importance: 0.05
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 独坐书斋读《春秋》, 指间墨染。"
+  - event_kind: training
+    description: 狐类修炼。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [fox-spirit]}
+    cooldown_days: 0
+    base_importance: 0.06
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 静坐林间吐纳半时辰, 气息绵长。"
+  - event_kind: chore
+    description: 家务琐事。
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 扫院汲水, 安静半日。"
+  - event_kind: meal-break
+    description: 饭食时分。
+    trigger_conditions: {min_participants: 1, max_participants: 2}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 共食粗茶淡饭, 不言。"
+  - event_kind: patrol
+    description: 夜间更巡。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [monk]}
+    cooldown_days: 0
+    base_importance: 0.04
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 掌灯巡廊, 一切如常。"
+  - event_kind: market-buy
+    description: 市集买办。
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 往集上买得一束青菜, 归家。"
+  - event_kind: letter-writing
+    description: 写信家书。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [scholar]}
+    cooldown_days: 0
+    base_importance: 0.04
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 为家中修书一封, 言近日身安无事。"
+  - event_kind: sleep-shift
+    description: 就寝。
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.02
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 息灯早寝。"
+  - event_kind: tea-alone
+    description: 独饮一盏。
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 独酌一盏新茶, 风过庭前。"

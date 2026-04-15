@@ -1,0 +1,12 @@
+pack_id: liaozhai
+display_name: 聊斋志异
+description: >
+  基于蒲松龄《聊斋志异》原著的角色与情境集合。公共领域作品, 无 IP 风险。
+narrative_style: >
+  文白相间的古典笔记体。简洁、含蓄、多以意象写情。
+storyteller:
+  personality: peaceful
+  tension_target: 0.40
+  max_events_per_day: 2
+  narration_tone: >
+    文言白话, 点到为止。多用"忽""乃""遂""既而"等古词。情节留白多过说破。

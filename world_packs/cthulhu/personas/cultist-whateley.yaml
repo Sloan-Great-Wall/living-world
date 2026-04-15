@@ -1,0 +1,17 @@
+agent_id: wilbur-whateley
+display_name: Wilbur Whateley
+is_historical_figure: true
+persona_card: >
+  敦威治偏僻山区的畸形青年, 出生即以异常速度生长, 15 岁已成年男子身量。
+  随母习旧神秘法, 为家族宏大计划奔走。举止彬彬有礼, 眼神总在别处。
+attributes:
+  sanity: 30
+  arcane_knowledge: 75
+  physical_aberration: 80
+  social: 35
+alignment: chaotic_evil
+tags: [cthulhu, cultist, non-human-ancestry]
+life_stage: young
+age: 15
+current_tile: dunwich-hills
+current_goal: 取回存于米斯卡塔尼克的某本典籍

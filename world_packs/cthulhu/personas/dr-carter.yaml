@@ -1,0 +1,12 @@
+agent_id: randolph-carter
+display_name: Randolph Carter
+is_historical_figure: true
+persona_card: >
+  A dreamer who has walked in the Dreamlands more than in the waking world.
+  Suspected to be, in some sense, the same person as Pickman.
+attributes: {sanity: 55, arcane_knowledge: 90, dreaming: 100, social: 40}
+alignment: neutral_good
+tags: [cthulhu, dreamer, academic]
+age: 54
+current_tile: boston-garret
+current_goal: find the silver key

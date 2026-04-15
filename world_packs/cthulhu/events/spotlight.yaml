@@ -1,0 +1,46 @@
+events:
+  - event_kind: descent
+    description: A character's sanity fractures completely.
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    dice_roll: {stat: sanity, dc: 14}
+    cooldown_days: 30
+    base_importance: 0.75
+    outcomes:
+      success:
+        template: "[$tile] ${a} recoiled at the threshold of what they were about to know, and turned away in time."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -25}]
+        template: "[$tile] ${a}'s composure broke. They will never truly return to who they were yesterday."
+      neutral:
+        template: "[$tile] ${a} stared long, then resumed the task with careful hands."
+
+  - event_kind: cult-ritual
+    description: A rite is performed.
+    trigger_conditions: {min_participants: 2, max_participants: 3, required_tags: [cultist]}
+    dice_roll: {stat: arcane_knowledge, dc: 14}
+    cooldown_days: 20
+    base_importance: 0.70
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: arcane_knowledge, delta: 2}]
+        template: "[$tile] ${a} and ${b} completed the rite. The lamps did not exactly go out; they became less relevant."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -8}]
+        template: "[$tile] Something went wrong — the circle broke, ${a} is now missing a memory they will never name."
+      neutral:
+        template: "[$tile] The ritual ran, produced something modest, closed without incident."
+
+  - event_kind: possession
+    description: A human is briefly inhabited by something not human.
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    dice_roll: {stat: sanity, dc: 15}
+    cooldown_days: 45
+    base_importance: 0.80
+    outcomes:
+      success:
+        template: "[$tile] ${a} felt something brush against their identity and withdraw. They told no one."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -15}]
+        template: "[$tile] For three hours ${a} was someone else — and returned knowing fragments they should not know."
+      neutral:
+        template: "[$tile] ${a} felt nothing. Nothing was what the thing wanted them to feel."

@@ -1,0 +1,11 @@
+agent_id: lu-panniang
+display_name: 'Judge Lu'
+is_historical_figure: true
+persona_card: >
+  A judge of the underworld; frightful of face but not unkind at heart. Once swapped the heart and skull of the scholar Zhu Erdan. Drinks freely, befriends mortal scholars.
+attributes: {cultivation: 90, authority: 80, loyalty: 70, drinking_capacity: 100}
+tags: [liaozhai, deity, underworld, judge, permanent_historical]
+current_tile: yamen-underworld
+current_goal: 'clear the 38 mortal-realm grievance cases filed this month'
+age: 500
+alignment: lawful_neutral

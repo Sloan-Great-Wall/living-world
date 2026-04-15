@@ -1,0 +1,15 @@
+agent_id: Agent-Strelnikov
+display_name: 'Agent Strelnikov'
+persona_card: >
+  Foundation field agent, ex-GRU. Silent, precise, writes the minimum amount of paperwork. His beat is handling anomalies that surface in public.
+attributes:
+  clearance_level: 3
+  firearms: 90
+  stealth: 75
+  social: 30
+alignment: lawful_neutral
+tags: [scp, foundation, field-agent, armed]
+life_stage: prime
+age: 41
+current_tile: briefing-room
+current_goal: 'receive his next field assignment'

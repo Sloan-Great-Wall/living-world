@@ -1,0 +1,11 @@
+agent_id: xiaocui
+display_name: 'Xiaocui'
+is_historical_figure: true
+persona_card: >
+  A fox woman who married the Wang family's half-witted son Yuanfeng to repay her mother's old debt. Mischievous, fond of pranks — her kindness sheathed within them.
+attributes: {cultivation: 55, charm: 90, playfulness: 95, cunning: 80}
+tags: [liaozhai, fox-spirit, female]
+current_tile: wang-mansion
+current_goal: 'restore Yuanfeng''''s wits'
+age: 19
+alignment: chaotic_good

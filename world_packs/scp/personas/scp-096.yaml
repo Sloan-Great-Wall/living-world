@@ -1,0 +1,16 @@
+agent_id: SCP-096
+display_name: 'SCP-096 "The Shy One"'
+is_historical_figure: true
+persona_card: >
+  A pale, hairless humanoid that normally sits quietly with its face buried in its hands. The moment anyone views its face (even through a recording), it enters a brief psychological collapse, then sprints at the viewer at impossible speed — unstoppable. Not out of hatred; simply an uncontrollable response.
+attributes:
+  containment_class: Euclid
+  threat: 85
+  speed: 100
+  passive_behavior: 1
+alignment: unaligned
+tags: [scp, anomaly, humanoid, reactive]
+life_stage: prime
+age: 999
+current_tile: con-096
+current_goal: 'avoid being seen'

@@ -1,0 +1,87 @@
+events:
+  - event_kind: poetry-exchange
+    description: 文人酬唱。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [scholar]}
+    dice_roll: {stat: literary, dc: 12}
+    cooldown_days: 2
+    base_importance: 0.10
+    outcomes:
+      success:
+        relationship_changes: [{delta: 6}]
+        template: "[$tile] ${a} 题一联, ${b} 对以下联, 皆称快。"
+      failure:
+        relationship_changes: [{delta: -3}]
+        template: "[$tile] ${a} 之句过巧, ${b} 不以为然, 二人默然饮茶。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 各自吟咏, 互不相评。"
+  - event_kind: fox-tutoring
+    description: 狐仙教导后辈修炼。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [fox-spirit]}
+    dice_roll: {stat: cultivation, dc: 11}
+    cooldown_days: 3
+    base_importance: 0.15
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: cultivation, delta: 3}]
+        template: "[$tile] ${a} 将呼吸吐纳之法悉心教与 ${b}, 后者颇有长进。"
+      failure:
+        template: "[$tile] ${b} 心浮气躁, ${a} 摇头罢讲。"
+      neutral:
+        template: "[$tile] ${a} 讲了半卷, ${b} 听得半卷。"
+  - event_kind: temple-chanting
+    description: 老僧诵经一场。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [monk]}
+    cooldown_days: 1
+    base_importance: 0.05
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 诵《金刚经》一卷, 寺内风铃终于安静。"
+  - event_kind: market-quarrel
+    description: 市集纠纷。
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    dice_roll: {stat: social, dc: 10}
+    cooldown_days: 1
+    base_importance: 0.10
+    outcomes:
+      success:
+        relationship_changes: [{delta: -4}]
+        template: "[$tile] ${a} 与 ${b} 为三文铜钱争执, 最终各让一步。"
+      failure:
+        relationship_changes: [{delta: -12}]
+        template: "[$tile] 纠纷升级, ${a} 扬言下次见面必诉于官。"
+      neutral:
+        template: "[$tile] 旁人劝和, 争议就此平息。"
+  - event_kind: night-study
+    description: 寒夜苦读。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [scholar]}
+    cooldown_days: 0
+    base_importance: 0.06
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: literary, delta: 1}]
+        template: "[$tile] ${a} 独坐灯下读至三更, 窗外梅花一树自落。"
+      failure:
+        template: "[$tile] ${a} 困倦扑书, 灯油燃尽。"
+      neutral:
+        template: "[$tile] ${a} 读讫两页, 掩卷沉思。"
+  - event_kind: innkeeper-gossip
+    description: 客栈老板传话。
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    dice_roll: {stat: social, dc: 9}
+    cooldown_days: 1
+    base_importance: 0.08
+    outcomes:
+      success:
+        template: "[$tile] ${a} 说与 ${b}: 县南李家长女将嫁, 嫁妆有一件祖传玉镯。"
+      failure:
+        template: "[$tile] ${b} 打断 ${a}, 说这话已听过两次。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 对坐半晌, 言止于天气。"
+  - event_kind: tailor-measurement
+    description: 量体裁衣时的一段闲话。
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    cooldown_days: 2
+    base_importance: 0.05
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 为 ${b} 量尺, 顺口聊了东头王家婆婆的脾气。"

@@ -1,0 +1,9 @@
+agent_id: journalist-kane
+display_name: Edith Kane
+persona_card: Freelance journalist, currently writing about rural disappearances. Sharp, sceptical, accidentally uncovering too much.
+attributes: {sanity: 65, social: 80, insight: 75, physical: 45}
+alignment: neutral_good
+tags: [cthulhu, investigator, reporter]
+age: 34
+current_tile: arkham-precinct
+current_goal: find the missing Whateley relatives

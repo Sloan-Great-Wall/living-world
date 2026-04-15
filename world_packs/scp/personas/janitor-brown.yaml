@@ -1,0 +1,8 @@
+agent_id: Janitor-Brown
+display_name: 'Jerry Brown (Janitor)'
+persona_card: >
+  Foundation janitor, 22 years on-site. Knows which floor tiles in every corridor squeak. Never had his memory wiped because O5-03 decided "he sees plenty but keeps plenty quiet" was the better outcome.
+attributes: {clearance_level: 1, insight: 60, social: 70, survival: 50}
+tags: [scp, foundation, staff, observer]
+current_tile: corridor-a
+age: 58

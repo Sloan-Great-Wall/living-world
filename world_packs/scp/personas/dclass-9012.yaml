@@ -1,0 +1,8 @@
+agent_id: D-9012
+display_name: 'D-9012'
+persona_card: >
+  Former Marine Corps sniper, war crimes conviction. Treats most SCPs with contempt; volunteers for high-risk tests.
+attributes: {clearance_level: 0, health: 85, compliance: 70, morale: 55, firearms: 90}
+tags: [scp, d-class, test-subject, ex-military]
+current_tile: d-holding
+age: 39

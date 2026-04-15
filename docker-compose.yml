@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: lw-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: living_world
+      POSTGRES_USER: lw
+      POSTGRES_PASSWORD: lw_dev_only
+    ports:
+      - "5433:5432"  # host:container; 5433 to avoid collision with system PG
+    volumes:
+      - lw_pg_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lw -d living_world"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: lw-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - lw_redis_data:/data
+
+volumes:
+  lw_pg_data:
+  lw_redis_data:

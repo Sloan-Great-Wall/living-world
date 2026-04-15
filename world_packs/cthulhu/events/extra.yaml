@@ -1,0 +1,88 @@
+events:
+  - event_kind: book-trade
+    description: Antiquarian book exchange.
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [antiquarian]}
+    dice_roll: {stat: social, dc: 11}
+    cooldown_days: 4
+    base_importance: 0.20
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: arcane_knowledge, delta: 2}]
+        template: "[$tile] ${a} bought a 1623 edition from ${b}. Both pretended it was unremarkable."
+      failure:
+        template: "[$tile] ${b} withheld the index. ${a} noticed, said nothing."
+      neutral:
+        template: "[$tile] ${a} and ${b} settled the ledger, exchanged a volume of minor interest."
+
+  - event_kind: harbor-sighting
+    description: Something in the water.
+    trigger_conditions: {min_participants: 1, max_participants: 2}
+    dice_roll: {stat: sanity, dc: 12}
+    cooldown_days: 5
+    base_importance: 0.35
+    outcomes:
+      success:
+        template: "[$tile] ${a} saw the shape and named it seal to ${b}. No one argued."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -4}]
+        template: "[$tile] ${a} watched far too long. The shape watched back."
+      neutral:
+        template: "[$tile] ${a} stood on the pier; the water did not oblige."
+
+  - event_kind: manuscript-decipher
+    description: Late-night translation of a forbidden passage.
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [academic]}
+    dice_roll: {stat: arcane_knowledge, dc: 14}
+    cooldown_days: 3
+    base_importance: 0.40
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: arcane_knowledge, delta: 3}]
+        template: "[$tile] ${a} rendered three pages into English. The margin notes are now unreadable."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -6}]
+        template: "[$tile] ${a} bound the book shut with twine and pushed it to the back of the shelf."
+      neutral:
+        template: "[$tile] ${a} made notes that will require another pass tomorrow."
+
+  - event_kind: cult-meeting
+    description: A closed meeting of the Esoteric Order.
+    trigger_conditions: {min_participants: 2, max_participants: 3, required_tags: [cultist]}
+    dice_roll: {stat: social, dc: 11}
+    cooldown_days: 7
+    base_importance: 0.30
+    outcomes:
+      success:
+        relationship_changes: [{delta: 6}]
+        template: "[$tile] ${a} and ${b} agreed on the spring calendar."
+      failure:
+        relationship_changes: [{delta: -6}]
+        template: "[$tile] ${a} questioned ${b}'s devotion publicly — inadvisable."
+      neutral:
+        template: "[$tile] ${a} and ${b} parted without decision."
+
+  - event_kind: disappearance
+    description: Someone goes missing.
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    dice_roll: {dc: 15}
+    cooldown_days: 25
+    base_importance: 0.65
+    outcomes:
+      success:
+        template: "[$tile] ${a} returned home late, pale, uncommunicative, but home."
+      failure:
+        template: "[$tile] ${a} was last seen at dusk. The sheriff added a fresh file."
+      neutral:
+        template: "[$tile] ${a} was reported missing; by noon, they were reported found."
+
+  - event_kind: silver-key
+    description: Carter's key briefly surfaces.
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [dreamer]}
+    cooldown_days: 90
+    base_importance: 0.55
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: arcane_knowledge, delta: 5}]
+        template: "[$tile] ${a} held the key and, for a moment, remembered where every door led."
+      neutral:
+        template: "[$tile] ${a} dreamed of the key. Upon waking, the dream receded as tide."

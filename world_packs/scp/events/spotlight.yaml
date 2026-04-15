@@ -1,0 +1,21 @@
+events:
+  - event_kind: containment-breach
+    description: 一次小规模收容失效。
+    trigger_conditions:
+      min_participants: 1
+      max_participants: 3
+      required_tags: [scp]
+    dice_roll:
+      stat: threat
+      dc: 15
+    cooldown_days: 14
+    base_importance: 0.75
+    outcomes:
+      success:
+        stat_changes:
+          - { target: any, attribute: threat, delta: 3 }
+        template: "[$tile] 收容失效报警响起, ${a} 短暂脱离收容, 造成 2 名员工轻伤后被重新收容。"
+      failure:
+        template: "[$tile] 收容系统测试中出现误报, 无实际异常。"
+      neutral:
+        template: "[$tile] 收容边界出现波动, 经复核属于日常扰动。"

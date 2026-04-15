@@ -1,0 +1,80 @@
+events:
+  - event_kind: coffee-machine-debate
+    description: 休息区咖啡机前的一场小辩论。
+    trigger_conditions: {min_participants: 2, max_participants: 3}
+    dice_roll: {stat: social, dc: 9}
+    cooldown_days: 1
+    base_importance: 0.06
+    outcomes:
+      success:
+        template: "[$tile] ${a} 和 ${b} 为是否该把备用咖啡豆编号争了十分钟, 最后分赢分输无果。"
+      failure:
+        relationship_changes: [{delta: -3}]
+        template: "[$tile] ${a} 抢了 ${b} 看中的最后一包速溶, 两人晚餐分桌而坐。"
+      neutral:
+        template: "[$tile] ${a} 默默加了两勺糖, 没说话。"
+  - event_kind: d-class-escape-plan
+    description: D 级人员私下策划。
+    trigger_conditions: {min_participants: 2, max_participants: 3, required_tags: [d-class]}
+    dice_roll: {stat: compliance, dc: 14}
+    cooldown_days: 5
+    base_importance: 0.28
+    outcomes:
+      success:
+        template: "[$tile] ${a} 与 ${b} 压低声音讨论上周的通风管道走向, 发现一段图纸空白。"
+      failure:
+        stat_changes: [{target: any, attribute: compliance, delta: -10}]
+        template: "[$tile] 对话被墙麦抓到, ${a} 次日消失在 D 级花名册上。"
+      neutral:
+        template: "[$tile] ${a} 忽然改话题到监狱时期的女朋友。"
+  - event_kind: psych-eval
+    description: Dr. Glass 给某员工做季度心评。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [psychologist]}
+    dice_roll: {stat: insight, dc: 11}
+    cooldown_days: 90
+    base_importance: 0.22
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: morale, delta: 4}]
+        template: "[$tile] ${a} 为 ${b} 的焦虑症给出了非药物建议, 后者竟真去试了。"
+      failure:
+        template: "[$tile] ${b} 回答每一题都合规但毫无信息量, ${a} 在表上勾了一个小问号。"
+      neutral:
+        template: "[$tile] ${a} 照流程做完了量表, 归档。"
+  - event_kind: lab-late-night
+    description: 深夜加班, 灵感或失控。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [researcher]}
+    dice_roll: {stat: insight, dc: 12}
+    cooldown_days: 2
+    base_importance: 0.14
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: insight, delta: 2}]
+        template: "[$tile] ${a} 凌晨两点做通了一个困扰半年的观察模型。"
+      failure:
+        stat_changes: [{target: any, attribute: morale, delta: -4}]
+        template: "[$tile] ${a} 在键盘上睡着, 醒来写的东西自己也看不懂。"
+      neutral:
+        template: "[$tile] ${a} 离开办公室时, 天边刚亮。"
+  - event_kind: mtf-briefing
+    description: MTF 任务前简报。
+    trigger_conditions: {min_participants: 2, max_participants: 3, required_tags: [field-agent]}
+    dice_roll: {stat: firearms, dc: 10}
+    cooldown_days: 3
+    base_importance: 0.25
+    outcomes:
+      success:
+        template: "[$tile] ${a} 带队向 ${b} 布置了目标与撤离点, 问答环节没有废话。"
+      failure:
+        template: "[$tile] 简报中出现情报冲突, ${a} 要求重审。"
+        relationship_changes: [{delta: -3}]
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 走完简报流程。"
+  - event_kind: o5-memo
+    description: O5 议会下发一份绝密备忘。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [o5]}
+    cooldown_days: 14
+    base_importance: 0.55
+    outcomes:
+      neutral:
+        template: "[$tile] 今日 ${a} 签发的一道指令, 全站仅三人知晓具体内容。"

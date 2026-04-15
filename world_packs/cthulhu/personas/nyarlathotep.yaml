@@ -1,0 +1,18 @@
+agent_id: nyarlathotep
+display_name: Nyarlathotep
+is_historical_figure: true
+persona_card: >
+  The Crawling Chaos. Moves among humans in a thousand guises, delivering
+  visions, breaking minds, accelerating the coming of the Outer Gods.
+  Charming, articulate, and utterly malicious.
+attributes:
+  sanity: 0
+  arcane_knowledge: 100
+  charm: 100
+  cruelty: 100
+alignment: chaotic_evil
+tags: [cthulhu, outer-god, avatar, permanent_historical]
+life_stage: prime
+age: 999999
+current_tile: abyss
+current_goal: spread dread

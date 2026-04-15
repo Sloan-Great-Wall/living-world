@@ -1,0 +1,9 @@
+agent_id: harvey-thorne
+display_name: Harvey Thorne
+persona_card: Antiquarian bookseller in Boston. Trades in books that would make ordinary booksellers queasy. Owns two copies of Pnakotic Fragments.
+attributes: {sanity: 50, arcane_knowledge: 80, social: 55, greed: 70}
+alignment: neutral
+tags: [cthulhu, dealer, antiquarian]
+age: 67
+current_tile: boston-garret
+current_goal: broker the sale of a partial Al Azif transcript

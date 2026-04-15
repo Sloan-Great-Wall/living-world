@@ -1,0 +1,9 @@
+agent_id: esther-dupree
+display_name: Esther Dupree
+persona_card: A New Orleans voodoo priestess who has real contact with real entities and deeply wishes she did not.
+attributes: {sanity: 60, arcane_knowledge: 70, social: 65, courage: 70}
+alignment: chaotic_good
+tags: [cthulhu, investigator, occultist]
+age: 46
+current_tile: new-orleans-precinct
+current_goal: close the door she accidentally opened last month

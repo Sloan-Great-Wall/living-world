@@ -1,0 +1,96 @@
+tiles:
+  - tile_id: con-173
+    display_name: 收容室 173
+    primary_pack: scp
+    tile_type: containment-chamber
+    description: 10 x 10 米混凝土加固收容室, 常年强光照明, 摄像头永不眨眼。
+    allowed_packs: [scp]
+    tension_bias: 0.75
+
+  - tile_id: lab-floor-3
+    display_name: 三层研究区
+    primary_pack: scp
+    tile_type: research-floor
+    description: 研究员主要活动区域, 报告撰写、样本分析、会议。
+    allowed_packs: [scp]
+    tension_bias: 0.30
+
+  - tile_id: d-holding
+    display_name: D 级人员居住区
+    primary_pack: scp
+    tile_type: d-holding
+    description: D 级人员的营房区, 简陋双层床 + 公共淋浴 + 食堂。
+    allowed_packs: [scp]
+    tension_bias: 0.45
+
+  - tile_id: con-049
+    display_name: 收容室 049
+    primary_pack: scp
+    tile_type: containment-chamber
+    description: 瘟疫医生专用带观察窗的诊疗室, 内置医疗工具架。
+    allowed_packs: [scp]
+    tension_bias: 0.55
+
+  - tile_id: con-096
+    display_name: 收容室 096
+    primary_pack: scp
+    tile_type: containment-chamber
+    description: 无窗、无镜、无影像记录设备的纯黑房间。
+    allowed_packs: [scp]
+    tension_bias: 0.60
+
+  - tile_id: con-682
+    display_name: 收容池 682
+    primary_pack: scp
+    tile_type: containment-chamber
+    description: 酸液浸泡池与复合装甲内层, 永远有两架 MTF 待命。
+    allowed_packs: [scp]
+    tension_bias: 0.90
+
+  - tile_id: con-079
+    display_name: 收容室 079
+    primary_pack: scp
+    tile_type: containment-chamber
+    description: 法拉第笼内的一张办公桌与一台古董电脑。无线网完全屏蔽。
+    allowed_packs: [scp]
+    tension_bias: 0.25
+
+  - tile_id: con-106
+    display_name: 收容室 106
+    primary_pack: scp
+    tile_type: containment-chamber
+    description: 带诱饵密室的多层物理陷阱环境。
+    allowed_packs: [scp]
+    tension_bias: 0.75
+
+  - tile_id: lounge
+    display_name: 员工休息区
+    primary_pack: scp
+    tile_type: social-area
+    description: 咖啡机、旧沙发、白板上一串没擦的数据。
+    allowed_packs: [scp]
+    tension_bias: 0.15
+
+  - tile_id: briefing-room
+    display_name: 任务简报室
+    primary_pack: scp
+    tile_type: operations
+    description: 一张长桌, 墙上挂着今天的全球异常热点图。
+    allowed_packs: [scp]
+    tension_bias: 0.40
+
+  - tile_id: o5-chamber
+    display_name: O5 议会室
+    primary_pack: scp
+    tile_type: restricted
+    description: 13 把椅子, 无人完整见过所有议员。
+    allowed_packs: [scp]
+    tension_bias: 0.50
+
+  - tile_id: corridor-a
+    display_name: A 区走廊
+    primary_pack: scp
+    tile_type: hallway
+    description: 连接研究区与收容区的主走廊, 永远在打蜡。
+    allowed_packs: [scp]
+    tension_bias: 0.20

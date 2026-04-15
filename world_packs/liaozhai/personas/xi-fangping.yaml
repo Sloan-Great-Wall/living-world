@@ -1,0 +1,11 @@
+agent_id: xi-fangping
+display_name: 'Xi Fangping'
+is_historical_figure: true
+persona_card: >
+  Sought justice for his slandered father by entering the underworld courts three times and still refused to yield. Fierce in nature; reveres filial duty and righteousness. Bears a scholar's appearance but is unafraid of torture.
+attributes: {literary: 70, moral_resolve: 99, courage: 90, cunning: 40}
+tags: [liaozhai, scholar, male, permanent_historical]
+current_tile: yamen
+current_goal: 'clear his father''''s name'
+age: 27
+alignment: lawful_good

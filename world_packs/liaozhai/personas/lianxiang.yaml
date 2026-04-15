@@ -1,0 +1,11 @@
+agent_id: lianxiang
+display_name: 'Lianxiang'
+is_historical_figure: true
+persona_card: >
+  A fox woman who came to know Sang Sheng. Skilled in medicine. Loved Sang Sheng alongside the ghost girl Li Shi without conflict — the two became sisters instead of rivals.
+attributes: {cultivation: 70, charm: 85, medical_skill: 85, wisdom: 80}
+tags: [liaozhai, fox-spirit, female]
+current_tile: sang-residence
+current_goal: 'reconcile the human–ghost–fox triangle peacefully'
+age: 21
+alignment: neutral_good

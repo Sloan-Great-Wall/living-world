@@ -1,0 +1,16 @@
+agent_id: D-9007
+display_name: 'D-9007'
+persona_card: >
+  Former insurance broker, serving twelve years for large-scale financial fraud. Wiry, sharp-eyed. Unusual among D-class for being literate enough to actually read the informed-consent forms he's given — often reads them aloud for his bunkmates.
+attributes:
+  clearance_level: 0
+  health: 72
+  compliance: 55
+  morale: 50
+  literacy: 85
+alignment: neutral
+tags: [scp, d-class, test-subject, literate]
+life_stage: prime
+age: 45
+current_tile: d-holding
+current_goal: 'figure out what the Foundation is really testing'

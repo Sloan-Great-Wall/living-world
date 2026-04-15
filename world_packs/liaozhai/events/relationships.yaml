@@ -1,0 +1,76 @@
+events:
+  - event_kind: scholarly-reading
+    description: 两生共读一卷。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [scholar]}
+    dice_roll: {stat: literary, dc: 11}
+    cooldown_days: 2
+    base_importance: 0.12
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: literary, delta: 1}]
+        relationship_changes: [{delta: 8}]
+        template: "[$tile] ${a} 与 ${b} 共读《庄子》, 至《齐物论》而笑。"
+      failure:
+        template: "[$tile] ${a} 与 ${b} 争一义之辨, 不欢而散。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 各读所好, 互不打扰。"
+
+  - event_kind: fox-mischief
+    description: 狐类作弄人间人。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [fox-spirit]}
+    dice_roll: {stat: playfulness, dc: 10}
+    cooldown_days: 1
+    base_importance: 0.20
+    outcomes:
+      success:
+        relationship_changes: [{delta: 5}]
+        template: "[$tile] ${a} 将墨汁点上 ${b} 鼻端, 两人哈哈大笑。"
+      failure:
+        relationship_changes: [{delta: -10}]
+        template: "[$tile] ${a} 恶作剧过火, ${b} 怒形于色, 拂袖而去。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 互看一眼, 各自敛手。"
+
+  - event_kind: court-trial
+    description: 公堂审案。
+    trigger_conditions: {min_participants: 2, max_participants: 3, required_tags: [official]}
+    dice_roll: {stat: authority, dc: 13}
+    cooldown_days: 3
+    base_importance: 0.35
+    outcomes:
+      success:
+        template: "[$tile] 县太爷判案清正, 堂下一片肃然。"
+      failure:
+        stat_changes: [{target: any, attribute: authority, delta: -3}]
+        template: "[$tile] 一位书生当堂驳难, 太爷颜面略损。"
+      neutral:
+        template: "[$tile] 案情胶着, 太爷宣布延至下次再审。"
+
+  - event_kind: temple-guard
+    description: 老僧守寺的一次无声周行。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [monk]}
+    dice_roll: {stat: cultivation, dc: 12}
+    cooldown_days: 0
+    base_importance: 0.15
+    outcomes:
+      success:
+        template: "[$tile] ${a} 拈香过殿, 檐下风铃静默。"
+      failure:
+        template: "[$tile] ${a} 途中停步, 合十默祷, 似有所察。"
+      neutral:
+        template: "[$tile] ${a} 照例走完一遭, 无事。"
+
+  - event_kind: inn-gossip
+    description: 客栈中的夜话。
+    trigger_conditions: {min_participants: 2, max_participants: 3}
+    dice_roll: {stat: social, dc: 10}
+    cooldown_days: 1
+    base_importance: 0.08
+    outcomes:
+      success:
+        relationship_changes: [{delta: 4}]
+        template: "[$tile] ${a} 与 ${b} 于酒桌听得县南十里的奇事, 津津有味。"
+      failure:
+        template: "[$tile] ${a} 讲的笑话无人接话, 一时冷场。"
+      neutral:
+        template: "[$tile] ${a} 饮酒独听, ${b} 在旁闲观。"

@@ -1,0 +1,8 @@
+agent_id: D-9045
+display_name: 'D-9045'
+persona_card: >
+  Former ER nurse, convicted of serially medicating patients into environmental emergencies. Calm. Extraordinarily good at taking care of others — unexpectedly respected among fellow D-class.
+attributes: {clearance_level: 0, health: 70, compliance: 80, morale: 65, medical_skill: 80}
+tags: [scp, d-class, test-subject, caregiver]
+current_tile: d-holding
+age: 51

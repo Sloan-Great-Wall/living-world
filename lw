@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Living World launcher — one command for all operations.
+#
+# Usage:
+#   ./lw             → open dashboard (default)
+#   ./lw dashboard   → open dashboard
+#   ./lw run         → CLI run (10 days, 3 packs)
+#   ./lw test        → run test suite
+#   ./lw install     → create venv + install deps
+
+set -e
+cd "$(dirname "$0")"
+
+if [ ! -d ".venv" ]; then
+  echo "→ First run — creating venv and installing deps..."
+  python3 -m venv .venv
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+  pip install -q -e ".[dev]"
+else
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+fi
+
+CMD="${1:-dashboard}"
+shift || true
+
+case "$CMD" in
+  dashboard|ui|gui)
+    exec python -m living_world dashboard "$@"
+    ;;
+  run)
+    exec python -m living_world run "$@"
+    ;;
+  digest)
+    exec python -m living_world digest "$@"
+    ;;
+  test)
+    exec pytest tests/ "$@"
+    ;;
+  install)
+    pip install -q -e ".[dev]"
+    echo "→ Installed."
+    ;;
+  *)
+    exec python -m living_world "$CMD" "$@"
+    ;;
+esac

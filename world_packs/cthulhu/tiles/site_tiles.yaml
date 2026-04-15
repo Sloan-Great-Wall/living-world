@@ -1,0 +1,72 @@
+tiles:
+  - tile_id: miskatonic-library
+    display_name: 米斯卡塔尼克大学图书馆
+    primary_pack: cthulhu
+    tile_type: restricted-archive
+    description: 禁区手稿室, 地下三层以下不对外开放。空气干燥, 纸张气味掩盖其他。
+    allowed_packs: [cthulhu]
+    tension_bias: 0.45
+
+  - tile_id: dunwich-hills
+    display_name: 敦威治山区
+    primary_pack: cthulhu
+    tile_type: wilderness-haunt
+    description: 花岗岩丘陵, 石环遗址散见其间。当地人避谈'山后'的事。
+    allowed_packs: [cthulhu]
+    tension_bias: 0.70
+
+  - tile_id: rlyeh
+    display_name: R'lyeh (sunken city)
+    primary_pack: cthulhu
+    tile_type: cosmic-ruin
+    description: Non-Euclidean architecture under the Pacific. Currently submerged.
+    allowed_packs: [cthulhu]
+    tension_bias: 0.90
+
+  - tile_id: abyss
+    display_name: The outer dark
+    primary_pack: cthulhu
+    tile_type: cosmic-void
+    description: The place from which Nyarlathotep steps into the world.
+    allowed_packs: [cthulhu]
+    tension_bias: 0.85
+
+  - tile_id: innsmouth-harbor
+    display_name: Innsmouth Harbor
+    primary_pack: cthulhu
+    tile_type: decaying-port
+    description: Rotting wharves, closed shutters, the smell of fish at any hour.
+    allowed_packs: [cthulhu]
+    tension_bias: 0.65
+
+  - tile_id: dagon-chapel
+    display_name: Esoteric Order of Dagon Chapel
+    primary_pack: cthulhu
+    tile_type: cult-hall
+    description: Former Methodist chapel, now a cult's front. Silver candlesticks, altered stained glass.
+    allowed_packs: [cthulhu]
+    tension_bias: 0.60
+
+  - tile_id: boston-garret
+    display_name: Boston garret (Carter's flat)
+    primary_pack: cthulhu
+    tile_type: scholar-study
+    description: Narrow attic crammed with occult volumes. Only window faces northeast.
+    allowed_packs: [cthulhu]
+    tension_bias: 0.30
+
+  - tile_id: new-orleans-precinct
+    display_name: New Orleans police precinct
+    primary_pack: cthulhu
+    tile_type: law-office
+    description: Precinct annex where Legrasse keeps the cases he can't technically close.
+    allowed_packs: [cthulhu]
+    tension_bias: 0.35
+
+  - tile_id: arkham-precinct
+    display_name: Arkham town precinct
+    primary_pack: cthulhu
+    tile_type: law-office
+    description: Sheriff Briggs's worn-wood office, full of filed 'unsolved' boxes.
+    allowed_packs: [cthulhu]
+    tension_bias: 0.35

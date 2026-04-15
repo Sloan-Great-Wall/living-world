@@ -1,0 +1,119 @@
+events:
+  - event_kind: armitage-reads-alone
+    description: Armitage reads something he will regret reading.
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [investigator, academic]}
+    dice_roll: {stat: sanity, dc: 14}
+    cooldown_days: 40
+    base_importance: 0.55
+    outcomes:
+      success:
+        template: "[$tile] ${a} closed the manuscript at the exact paragraph he had sworn never to reach again. He noted the time. 2:17 AM."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -10}]
+        template: "[$tile] ${a} read past the warning. Afterwards his handwriting slanted the wrong way for a week."
+      neutral:
+        template: "[$tile] ${a} stopped at the colophon. Small mercies."
+
+  - event_kind: wilbur-asks-for-book
+    description: Wilbur Whateley comes to the library to formally request the Necronomicon.
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    dice_roll: {stat: arcane_knowledge, dc: 15}
+    cooldown_days: 90
+    base_importance: 0.75
+    outcomes:
+      success:
+        relationship_changes: [{delta: -40}]
+        template: "[$tile] ${a} extended a gloved hand for the request form. ${b} refused. The air in the reading room became noticeably colder."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -5}]
+        template: "[$tile] ${a} smiled and said he would come back. ${b} spent the rest of the week checking locks."
+      neutral:
+        template: "[$tile] ${a} left a letter. It was not opened."
+
+  - event_kind: peaslee-remembers
+    description: Peaslee remembers a fragment from his Yithian period.
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [possessed]}
+    dice_roll: {stat: sanity, dc: 15}
+    cooldown_days: 30
+    base_importance: 0.55
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: arcane_knowledge, delta: 4}]
+        template: "[$tile] ${a} woke with a sentence in his mouth in a language older than his species. He wrote it down before it faded."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -8}]
+        template: "[$tile] ${a} spent the afternoon unable to recognize his own reflection."
+      neutral:
+        template: "[$tile] The dream slipped away. ${a} was grateful."
+
+  - event_kind: sarah-considers-leaving
+    description: The Innsmouth hybrid girl counts her savings.
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [hybrid]}
+    dice_roll: {stat: hope, dc: 12}
+    cooldown_days: 14
+    base_importance: 0.40
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: hope, delta: 5}]
+        template: "[$tile] ${a} counted her savings twice. Forty-nine dollars. Boston train fare was nineteen."
+      failure:
+        stat_changes: [{target: any, attribute: hope, delta: -10}, {target: any, attribute: physical_aberration, delta: 3}]
+        template: "[$tile] ${a} caught her reflection in the harbor water. The Boston ticket went back under the mattress."
+      neutral:
+        template: "[$tile] ${a} put the coins back in the tin. Maybe next month."
+
+  - event_kind: kane-gets-close
+    description: Journalist Kane interviews a witness who knows too much.
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [reporter]}
+    dice_roll: {stat: insight, dc: 13}
+    cooldown_days: 20
+    base_importance: 0.50
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: arcane_knowledge, delta: 3}]
+        template: "[$tile] ${a} pressed ${b} with one more question. ${b} finally said: 'You shouldn't be writing this down.' She kept writing."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -6}]
+        template: "[$tile] ${b} stood up, walked out, and was found two counties away the next morning, unable to remember his own name."
+      neutral:
+        template: "[$tile] ${a} got nothing new. Yet."
+
+  - event_kind: cthulhu-dream-wave
+    description: Cthulhu's dreams wash over multiple agents at once.
+    trigger_conditions: {min_participants: 2, max_participants: 3}
+    dice_roll: {stat: sanity, dc: 14}
+    cooldown_days: 60
+    base_importance: 0.70
+    outcomes:
+      success:
+        template: "[$tile] Across the county, ${a} and ${b} dreamed the same non-Euclidean geometry tonight. Neither will speak of it."
+      failure:
+        stat_changes: [{target: all, attribute: sanity, delta: -5}]
+        template: "[$tile] ${a} and ${b} woke screaming from dreams they cannot separate from memory. A third person across town also woke."
+      neutral:
+        template: "[$tile] Somewhere the stars shifted a fraction of a degree. No one noticed."
+
+  - event_kind: marsh-recruits
+    description: Ezra Marsh tries to recruit a new follower.
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    dice_roll: {stat: social, dc: 13}
+    cooldown_days: 30
+    base_importance: 0.55
+    outcomes:
+      success:
+        relationship_changes: [{delta: 20}]
+        template: "[$tile] ${a}'s sermon tonight was meant for one listener. ${b} stayed after, took the coin, and signed the book."
+      failure:
+        relationship_changes: [{delta: -15}]
+        template: "[$tile] ${b} walked out halfway. ${a} noted the name. It would come back to the name."
+      neutral:
+        template: "[$tile] ${a} and ${b} spoke in circles. Neither committed."
+
+  - event_kind: mi-go-negotiation
+    description: The Mi-go envoy completes or breaks a deal.
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [mi-go]}
+    cooldown_days: 120
+    base_importance: 0.80
+    outcomes:
+      neutral:
+        template: "[$tile] ${a}'s buzzing was almost words. ${b} understood enough to know the deal was now binding, in a sense the English word 'binding' did not fully cover."

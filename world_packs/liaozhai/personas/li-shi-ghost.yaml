@@ -1,0 +1,11 @@
+agent_id: li-shi
+display_name: 'Li Shi (Ghost)'
+is_historical_figure: true
+persona_card: >
+  A wandering soul who hanged herself for love and remains attached to the living world. Had an unfinished attachment to Sang Sheng. Later served him in harmony with Lianxiang.
+attributes: {cultivation: 40, charm: 80, sadness: 60, persistence: 85}
+tags: [liaozhai, ghost, female]
+current_tile: sang-residence
+current_goal: 'resolve her unfinished attachment to the mortal world'
+age: 19
+alignment: neutral

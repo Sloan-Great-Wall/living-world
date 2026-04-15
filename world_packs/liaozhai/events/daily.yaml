@@ -1,0 +1,44 @@
+events:
+  - event_kind: encounter-at-temple
+    description: 寺内偶遇, 互探来历。
+    trigger_conditions:
+      min_participants: 2
+      max_participants: 2
+    dice_roll:
+      stat: charm
+      dc: 11
+    cooldown_days: 1
+    base_importance: 0.18
+    outcomes:
+      success:
+        relationship_changes:
+          - { delta: 12 }
+        template: "[$tile] ${a} 于廊下拂袖而立, ${b} 持灯近前, 二人目光相接, 有言未语。"
+      failure:
+        relationship_changes:
+          - { delta: -4 }
+        template: "[$tile] ${a} 与 ${b} 相遇于佛像之后, 一方生疑, 匆匆别去。"
+      neutral:
+        relationship_changes:
+          - { delta: 2 }
+        template: "[$tile] ${a} 与 ${b} 廊下相问, 寒暄数语, 各自归去。"
+
+  - event_kind: market-stroll
+    description: 闹市中闲游, 见闻趣事。
+    trigger_conditions:
+      min_participants: 1
+      max_participants: 2
+    dice_roll:
+      stat: innocence
+      dc: 10
+    cooldown_days: 0
+    base_importance: 0.06
+    outcomes:
+      success:
+        stat_changes:
+          - { target: any, attribute: charm, delta: 1 }
+        template: "[$tile] ${a} 见集市新开花肆, 执一枝入袖而笑。"
+      failure:
+        template: "[$tile] ${a} 误入肉案前, 鲜血淋漓, 急急折返。"
+      neutral:
+        template: "[$tile] ${a} 游于市西, 沽酒一壶, 未见异事。"

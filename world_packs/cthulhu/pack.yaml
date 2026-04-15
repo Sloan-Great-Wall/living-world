@@ -1,0 +1,12 @@
+pack_id: cthulhu
+display_name: Cthulhu Mythos
+description: >
+  Lovecraftian 宇宙恐怖。原著 Lovecraft 作品多数已进入公共领域。
+narrative_style: >
+  哥特散文, 阴郁冷色调, 多长句, 重感官与心理描写。
+storyteller:
+  personality: chaotic
+  tension_target: 0.60
+  max_events_per_day: 2
+  narration_tone: >
+    阴云、潮湿、无法言喻的气味。避免直接名状恐怖, 以暗示和失衡感推进。

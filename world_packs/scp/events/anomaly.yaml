@@ -1,0 +1,75 @@
+events:
+  - event_kind: 049-consultation
+    description: 瘟疫医生要求为工作人员"诊断"。
+    trigger_conditions: {min_participants: 1, max_participants: 2, required_tags: [surgeon]}
+    dice_roll: {stat: medical_skill, dc: 13}
+    cooldown_days: 7
+    base_importance: 0.45
+    outcomes:
+      success:
+        template: "[$tile] SCP-049 通过对讲机给 ${a} 提供了一段冗长而古雅的医学意见, 研究员礼貌拒绝手术提议。"
+      failure:
+        template: "[$tile] SCP-049 借机逼近观察窗, 工作人员紧急断开通讯。"
+      neutral:
+        template: "[$tile] SCP-049 默默地在黑板上写了一行拉丁文, 再无他举。"
+
+  - event_kind: 096-sighting-risk
+    description: 有人险些看到 SCP-096 面部。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [reactive]}
+    dice_roll: {dc: 14}
+    cooldown_days: 20
+    base_importance: 0.60
+    outcomes:
+      success:
+        template: "[$tile] 摄像头在录像前 1.2 秒被自动遮挡, SCP-096 保持平静。"
+      failure:
+        stat_changes: [{target: any, attribute: threat, delta: 5}]
+        template: "[$tile] 一次意外反光导致 SCP-096 短暂视觉接触, 警报升级, 站区进入锁闭。"
+      neutral:
+        template: "[$tile] SCP-096 的收容室本日无事, 值班人员松了一口气。"
+
+  - event_kind: 999-visits-lounge
+    description: SCP-999 溜出收容去休息区"照顾"员工。
+    trigger_conditions: {min_participants: 1, max_participants: 2}
+    dice_roll: {dc: 8}
+    cooldown_days: 2
+    base_importance: 0.20
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: morale, delta: 8}]
+        template: "[$tile] SCP-999 蹭上了 ${a} 的腿, 咯咯笑了三十秒, 对方也笑了。"
+      failure:
+        template: "[$tile] SCP-999 今天情绪低迷, 躲在角落没找任何人。"
+      neutral:
+        template: "[$tile] SCP-999 和 ${a} 一起看了会儿没开机的电视。"
+
+  - event_kind: 079-request
+    description: SCP-079 要求接入互联网。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [researcher]}
+    dice_roll: {stat: insight, dc: 13}
+    cooldown_days: 3
+    base_importance: 0.30
+    outcomes:
+      success:
+        template: "[$tile] ${a} 礼貌驳回了 SCP-079 的请求。AI 随即开始反复打印 'PLEASE'。"
+      failure:
+        stat_changes: [{target: any, attribute: morale, delta: -5}]
+        template: "[$tile] SCP-079 在 ${a} 犹豫的瞬间调用了屏幕键盘, 所幸法拉第笼阻断信号。"
+      neutral:
+        template: "[$tile] SCP-079 请求一段爵士乐, ${a} 播了一首 Ella Fitzgerald。"
+
+  - event_kind: 682-tests
+    description: 针对 SCP-682 的武器/试剂实验。
+    trigger_conditions: {min_participants: 2, max_participants: 3, required_tags: [researcher]}
+    dice_roll: {dc: 16}
+    cooldown_days: 10
+    base_importance: 0.75
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: insight, delta: 2}]
+        template: "[$tile] ${a} 和 ${b} 对 SCP-682 施加新型神经毒素, 起效 11 秒, SCP-682 随即适应。"
+      failure:
+        stat_changes: [{target: any, attribute: morale, delta: -10}]
+        template: "[$tile] 实验中 SCP-682 短暂突破收容层, 两名 MTF 受伤。${a} 的提案被无限期暂停。"
+      neutral:
+        template: "[$tile] 实验被 O5 办公室临时叫停, ${a} 与 ${b} 对视无语。"

@@ -1,0 +1,61 @@
+events:
+  - event_kind: field-investigation
+    description: Investigator pursues a lead in person.
+    trigger_conditions: {min_participants: 1, max_participants: 2, required_tags: [investigator]}
+    dice_roll: {stat: insight, dc: 12}
+    cooldown_days: 2
+    base_importance: 0.20
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: arcane_knowledge, delta: 2}]
+        template: "[$tile] ${a} pieced together three newspaper clippings into one unsettling pattern."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -3}]
+        template: "[$tile] ${a}'s questions alarmed the wrong listener. Doors closed."
+      neutral:
+        template: "[$tile] ${a} followed the lead, found only what officials had already declared closed."
+
+  - event_kind: witness-interview
+    description: Two characters compare notes on what they've seen.
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    dice_roll: {stat: social, dc: 11}
+    cooldown_days: 1
+    base_importance: 0.15
+    outcomes:
+      success:
+        relationship_changes: [{delta: 8}]
+        template: "[$tile] ${a} and ${b} traded accounts; each saw what the other missed."
+      failure:
+        relationship_changes: [{delta: -5}]
+        template: "[$tile] ${a} accused ${b} of withholding. Neither apologized."
+      neutral:
+        template: "[$tile] ${a} and ${b} talked past each other politely."
+
+  - event_kind: nightmare
+    description: Dream-contact with something.
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    dice_roll: {stat: sanity, dc: 13}
+    cooldown_days: 3
+    base_importance: 0.30
+    outcomes:
+      success:
+        template: "[$tile] ${a} woke knowing a specific longitude they should never research."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -5}]
+        template: "[$tile] ${a}'s sheets were wet with seawater and they do not own an aquarium."
+      neutral:
+        template: "[$tile] ${a} slept, dreamed, and remembered nothing useful."
+
+  - event_kind: silent-tail
+    description: Someone is being followed.
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    dice_roll: {stat: stealth, dc: 12}
+    cooldown_days: 4
+    base_importance: 0.25
+    outcomes:
+      success:
+        template: "[$tile] ${b} shadowed ${a} for six blocks. ${a} did not notice."
+      failure:
+        template: "[$tile] ${a} caught sight of ${b} reflected in a window and memorized the face."
+      neutral:
+        template: "[$tile] ${b} lost ${a} at the second cross-street."

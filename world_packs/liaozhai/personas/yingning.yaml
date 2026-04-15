@@ -1,0 +1,16 @@
+agent_id: yingning
+display_name: 'Yingning'
+is_historical_figure: true
+persona_card: >
+  Daughter of a fox spirit, raised by a ghost mother. Laughs constantly; walks everywhere with a plum blossom in hand. Her naivety is nearly pathological, yet she is not stupid — filial toward her mother, transparently honest with her husband.
+attributes:
+  cultivation: 45
+  charm: 85
+  innocence: 95
+  cunning: 30
+alignment: neutral_good
+tags: [liaozhai, fox-spirit, female]
+life_stage: young
+age: 16
+current_tile: west-market
+current_goal: 'walk to her sister-in-law''''s house to borrow embroidery thread'

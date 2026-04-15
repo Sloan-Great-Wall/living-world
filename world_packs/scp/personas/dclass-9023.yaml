@@ -1,0 +1,8 @@
+agent_id: D-9023
+display_name: 'D-9023'
+persona_card: >
+  Solo programmer convicted of large-scale financial fraud. Very intelligent; multiple escape attempts already on record. Shows unusual interest in SCP-079.
+attributes: {clearance_level: 0, health: 60, compliance: 30, morale: 40, intellect: 85}
+tags: [scp, d-class, test-subject, high-intellect, escape-risk]
+current_tile: d-holding
+age: 34

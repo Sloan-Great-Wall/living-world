@@ -1,0 +1,12 @@
+pack_id: scp
+display_name: SCP Foundation
+description: >
+  Site-Zero 内的异常收容与研究机构。基于 SCP Wiki (CC BY-SA 3.0) 二次创作。
+narrative_style: >
+  冷硬、临床、报告体。多用编号、分类、收容规程用语。
+storyteller:
+  personality: balanced
+  tension_target: 0.55
+  max_events_per_day: 3
+  narration_tone: >
+    项目编号、收容等级、研究员手记、事故报告风格。避免情感描写, 强调程序和数据。

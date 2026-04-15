@@ -1,0 +1,69 @@
+events:
+  - event_kind: routine-observation
+    description: 研究员进行例行观察并撰写报告。
+    trigger_conditions:
+      min_participants: 1
+      max_participants: 1
+      required_tags: [researcher]
+    dice_roll:
+      stat: insight
+      dc: 10
+    cooldown_days: 0
+    base_importance: 0.08
+    outcomes:
+      success:
+        stat_changes:
+          - { target: any, attribute: insight, delta: 1 }
+        template: "[$tile] ${a} 完成了一份详尽的观察报告, 记录若干细节异常。"
+      failure:
+        stat_changes:
+          - { target: any, attribute: morale, delta: -2 }
+        template: "[$tile] ${a} 的报告被驳回: 缺少关键数据点。"
+      neutral:
+        template: "[$tile] ${a} 递交了一份合格但平庸的观察报告。"
+
+  - event_kind: d-class-test
+    description: D 级人员参与日常测试。
+    trigger_conditions:
+      min_participants: 2
+      max_participants: 2
+      required_tags: [d-class]
+    dice_roll:
+      stat: health
+      dc: 12
+    cooldown_days: 1
+    base_importance: 0.15
+    outcomes:
+      success:
+        stat_changes:
+          - { target: all, attribute: morale, delta: 2 }
+        template: "[$tile] ${a} 与 ${b} 在常规测试中均未出现异常, 研究员标记为 '无值得关注现象'。"
+      failure:
+        stat_changes:
+          - { target: any, attribute: health, delta: -10 }
+        template: "[$tile] ${a} 在测试中出现轻度不适, 被要求隔离观察 24 小时。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 完成测试, 记录归档。"
+
+  - event_kind: mess-hall-chat
+    description: D 级人员之间的私下交谈。
+    trigger_conditions:
+      min_participants: 2
+      max_participants: 3
+      required_tags: [d-class]
+    dice_roll:
+      stat: compliance
+      dc: 10
+    cooldown_days: 0
+    base_importance: 0.05
+    outcomes:
+      success:
+        relationship_changes:
+          - { delta: 5 }
+        template: "[$tile] ${a} 和 ${b} 在食堂交换了半份甜点和几句笑话。"
+      failure:
+        relationship_changes:
+          - { delta: -8 }
+        template: "[$tile] ${a} 和 ${b} 因为一句玩笑差点动手, 被保安制止。"
+      neutral:
+        template: "[$tile] ${a} 和 ${b} 闲聊了几句天气。"

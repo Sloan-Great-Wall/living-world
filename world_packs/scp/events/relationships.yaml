@@ -1,0 +1,48 @@
+events:
+  - event_kind: researcher-feud
+    description: 研究员之间的学术/作风冲突。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [researcher]}
+    dice_roll: {stat: social, dc: 12}
+    cooldown_days: 3
+    base_importance: 0.25
+    outcomes:
+      success:
+        relationship_changes: [{delta: -5}]
+        template: "[$tile] ${a} 和 ${b} 在周会上就 Keter 项目分类标准发生争执, 最终达成妥协。"
+      failure:
+        relationship_changes: [{delta: -15}]
+        template: "[$tile] ${a} 将 ${b} 的报告批注得体无完肤, 两人再无往来数日。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 礼貌地回避了彼此的议题, 各自端咖啡离开。"
+
+  - event_kind: mentor-moment
+    description: 老手对新人的一次私下指点。
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    dice_roll: {stat: insight, dc: 11}
+    cooldown_days: 5
+    base_importance: 0.20
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: insight, delta: 3}]
+        relationship_changes: [{delta: 10}]
+        template: "[$tile] ${a} 给 ${b} 讲了一个从未写进报告的早期事故细节。"
+      failure:
+        template: "[$tile] ${a} 的建议被 ${b} 客气地绕开了。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 闲聊了几句上个月的站内八卦。"
+
+  - event_kind: chess-game
+    description: 休息区里的一局非正式棋局或闲聊。
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    dice_roll: {stat: social, dc: 10}
+    cooldown_days: 1
+    base_importance: 0.10
+    outcomes:
+      success:
+        relationship_changes: [{delta: 5}]
+        template: "[$tile] ${a} 与 ${b} 对弈一局, 前者一子险胜, 双方约定再战。"
+      failure:
+        relationship_changes: [{delta: -2}]
+        template: "[$tile] ${a} 和 ${b} 的对弈因一句无心之言变得沉默, 未终局。"
+      neutral:
+        template: "[$tile] ${a} 陪 ${b} 在休息区消磨了半小时。"

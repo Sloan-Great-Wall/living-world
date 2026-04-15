@@ -1,0 +1,16 @@
+agent_id: SCP-106
+display_name: 'SCP-106 "The Old Man"'
+is_historical_figure: true
+persona_card: >
+  Appears as a rotting elderly human. Can phase through solid matter and drag victims into a "pocket dimension." Extraordinarily patient — it will wait motionless in a single room for days, stalking.
+attributes:
+  containment_class: Keter
+  threat: 90
+  patience: 100
+  phase_ability: 1
+alignment: chaotic_evil
+tags: [scp, anomaly, humanoid, phaser]
+life_stage: elder
+age: 500
+current_tile: con-106
+current_goal: 'slip out through any unlocked opening'

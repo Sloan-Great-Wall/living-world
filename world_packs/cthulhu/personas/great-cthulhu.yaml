@@ -1,0 +1,18 @@
+agent_id: great-cthulhu
+display_name: Great Cthulhu
+is_historical_figure: true
+persona_card: >
+  The sleeping priest of R'lyeh. Its dreams seep into human consciousness.
+  When the stars are right it will rise. Until then its influence is indirect:
+  visions, cultist calls, mutations in marine life.
+attributes:
+  sanity: 0
+  arcane_knowledge: 100
+  cosmic_influence: 100
+  physical_presence: 10
+alignment: chaotic_evil
+tags: [cthulhu, great-old-one, dreaming, permanent_historical]
+life_stage: prime
+age: 999999
+current_tile: rlyeh
+current_goal: wait for the stars to align

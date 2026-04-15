@@ -1,0 +1,12 @@
+agent_id: richard-pickman
+display_name: Richard Upton Pickman
+is_historical_figure: true
+persona_card: >
+  Boston painter whose canvases depict things that should not exist — rendered
+  with uncanny anatomical precision. Recently vanished from his North End studio.
+attributes: {sanity: 35, arcane_knowledge: 60, craft: 95, social: 30}
+alignment: neutral_evil
+tags: [cthulhu, artist, missing]
+age: 41
+current_tile: boston-garret
+current_goal: finish the painting underground

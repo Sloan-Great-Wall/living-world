@@ -1,0 +1,22 @@
+events:
+  - event_kind: renlao-tryst
+    description: 人妖相好的关键夜晚。
+    trigger_conditions:
+      min_participants: 2
+      max_participants: 2
+    dice_roll:
+      stat: moral_resolve
+      dc: 13
+    cooldown_days: 30
+    base_importance: 0.7
+    outcomes:
+      success:
+        relationship_changes:
+          - { delta: 30 }
+        template: "[$tile] 夜半, ${a} 倾诉其苦, ${b} 闻之感泣, 约以阳间再聚。"
+      failure:
+        relationship_changes:
+          - { delta: -20 }
+        template: "[$tile] ${a} 夜入 ${b} 之室, 为其正色所拒, 惭然退去。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 夜谈至三更, 未及深情。"

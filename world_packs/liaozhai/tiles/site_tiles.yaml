@@ -1,0 +1,72 @@
+tiles:
+  - tile_id: lanruo-temple
+    display_name: 兰若寺
+    primary_pack: liaozhai
+    tile_type: haunted-temple
+    description: 荒废古寺, 殿宇倾颓, 墙外数冢相望。夜间常闻风铃无风自响。
+    allowed_packs: [liaozhai]
+    tension_bias: 0.60
+
+  - tile_id: west-market
+    display_name: 市西集
+    primary_pack: liaozhai
+    tile_type: market-street
+    description: 县城西侧集市, 日有货郎铁匠, 夜归清寂。
+    allowed_packs: [liaozhai]
+    tension_bias: 0.25
+
+  - tile_id: yamen
+    display_name: 县衙公堂
+    primary_pack: liaozhai
+    tile_type: official-yard
+    description: 鸣冤鼓、惊堂木、公案文牍齐备。
+    allowed_packs: [liaozhai]
+    tension_bias: 0.45
+
+  - tile_id: yamen-underworld
+    display_name: 阴司公堂
+    primary_pack: liaozhai
+    tile_type: underworld-yard
+    description: 判官持笔, 小鬼列两旁。
+    allowed_packs: [liaozhai]
+    tension_bias: 0.55
+
+  - tile_id: wang-mansion
+    display_name: 王家大宅
+    primary_pack: liaozhai
+    tile_type: courtyard-residence
+    description: 三进的青砖庭院, 中堂悬一匾"德泽绵远"。
+    allowed_packs: [liaozhai]
+    tension_bias: 0.20
+
+  - tile_id: sang-residence
+    display_name: 桑生书房
+    primary_pack: liaozhai
+    tile_type: scholar-study
+    description: 简朴书斋, 夜晚有人灯下读书, 亦有人灯外徘徊。
+    allowed_packs: [liaozhai]
+    tension_bias: 0.35
+
+  - tile_id: zhu-study
+    display_name: 朱尔旦书斋
+    primary_pack: liaozhai
+    tile_type: scholar-study
+    description: 朱尔旦自换心之后新整饬的书房, 架上多了一尊陆判小像。
+    allowed_packs: [liaozhai]
+    tension_bias: 0.30
+
+  - tile_id: frontier-road
+    display_name: 边野古道
+    primary_pack: liaozhai
+    tile_type: wilderness
+    description: 穿州过县的必经之路, 常逢过客。
+    allowed_packs: [liaozhai]
+    tension_bias: 0.40
+
+  - tile_id: shanxi-cave
+    display_name: 山西狐洞
+    primary_pack: liaozhai
+    tile_type: fox-den
+    description: 狐族所居, 人不易至。洞内设有仿人间学塾。
+    allowed_packs: [liaozhai]
+    tension_bias: 0.25

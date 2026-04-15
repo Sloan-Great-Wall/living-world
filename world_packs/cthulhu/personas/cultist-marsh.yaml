@@ -1,0 +1,9 @@
+agent_id: obed-marsh-heir
+display_name: Ezra Marsh
+persona_card: Descendant of Obed Marsh, keeps the Esoteric Order of Dagon alive. Smooth-talking, devout, dangerous.
+attributes: {sanity: 40, arcane_knowledge: 70, social: 75, cruelty: 60}
+alignment: chaotic_evil
+tags: [cthulhu, cultist, preacher]
+age: 52
+current_tile: dagon-chapel
+current_goal: complete the spring marriage rite with the Deep Ones

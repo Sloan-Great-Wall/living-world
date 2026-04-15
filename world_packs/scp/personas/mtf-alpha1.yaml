@@ -1,0 +1,9 @@
+agent_id: MTF-Alpha-1-Leader
+display_name: 'MTF Alpha-1 "Red Right Hand" Commander'
+persona_card: >
+  Commander of MTF Alpha-1, answering directly to the O5 Council. His real name is unknown. Executes jobs that need to happen "immediately, without trace."
+attributes: {clearance_level: 5, firearms: 99, stealth: 95, social: 40}
+tags: [scp, foundation, field-agent, armed, elite, permanent_historical]
+is_historical_figure: true
+current_tile: briefing-room
+age: 46

@@ -1,0 +1,20 @@
+[client]
+# Hide Streamlit's "Deploy" button + top-right hamburger menu.
+# Values: "viewer" (hide all), "minimal" (keep rerun + settings), "developer" (full)
+toolbarMode = "minimal"
+showErrorDetails = "full"
+
+[theme]
+# Base theme; our custom CSS overrides most of this.
+base = "dark"
+primaryColor = "#e8c56a"
+backgroundColor = "#05060a"
+secondaryBackgroundColor = "#0a0b10"
+textColor = "#e8ecf2"
+font = "sans-serif"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true

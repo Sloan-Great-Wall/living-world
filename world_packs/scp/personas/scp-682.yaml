@@ -1,0 +1,16 @@
+agent_id: SCP-682
+display_name: 'SCP-682 "Hard-to-Destroy Reptile"'
+is_historical_figure: true
+persona_card: >
+  A large reptilian creature that speaks and hates "all life." It can adapt to any form of damage inflicted on it, making destruction impossible — only containment works. Every wound makes it stronger.
+attributes:
+  containment_class: Keter
+  threat: 100
+  regeneration: 100
+  adaptability: 100
+alignment: chaotic_evil
+tags: [scp, anomaly, reptilian, permanent_historical]
+life_stage: prime
+age: 999
+current_tile: con-682
+current_goal: 'break containment, purge all organic life'

@@ -1,0 +1,11 @@
+agent_id: dagon
+display_name: Father Dagon
+is_historical_figure: true
+persona_card: >
+  Patriarch of the Deep Ones. Worshipped in Innsmouth. Slow, vast, patient.
+attributes: {sanity: 0, arcane_knowledge: 90, physical_presence: 90, cruelty: 70}
+alignment: chaotic_evil
+tags: [cthulhu, great-old-one, deep-one, permanent_historical]
+age: 999999
+current_tile: innsmouth-harbor
+current_goal: protect the hybrid line of Innsmouth

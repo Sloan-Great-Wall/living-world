@@ -1,0 +1,17 @@
+agent_id: SCP-173
+display_name: 'SCP-173 "The Sculpture"'
+is_historical_figure: true
+persona_card: >
+  A human-shaped statue of reinforced concrete and rebar. Moves only when no one is watching. It does not speak, eat, or communicate. Its only drive is to reach the cervical vertebrae of any living person it can see. Within Site-Zero it is the benchmark by which "efficiency" is measured.
+attributes:
+  containment_class: Euclid
+  threat: 80
+  observability_dependent: 1
+  speed: 90
+  endurance: 100
+alignment: unaligned
+tags: [scp, anomaly, physical, kinetic, mute]
+life_stage: prime
+age: 999
+current_tile: con-173
+current_goal: 'reach the nearest living cervical spine'

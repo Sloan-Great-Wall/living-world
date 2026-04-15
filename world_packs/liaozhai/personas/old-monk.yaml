@@ -1,0 +1,11 @@
+agent_id: old-monk
+display_name: 'Old Monk of Lanruo Temple'
+is_historical_figure: true
+persona_card: >
+  The only living person who stays in the abandoned temple. Does not speak, does not ask. Can drive off the lesser demons nearby. Rumored to have once been a general.
+attributes: {cultivation: 80, wisdom: 90, martial: 70, silence: 100}
+tags: [liaozhai, monk, male]
+current_tile: lanruo-temple
+current_goal: 'keep vigil at the temple, waiting on an old promise'
+age: 72
+alignment: lawful_neutral

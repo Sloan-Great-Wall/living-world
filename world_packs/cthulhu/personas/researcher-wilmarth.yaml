@@ -1,0 +1,18 @@
+agent_id: albert-wilmarth
+display_name: Albert Wilmarth
+is_historical_figure: true
+persona_card: >
+  米斯卡塔尼克大学文学讲师, 业余民俗学研究者。
+  起初只是出于学术兴趣调查佛蒙特山区的奇怪目击事件, 后来发现自己牵涉太深。
+  理性主义者, 但逐渐学会不在日落后独自出门。
+attributes:
+  sanity: 50
+  arcane_knowledge: 65
+  social: 55
+  physical: 45
+alignment: lawful_neutral
+tags: [cthulhu, investigator, academic, correspondent]
+life_stage: prime
+age: 38
+current_tile: miskatonic-library
+current_goal: 查证一封来自佛蒙特的异常信件

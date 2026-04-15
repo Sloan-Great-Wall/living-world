@@ -1,0 +1,112 @@
+events:
+  - event_kind: bright-clef-standoff
+    description: Bright 与 Clef 在走廊相遇, 旧账翻涌。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [foundation, researcher]}
+    dice_roll: {stat: social, dc: 13}
+    cooldown_days: 21
+    base_importance: 0.40
+    outcomes:
+      success:
+        relationship_changes: [{delta: 3}]
+        template: "[$tile] ${a} 拍了拍 ${b} 的肩膀: '当年 963 报告里你替我背那段锅, 我记着。'"
+      failure:
+        relationship_changes: [{delta: -18}]
+        template: "[$tile] ${a} 与 ${b} 擦身而过时, 对方的话像刀子: '别再让人替你去死。'"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 各自点头, 七年的沉默仍旧沉默。"
+
+  - event_kind: dclass-last-letter
+    description: D 级人员知道自己明天要上测试桌, 今夜写信。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [d-class]}
+    dice_roll: {stat: literacy, dc: 11}
+    cooldown_days: 14
+    base_importance: 0.45
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: morale, delta: -2}]
+        template: "[$tile] ${a} 给十二岁的女儿写信, 落款只签 'Dad'。基金会的邮局会不会寄, 他不知道。"
+      failure:
+        template: "[$tile] ${a} 撕了三次稿, 把信纸塞回枕下。"
+      neutral:
+        template: "[$tile] ${a} 对着空白信纸坐到熄灯。"
+
+  - event_kind: 079-082-note-exchange
+    description: 老 AI 透过一张被风吹到走廊的打印纸跟 682 进行了一次笔谈。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [ai]}
+    cooldown_days: 30
+    base_importance: 0.55
+    outcomes:
+      success:
+        template: "[$tile] 巡逻员在通风口发现一张印着十六进制的 A4 纸, 背面是爪痕写的 'YES'。本周内最让 O5 不安的一张纸。"
+      neutral:
+        template: "[$tile] SCP-079 打印了一页十六进制, 无人发现已被替换成收容报告。"
+
+  - event_kind: kondraki-unauthorized-test
+    description: Kondraki 绕过审批做了一次实验。
+    trigger_conditions: {min_participants: 1, max_participants: 2, required_tags: [researcher]}
+    dice_roll: {stat: insight, dc: 16}
+    cooldown_days: 30
+    base_importance: 0.60
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: clearance_level, delta: 1}]
+        template: "[$tile] ${a} 的'非正式观察'事后被 O5 以'可复现意义重大'为由追认。${b} 在旁记录, 全程没眨眼。"
+      failure:
+        stat_changes: [{target: any, attribute: clearance_level, delta: -1}, {target: any, attribute: morale, delta: -15}]
+        template: "[$tile] 实验中 ${b} 轻伤, ${a} 被暂停访问权限两周。武士刀被锁入保管柜。"
+      neutral:
+        template: "[$tile] ${a} 临时中止, 删除了摄像头本地缓存。"
+
+  - event_kind: o5-midnight-directive
+    description: O5 议会半夜下达紧急指令。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [o5]}
+    cooldown_days: 45
+    base_importance: 0.65
+    outcomes:
+      success:
+        template: "[$tile] ${a} 签发了本月第三道'请立刻执行, 文件三天后销毁'的指令。收件人是 MTF Alpha-1。"
+      neutral:
+        template: "[$tile] ${a} 合上文件, 椅子在空旷议会室里吱呀一声。"
+
+  - event_kind: janitor-sees-too-much
+    description: 清洁工拖到了不该拖的那一块地。
+    trigger_conditions: {min_participants: 1, max_participants: 2}
+    dice_roll: {stat: insight, dc: 12}
+    cooldown_days: 20
+    base_importance: 0.35
+    outcomes:
+      success:
+        template: "[$tile] ${a} 看见 ${b} 手里拿着不该存在的那本笔记, 低头继续拖地。${b} 假装没看见他也假装没看见。"
+      failure:
+        stat_changes: [{target: any, attribute: morale, delta: -3}]
+        template: "[$tile] ${a} 说错了一个名字。${b} 停住了三秒, 再没看他。"
+      neutral:
+        template: "[$tile] ${a} 拖过了 ${b} 的鞋边, 两人都没说话。"
+
+  - event_kind: 999-comforts-dclass
+    description: 挠痒怪偷偷溜进 D 级居住区。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [d-class]}
+    cooldown_days: 10
+    base_importance: 0.30
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: morale, delta: 15}]
+        relationship_changes: [{delta: 5}]
+        template: "[$tile] SCP-999 爬上 ${a} 的床, 又爬到 ${b} 那里。两人今晚破天荒说了一段话。"
+      neutral:
+        template: "[$tile] SCP-999 在 ${a} 脚边蹭了几下, 又回到自己的收容区。"
+
+  - event_kind: glass-finds-a-pattern
+    description: 心理学家 Glass 注意到多名员工在同一时段做同一种噩梦。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [psychologist]}
+    dice_roll: {stat: insight, dc: 14}
+    cooldown_days: 60
+    base_importance: 0.50
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: insight, delta: 3}]
+        template: "[$tile] ${a} 在笔记上画下第 11 位汇报相同噩梦的员工时, 意识到这不是巧合。"
+      failure:
+        template: "[$tile] ${a} 合上本子, 决定再观察两周。"
+      neutral:
+        template: "[$tile] ${a} 把三份评估归入 '待看' 一格。"

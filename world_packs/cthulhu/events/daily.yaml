@@ -1,0 +1,44 @@
+events:
+  - event_kind: archive-study
+    description: 在禁区档案中研读危险文献。
+    trigger_conditions:
+      min_participants: 1
+      max_participants: 1
+      required_tags: [academic]
+    dice_roll:
+      stat: arcane_knowledge
+      dc: 13
+    cooldown_days: 2
+    base_importance: 0.15
+    outcomes:
+      success:
+        stat_changes:
+          - { target: any, attribute: arcane_knowledge, delta: 2 }
+          - { target: any, attribute: sanity, delta: -3 }
+        template: "[$tile] ${a} 在封闭书架间找到一行未译的札记, 心中一凉。"
+      failure:
+        stat_changes:
+          - { target: any, attribute: sanity, delta: -6 }
+        template: "[$tile] ${a} 读至某段文字时突然头痛欲裂, 合书而去。"
+      neutral:
+        template: "[$tile] ${a} 翻阅了数册文献, 未见新线索。"
+
+  - event_kind: whisper-at-dusk
+    description: 黄昏中听见难以言明的低语。
+    trigger_conditions:
+      min_participants: 1
+      max_participants: 2
+    dice_roll:
+      stat: sanity
+      dc: 12
+    cooldown_days: 0
+    base_importance: 0.12
+    outcomes:
+      success:
+        template: "[$tile] ${a} 说服自己那只是风声和松针摩擦的响动。"
+      failure:
+        stat_changes:
+          - { target: any, attribute: sanity, delta: -4 }
+        template: "[$tile] ${a} 分明听见自己的名字从无人的方向被叫了两次。"
+      neutral:
+        template: "[$tile] ${a} 驻足良久, 风声过去, 一切如常。"

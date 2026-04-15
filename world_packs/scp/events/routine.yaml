@@ -1,0 +1,81 @@
+events:
+  - event_kind: daily-chat
+    description: Routine hallway chitchat — low importance filler.
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    cooldown_days: 0
+    base_importance: 0.04
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 和 ${b} 擦肩而过, 一句'早'之后各走各路。"
+  - event_kind: reading
+    description: 研究员独自读文献。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [researcher]}
+    cooldown_days: 0
+    base_importance: 0.05
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 翻阅本月收到的期刊, 做了两处铅笔标注。"
+  - event_kind: training
+    description: MTF 训练。
+    trigger_conditions: {min_participants: 1, max_participants: 2, required_tags: [field-agent]}
+    cooldown_days: 0
+    base_importance: 0.06
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 进行两小时战术训练, 稳定发挥。"
+  - event_kind: chore
+    description: 日常杂务。
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 打扫了自己的办公区。"
+  - event_kind: meal-break
+    description: 食堂吃饭。
+    trigger_conditions: {min_participants: 1, max_participants: 2}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 在食堂同桌, 话题是上周的天气。"
+  - event_kind: patrol
+    description: 常规巡逻。
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.04
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 完成一轮常规巡逻, 无异常记录。"
+  - event_kind: sleep-shift
+    description: 换班休息。
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.02
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 离开岗位去睡觉。"
+  - event_kind: email-batch
+    description: 批量处理内部邮件。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [researcher]}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 清理了收件箱里的 47 封内部通报。"
+  - event_kind: maintenance
+    description: 设备维护。
+    trigger_conditions: {min_participants: 1, max_participants: 1}
+    cooldown_days: 0
+    base_importance: 0.04
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 校准了温控面板, 记录归档。"
+  - event_kind: gym-visit
+    description: 员工健身房。
+    trigger_conditions: {min_participants: 1, max_participants: 2}
+    cooldown_days: 0
+    base_importance: 0.03
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 在健身房跑了半小时椭圆机。"

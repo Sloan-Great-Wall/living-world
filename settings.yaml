@@ -1,0 +1,61 @@
+llm:
+  tier2_provider: mock
+  tier3_provider: mock
+  ollama_base_url: http://localhost:11434
+  ollama_tier2_model: gemma3:4b
+  ollama_tier3_model: gemma3:4b
+  ollama_timeout_seconds: 60.0
+  openai_base_url: null
+  openai_api_key: null
+  dynamic_dialogue_enabled: true
+  debate_enabled: false
+  debate_threshold: 0.75
+  debate_min_stakeholders: 3
+  debate_max_stakeholders: 5
+  llm_movement_enabled: true
+  llm_movement_hf_only: true
+  llm_movement_chance: 0.3
+budget:
+  tier2_tokens_per_day: 1000000
+  tier3_tokens_per_day: 200000
+importance:
+  tier2_threshold: 0.35
+  tier3_threshold: 0.65
+historical_figures:
+  spotlight_threshold: 0.6
+  notable_threshold: 0.3
+  notable_count_for_promotion: 3
+  strong_relationship_affinity: 70
+  inactivity_days_for_demotion: 30
+storyteller:
+  force_personality: ''
+  max_events_per_day_override: null
+  tension_target_override: null
+simulation:
+  default_packs:
+  - scp
+  - liaozhai
+  - cthulhu
+  default_days: 30
+  default_seed: 42
+  packs_dir: world_packs
+memory:
+  enabled: true
+  embedder: ollama
+  ollama_embed_model: nomic-embed-text
+  reflect_every_ticks: 7
+  recall_top_k: 5
+i18n:
+  enabled: false
+  target_locale: zh
+  provider: ollama
+  ollama_translate_model: gemma3:4b
+  cache_size: 4096
+persistence:
+  backend: memory
+  postgres_dsn: postgresql://lw:lw_dev_only@localhost:5433/living_world
+  snapshot_every_ticks: 10
+dashboard:
+  host: localhost
+  port: 8501
+  page_title: Living World — Stage A

@@ -1,0 +1,45 @@
+events:
+  - event_kind: karmic-return
+    description: 冤魂报恩或索命。
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    dice_roll: {stat: moral_resolve, dc: 14}
+    cooldown_days: 14
+    base_importance: 0.70
+    outcomes:
+      success:
+        template: "[$tile] ${a} 昨夜梦中得 ${b} 相告, 翌日按其言而免于祸。"
+      failure:
+        stat_changes: [{target: any, attribute: moral_resolve, delta: -5}]
+        template: "[$tile] ${a} 不听劝阻, 反致 ${b} 魂归不得, 事至绝境。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 两不亏负, 各归其所。"
+
+  - event_kind: heart-swap
+    description: 陆判以异术为人更换身体。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [underworld]}
+    dice_roll: {stat: cultivation, dc: 15}
+    cooldown_days: 60
+    base_importance: 0.85
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: literary, delta: 20}]
+        template: "[$tile] 陆判为 ${b} 换一颗有文气的心, 翌日 ${b} 自觉豁然。"
+      failure:
+        template: "[$tile] 陆判犹豫, ${b} 这番求术被婉拒。"
+      neutral:
+        template: "[$tile] 陆判与 ${b} 共饮, 未及异术, 已近五更。"
+
+  - event_kind: yaksha-attack
+    description: 夜叉作祟。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [evil]}
+    dice_roll: {stat: ferocity, dc: 15}
+    cooldown_days: 21
+    base_importance: 0.75
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: fear_of_buddhism, delta: -3}]
+        template: "[$tile] 夜叉趁夜逼近廊下, ${b} 魂不附体。幸老僧闻声而至, 夜叉退去。"
+      failure:
+        template: "[$tile] 夜叉欲出, 为寺内钟声所慑, 缩回阴处。"
+      neutral:
+        template: "[$tile] 夜叉立于檐影良久, 未动。"

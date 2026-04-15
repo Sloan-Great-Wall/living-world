@@ -1,0 +1,9 @@
+agent_id: sarah-waite
+display_name: Sarah Waite
+persona_card: Young Innsmouth girl, early signs of the "Innsmouth look". Still hopes to leave before it's too late.
+attributes: {sanity: 55, physical_aberration: 30, social: 40, hope: 60}
+alignment: neutral
+tags: [cthulhu, hybrid, female, non-human-ancestry]
+age: 17
+current_tile: innsmouth-harbor
+current_goal: save enough coin to reach Boston

@@ -1,0 +1,111 @@
+events:
+  - event_kind: xiaoqing-dilemma
+    description: 聂小倩被夜叉要求去诱另一书生, 心不甘。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [ghost, evil]}
+    dice_roll: {stat: moral_resolve, dc: 14}
+    cooldown_days: 30
+    base_importance: 0.65
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: moral_resolve, delta: 5}]
+        relationship_changes: [{delta: -12}]
+        template: "[$tile] ${a} 跪在 ${b} 脚下, 声音极轻: '此人不害, 可乎?' 夜叉冷哼, 掌心青焰跳动。她没敢抬头, 但也未起身再领命。"
+      failure:
+        stat_changes: [{target: any, attribute: moral_resolve, delta: -8}]
+        template: "[$tile] ${a} 领命去了, 这一夜她走得很慢。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 谈及此事, 被不容置喙地打断。"
+
+  - event_kind: lianxiang-li-shi-sisterhood
+    description: 狐女莲香与鬼女李氏约定共护桑生。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [female]}
+    dice_roll: {stat: wisdom, dc: 12}
+    cooldown_days: 45
+    base_importance: 0.60
+    outcomes:
+      success:
+        relationship_changes: [{delta: 30}]
+        template: "[$tile] ${a} 与 ${b} 月下歃血, 一狐一鬼, 结为姐妹。桑生尚在梦中。"
+      failure:
+        relationship_changes: [{delta: -5}]
+        template: "[$tile] ${a} 欲与 ${b} 立约, 后者犹疑再三, 转身而去。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 一夜长谈未决。"
+
+  - event_kind: xi-fangping-appeal
+    description: 席方平三入阴司再次申诉。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [underworld]}
+    dice_roll: {stat: moral_resolve, dc: 16}
+    cooldown_days: 60
+    base_importance: 0.70
+    outcomes:
+      success:
+        stat_changes: [{target: any, attribute: authority, delta: -3}]
+        template: "[$tile] ${a} 再上诉状, 字字诛心。${b} 案前的朱笔停住了, 很久。"
+      failure:
+        stat_changes: [{target: any, attribute: moral_resolve, delta: 10}]
+        template: "[$tile] ${a} 再次被重杖七十, 血洇青砖。他咬着舌头没哼一声, 起身再叩。"
+      neutral:
+        template: "[$tile] 状子被接下, 未批。"
+
+  - event_kind: yingning-laughter-breaks
+    description: 婴宁第一次没笑。
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    cooldown_days: 60
+    base_importance: 0.55
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 听闻鬼母讣音, 手中一枝梅落地。${b} 不敢言。这是她这辈子第一次没笑。"
+
+  - event_kind: zhu-erdan-banquet
+    description: 朱尔旦中举后设宴谢陆判。
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    cooldown_days: 90
+    base_importance: 0.50
+    outcomes:
+      success:
+        relationship_changes: [{delta: 20}]
+        template: "[$tile] ${a} 执壶亲斟 ${b}: '若无换心之恩, 今日我仍是县学中下。' ${b} 饮尽, 面如铁色却微笑。"
+      neutral:
+        template: "[$tile] ${a} 设宴, ${b} 按时而至, 按时而退。"
+
+  - event_kind: xin-shisi-test
+    description: 辛十四娘测试冯生的心性。
+    trigger_conditions: {min_participants: 2, max_participants: 2}
+    dice_roll: {stat: moral_resolve, dc: 13}
+    cooldown_days: 30
+    base_importance: 0.55
+    outcomes:
+      success:
+        relationship_changes: [{delta: 12}]
+        stat_changes: [{target: any, attribute: moral_resolve, delta: 3}]
+        template: "[$tile] ${a} 故意抛出一锭金, 看 ${b} 伸不伸手。三息, 金子静静躺在桌上。"
+      failure:
+        relationship_changes: [{delta: -15}]
+        template: "[$tile] ${b} 伸手了。${a} 收回金子, 一言不发。"
+      neutral:
+        template: "[$tile] ${a} 试探之, ${b} 假装没看见, 两人各自喝茶。"
+
+  - event_kind: old-monk-reveals
+    description: 老僧终于对一位旧人开口。
+    trigger_conditions: {min_participants: 2, max_participants: 2, required_tags: [monk]}
+    cooldown_days: 180
+    base_importance: 0.70
+    outcomes:
+      neutral:
+        template: "[$tile] ${a} 今夜破例说了七个字: '我曾是他的副将。' ${b} 不敢问 '他' 是谁。"
+
+  - event_kind: shiyi-sneaks-down
+    description: 十一娘偷下山。
+    trigger_conditions: {min_participants: 1, max_participants: 1, required_tags: [fox-spirit, 幼]}
+    dice_roll: {stat: cunning, dc: 10}
+    cooldown_days: 14
+    base_importance: 0.25
+    outcomes:
+      success:
+        template: "[$tile] ${a} 换了凡女衣装混入市集, 被货郎夸了一句'好俊的姑娘'。她抿嘴笑了一天。"
+      failure:
+        stat_changes: [{target: any, attribute: cultivation, delta: -2}]
+        template: "[$tile] 师长察觉, ${a} 被罚面壁三日。"
+      neutral:
+        template: "[$tile] ${a} 溜到洞口又折回, 终究没敢。"
