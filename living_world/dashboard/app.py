@@ -54,7 +54,6 @@ st.set_page_config(
 # ============ Load dark-theme stylesheet from external file ============
 _STYLES = (Path(__file__).parent / "styles.css").read_text()
 st.markdown(f"<style>{_STYLES}</style>", unsafe_allow_html=True)
-""", unsafe_allow_html=True)
 
 from living_world import PACKS_DIR as DEFAULT_PACKS_DIR
 
