@@ -26,8 +26,8 @@ ProviderName = Literal["none", "mock", "ollama"]
 class LLMSettings(BaseModel):
     """Which backend to use for each tier + model names."""
 
-    tier2_provider: ProviderName = "mock"
-    tier3_provider: ProviderName = "mock"
+    tier2_provider: ProviderName = "ollama"
+    tier3_provider: ProviderName = "ollama"
 
     # when provider = ollama
     ollama_base_url: str = "http://localhost:11434"
@@ -121,8 +121,8 @@ class I18nSettings(BaseModel):
 class MemorySettings(BaseModel):
     """Agent memory / embedding config."""
 
-    enabled: bool = False
-    embedder: Literal["none", "mock", "ollama"] = "mock"
+    enabled: bool = True
+    embedder: Literal["none", "mock", "ollama"] = "ollama"
     ollama_embed_model: str = "nomic-embed-text"
     reflect_every_ticks: int = 7
     recall_top_k: int = 5

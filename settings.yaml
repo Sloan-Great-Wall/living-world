@@ -1,6 +1,6 @@
 llm:
-  tier2_provider: mock
-  tier3_provider: mock
+  tier2_provider: ollama
+  tier3_provider: ollama
   ollama_base_url: http://localhost:11434
   ollama_tier2_model: gemma3:4b
   ollama_tier3_model: gemma3:4b
