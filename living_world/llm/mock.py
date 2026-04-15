@@ -39,10 +39,35 @@ class MockTier2Client(LLMClient):
         return 2
 
     def complete(self, prompt: str, *, max_tokens: int = 512, temperature: float = 0.7) -> LLMResponse:
+        # Detect "dialogue-style" long free-text prompts (from DialogueGenerator,
+        # DebatePhase, or ConsciousnessLayer). Mock can't author real prose —
+        # return a short stub instead of echoing the prompt.
+        is_dialogue_prompt = len(prompt) > 400 and "[BODY=" not in prompt
+        if is_dialogue_prompt:
+            # Consciousness layer wants JSON — give a canned APPROVE so events proceed.
+            if '"verdict"' in prompt or "APPROVE" in prompt:
+                return LLMResponse(
+                    text='{"verdict": "APPROVE"}',
+                    tokens_in=len(prompt), tokens_out=20, model="mock-phi4",
+                )
+            # DialogueGenerator / DebatePhase — try to extract the base narrative
+            stub = "(mock provider — switch tier2/tier3 to ollama for narrative)"
+            for marker in ("Base narrative", "BASE NARRATIVE"):
+                if marker in prompt:
+                    idx = prompt.index(marker)
+                    tail = prompt[idx:].split("\n", 2)
+                    if len(tail) >= 2:
+                        stub = tail[1].strip(" :")[:240] or stub
+                        break
+            return LLMResponse(
+                text=stub, tokens_in=len(prompt), tokens_out=len(stub),
+                model="mock-phi4",
+            )
+
+        # Legacy short structured prompt — [PACK=][KIND=][BODY=]
         pack = "scp"
         body = prompt.strip()
         kind = "unknown"
-        # pull a few keywords out of the prompt; real client will take structured input
         if "[PACK=" in prompt:
             start = prompt.index("[PACK=") + 6
             end = prompt.index("]", start)

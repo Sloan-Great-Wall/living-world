@@ -114,7 +114,16 @@ class DialogueGenerator:
                 text = text[len(prefix):].strip().lstrip('"').strip()
         if text.endswith('"'):
             text = text[:-1]
-        # Fallback to template if LLM gave nothing usable
+
+        # Defensive: if the LLM (mock or misbehaving real) echoed parts of the
+        # prompt back, fall back to template instead of polluting the chronicle.
+        suspect_markers = (
+            "CHARACTERS\n", "LOCATION:", "Now write", "You are a quiet",
+            "Output the narrative ONLY", "Base narrative",
+            "(mock provider",
+        )
+        if any(m in text for m in suspect_markers):
+            return event.template_rendering
         if len(text) < 20:
             return event.template_rendering
         return text
