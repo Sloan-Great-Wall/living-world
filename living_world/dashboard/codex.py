@@ -9,7 +9,7 @@ from __future__ import annotations
 import html
 
 from living_world.dashboard.map_view import PACK_THEMES, _agent_emoji
-from living_world.world_pack.loader import WorldPack
+from living_world.world_pack import WorldPack
 
 
 def render_persona_codex_html(packs: list[WorldPack]) -> str:

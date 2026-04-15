@@ -1,0 +1,443 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+/* =========================================================================
+   Typography — Apple HIG + Material proportions
+   Display : Space Grotesk  (tight, geometric, editorial)
+   Body    : Inter          (Apple-SF-like; highly readable at small sizes)
+   Mono    : JetBrains Mono (tabular data, timestamps)
+   CJK     : Noto Sans SC
+   Scale   : 34 / 28 / 22 / 17 / 15 / 13 / 11
+   ========================================================================= */
+
+.stApp, .stApp p, .stApp label, .stApp button, .stApp input, .stApp textarea,
+.stApp [data-testid="stMarkdownContainer"] {
+    font-family: Inter, "Noto Sans SC", -apple-system, system-ui, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";  /* Inter ss01 niceties */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+/* Keep Material Symbols font on icon elements */
+span.material-icons, span.material-icons-outlined,
+span.material-symbols-rounded, span.material-symbols-outlined,
+i.material-icons, i.material-icons-outlined,
+i.material-symbols-rounded, i.material-symbols-outlined,
+[class*="material-icons"], [class*="material-symbols"],
+[data-testid="stIconMaterial"], [data-testid="stIconMaterial"] *,
+header span[data-testid*="icon"], [data-testid="collapsedControl"] span {
+    font-family: "Material Symbols Rounded", "Material Icons" !important;
+    font-weight: normal !important; font-style: normal !important;
+    font-size: 20px; line-height: 1; letter-spacing: normal;
+    text-transform: none; display: inline-block; white-space: nowrap;
+    direction: ltr; -webkit-font-feature-settings: 'liga';
+}
+
+/* Background — Starfield/Octopath: deep space with subtle warm glow */
+.stApp {
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(60, 40, 80, 0.18) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(20, 60, 80, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(30, 25, 45, 0.08) 0%, transparent 70%),
+      #04050a;
+}
+
+/* Headings — Apple Large Title / Title 1-2 scale */
+h1, h2, h3, h4, h5, h6 {
+    font-family: "Space Grotesk", Inter, sans-serif !important;
+    color: #f2f4f8 !important;
+    font-weight: 600 !important;
+    margin: 0;
+}
+h1 { font-size: 34px !important; letter-spacing: -0.024em !important; line-height: 1.15 !important; }
+h2 { font-size: 28px !important; letter-spacing: -0.018em !important; line-height: 1.2 !important; }
+h3 { font-size: 22px !important; letter-spacing: -0.012em !important; line-height: 1.25 !important; font-weight: 600 !important; }
+h4 { font-size: 17px !important; letter-spacing: -0.006em !important; line-height: 1.3 !important; }
+
+/* Body text — Apple body 15pt equivalent */
+.stApp p, .stApp .stMarkdown p {
+    font-size: 15px !important;
+    line-height: 1.55 !important;
+    color: #cfd4dc !important;
+    letter-spacing: -0.003em;
+}
+.stCaption, .subtle {
+    font-size: 12px !important;
+    color: #7a8090 !important;
+    letter-spacing: 0.01em !important;
+    line-height: 1.5 !important;
+}
+
+/* Metrics */
+div[data-testid="stMetricValue"] {
+    color: #f2f4f8 !important;
+    font-family: "Space Grotesk", sans-serif !important;
+    font-size: 22px !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.018em !important;
+    line-height: 1.2 !important;
+}
+div[data-testid="stMetricLabel"] {
+    color: #7a8090 !important;
+    font-family: Inter, sans-serif !important;
+    font-size: 10.5px !important;
+    font-weight: 500 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+/* =========================================================================
+   Sidebar
+   ========================================================================= */
+section[data-testid="stSidebar"] {
+    background:
+      linear-gradient(180deg, rgba(16, 12, 22, 0.6) 0%, rgba(6, 7, 12, 1) 100%);
+    border-right: 1px solid #15171f;
+}
+section[data-testid="stSidebar"] > div { padding-top: 8px; }
+
+/* =========================================================================
+   Buttons — Starfield-style amber/slate
+   ========================================================================= */
+
+/* Primary (Bootstrap World, ▶ Play): deep slate gradient + amber border + amber text */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(180deg, #1a1e2c 0%, #0d1018 100%);
+    color: #e8c56a;
+    border: 1px solid rgba(232, 197, 106, 0.35);
+    border-radius: 4px;
+    font-family: Inter, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 10px 16px;
+    text-transform: none;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.stButton > button[kind="primary"]:hover:not(:disabled) {
+    background: linear-gradient(180deg, #242938 0%, #141825 100%);
+    border-color: rgba(232, 197, 106, 0.65);
+    color: #ffd98a;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06),
+                0 0 20px rgba(232, 197, 106, 0.2),
+                0 4px 12px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
+}
+.stButton > button[kind="primary"]:disabled {
+    background: #0d0f15;
+    color: #3a4050;
+    border-color: #1a1d26;
+}
+.stButton > button[kind="primary"]:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Secondary (Reset, Story Library): transparent with hairline border */
+.stButton > button[kind="secondary"] {
+    background: transparent;
+    color: #cfd4dc;
+    border: 1px solid #24293a;
+    border-radius: 4px;
+    font-family: Inter, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    padding: 10px 16px;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.stButton > button[kind="secondary"]:hover {
+    background: rgba(232, 197, 106, 0.05);
+    border-color: rgba(232, 197, 106, 0.3);
+    color: #e8c56a;
+}
+
+/* =========================================================================
+   Tabs, inputs, expander — refined
+   ========================================================================= */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0; background: transparent;
+    border-bottom: 1px solid #15171f;
+}
+.stTabs [data-baseweb="tab"] {
+    background: transparent; border: none;
+    font-family: Inter, sans-serif; font-size: 13px;
+    font-weight: 500; color: #7a8090;
+    padding: 12px 18px; letter-spacing: 0.01em;
+    transition: color 0.2s ease;
+}
+.stTabs [data-baseweb="tab"]:hover { color: #cfd4dc; }
+.stTabs [aria-selected="true"] {
+    color: #e8c56a !important;
+}
+.stTabs [data-baseweb="tab"]::after {
+    content: ''; display: block; height: 2px; width: 0;
+    background: #e8c56a;
+    transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-top: 6px;
+}
+.stTabs [data-baseweb="tab"]:hover::after { width: 40%; }
+.stTabs [aria-selected="true"]::after { width: 100%; }
+
+.stSelectbox > div > div,
+.stTextInput > div > div,
+.stNumberInput > div > div > input {
+    background: #0a0c14 !important;
+    border: 1px solid #1a1d26 !important;
+    color: #cfd4dc !important;
+    font-family: Inter, sans-serif !important;
+    font-size: 13.5px !important;
+    border-radius: 4px !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.stSelectbox > div > div:hover,
+.stTextInput > div > div:hover,
+.stNumberInput > div > div > input:hover {
+    border-color: rgba(232, 197, 106, 0.25) !important;
+}
+.stSelectbox > div > div:focus-within,
+.stTextInput > div > div:focus-within {
+    border-color: #e8c56a !important;
+    box-shadow: 0 0 0 3px rgba(232, 197, 106, 0.08) !important;
+}
+
+hr { border: none; border-top: 1px solid #15171f; margin: 18px 0; }
+
+/* Expander — unify with sidebar-nav-btn Story Library */
+.streamlit-expanderHeader, [data-testid="stExpander"] summary {
+    background: transparent !important;
+    border: 1px solid #15171f !important;
+    border-radius: 4px !important;
+    font-family: Inter, sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #cfd4dc !important;
+    padding: 12px 14px !important;
+}
+[data-testid="stExpander"] summary:hover {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-color: #24293a !important;
+}
+
+/* Story Library button — mimic expander header: left-aligned text + chevron.
+   Aggressive selectors to defeat Streamlit's default centered button layout. */
+.sidebar-nav-btn .stButton,
+.sidebar-nav-btn .stButton > button {
+    display: block !important;
+    width: 100% !important;
+}
+.sidebar-nav-btn .stButton > button[kind="secondary"] {
+    background: transparent !important;
+    border: 1px solid #15171f !important;
+    border-radius: 4px !important;
+    color: #cfd4dc !important;
+    font-family: Inter, sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 12px 36px !important;  /* leave room for absolute-positioned chevron */
+    letter-spacing: 0 !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    position: relative !important;
+}
+/* Force label children to left-align (Streamlit wraps text in <p> inside <div>) */
+.sidebar-nav-btn .stButton > button[kind="secondary"] *,
+.sidebar-nav-btn .stButton > button[kind="secondary"] > div,
+.sidebar-nav-btn .stButton > button[kind="secondary"] p {
+    text-align: left !important;
+    justify-content: flex-start !important;
+    width: auto !important;
+    margin: 0 !important;
+    display: inline !important;
+}
+.sidebar-nav-btn .stButton > button[kind="secondary"]:hover {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-color: #24293a !important;
+    color: #cfd4dc !important;
+    transform: none !important;
+}
+/* Absolutely-positioned chevron on the left edge */
+.sidebar-nav-btn .stButton > button[kind="secondary"]::before {
+    content: '›';
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7a8090;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1;
+}
+
+/* Checkbox labels */
+.stCheckbox > label {
+    color: #cfd4dc !important;
+    font-size: 14px !important;
+    font-family: Inter, sans-serif !important;
+}
+
+/* =========================================================================
+   Custom component classes (cards, pills, status dots)
+   ========================================================================= */
+.floating-card {
+    /* alias: behave like glass-card for legacy call-sites */
+    background: rgba(10, 12, 20, 0.72);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4),
+                0 16px 40px rgba(0, 0, 0, 0.5);
+}
+.pill {
+    display: inline-block; padding: 3px 8px; margin: 2px 3px 2px 0;
+    border-radius: 2px; font-family: "JetBrains Mono", monospace;
+    font-size: 10.5px; letter-spacing: 0.04em; font-weight: 500;
+}
+.status-dot {
+    display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; margin-right: 6px;
+    vertical-align: middle;
+}
+.mono { font-family: "JetBrains Mono", monospace; }
+.section-label {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em;
+    color: #7a8090; text-transform: uppercase; margin-bottom: 10px;
+}
+.field-label {
+    font-size: 11.5px; color: #8a8f9c; font-weight: 500;
+    letter-spacing: 0.01em; margin-bottom: 6px;
+}
+
+/* =========================================================================
+   World Map as full-page background + floating cards on top (glassmorphism)
+   ========================================================================= */
+.map-backdrop {
+    position: fixed;
+    top: 0;
+    left: 21rem;          /* sidebar width — adjust if Streamlit changes */
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+    overflow: auto;
+    padding: 24px 40px 40px 40px;
+    pointer-events: auto;
+}
+.map-backdrop svg { max-width: 100%; height: auto; }
+
+/* Collapsed sidebar — map expands full width */
+[data-testid="stSidebar"][aria-expanded="false"] ~ .main .map-backdrop,
+[data-testid="collapsedControl"]:not([style*="display: none"]) ~ * .map-backdrop {
+    left: 0;
+}
+
+/* Make Streamlit's main container transparent + z-index above map */
+.stApp > .main, .main .block-container {
+    background: transparent !important;
+}
+.main .block-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+    position: relative;
+    z-index: 5;
+}
+
+/* Dock bottom — fixed position bottom strip for cards. Cards in HTML inside this
+   div are positioned at the BOTTOM of the viewport, floating over the map. */
+.dock-bottom {
+    position: fixed;
+    left: calc(21rem + 24px);  /* after sidebar */
+    right: 24px;
+    bottom: 24px;
+    z-index: 20;
+    display: grid;
+    gap: 16px;
+    pointer-events: none;   /* pass-through by default */
+}
+.dock-bottom > * { pointer-events: auto; }  /* re-enable on children */
+/* When sidebar collapsed */
+[data-testid="stSidebar"][aria-expanded="false"] ~ * .dock-bottom,
+[data-testid="collapsedControl"] ~ * .dock-bottom {
+    left: 24px;
+}
+/* 1 card (chronicle only) = single column; 2 cards = two-column */
+.dock-bottom.with-agent { grid-template-columns: 1fr 1fr; }
+.dock-bottom.chronicle-only { grid-template-columns: 1fr; }
+
+/* Inspect selector — floats over the Chronicle card header, right side.
+   Streamlit container `inspect_bar` becomes `.st-key-inspect_bar` in the DOM. */
+.st-key-inspect_bar {
+    position: fixed !important;
+    right: 38px !important;
+    bottom: calc(38vh + 14px) !important;  /* align with chronicle title row */
+    z-index: 25 !important;
+    width: 240px !important;
+    max-width: 40vw;
+}
+.st-key-inspect_bar .stSelectbox > div > div {
+    background: rgba(10, 12, 20, 0.85) !important;
+    border-color: rgba(255,255,255,0.08) !important;
+    backdrop-filter: blur(8px);
+    font-size: 12.5px !important;
+}
+
+/* Top-dock for live banner */
+.dock-top {
+    position: fixed;
+    top: 14px;
+    left: calc(21rem + 24px);
+    right: 24px;
+    z-index: 20;
+    pointer-events: none;
+}
+.dock-top > * { pointer-events: auto; }
+[data-testid="stSidebar"][aria-expanded="false"] ~ * .dock-top,
+[data-testid="collapsedControl"] ~ * .dock-top {
+    left: 24px;
+}
+
+/* Floating glass card — semi-transparent panel that sits over map */
+.glass-card {
+    background: rgba(10, 12, 20, 0.72);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 20px 22px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4),
+                0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* =========================================================================
+   Motion
+   ========================================================================= */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.stMarkdown, .element-container, .floating-card {
+    animation: fadeInUp 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes livePulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(110, 196, 110, 0.6); opacity: 1; }
+    50%      { box-shadow: 0 0 0 6px rgba(110, 196, 110, 0);   opacity: 0.7; }
+}
+.live-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #6ec46e; animation: livePulse 1.6s infinite;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #15171f; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #24293a; }
+
+/* Map SVG hover effect on agent circles */
+svg a:hover circle { filter: brightness(1.25); }
+svg a { transition: filter 0.12s; }

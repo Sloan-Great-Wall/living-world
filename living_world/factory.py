@@ -13,8 +13,8 @@ from living_world.llm.dialogue import DialogueGenerator
 from living_world.llm.move_advisor import LLMMoveAdvisor
 from living_world.memory import AgentMemoryStore, OllamaEmbedder
 from living_world.persistence import MemoryRepository, PostgresRepository
-from living_world.persistence.repository import Repository
-from living_world.statmachine.debate import DebatePhase
+from living_world.persistence import Repository
+from living_world.statmachine.conscious import DebatePhase
 from living_world.statmachine.historical_figures import PromotionConfig
 from living_world.tick_loop import TickEngine
 from living_world.world_pack import load_all_packs
@@ -139,7 +139,7 @@ def make_engine(world: World, loaded: list, settings: Settings, seed: int, repos
         engine.movement.llm_chance = settings.llm.llm_movement_chance
 
     if settings.llm.conscious_override_enabled and tier2_client is not None:
-        from living_world.statmachine.consciousness import ConsciousnessLayer
+        from living_world.statmachine.conscious import ConsciousnessLayer
         engine.consciousness = ConsciousnessLayer(
             tier2_client,
             importance_threshold=settings.llm.conscious_override_threshold,

@@ -13,8 +13,44 @@ from typing import Any
 from living_world.core.agent import Agent
 from living_world.core.event import EventProposal, LegendEvent
 from living_world.core.world import World
-from living_world.statmachine.importance import score_event_importance
-from living_world.world_pack.loader import EventTemplate
+from living_world.world_pack import EventTemplate
+
+
+# ──────────────────────────────────────────────────────────────
+# Importance scoring — decides Tier routing
+# ──────────────────────────────────────────────────────────────
+# Target distribution: ~95% tier1, ~4% tier2, ~1% tier3.
+# Primary signal: `base_importance` from event template.
+# Modifiers: spotlight kinds, historical figures, player proximity.
+
+SPOTLIGHT_EVENT_KINDS: set[str] = {
+    "containment-breach", "descent", "possession", "cult-ritual",
+    "renlao-tryst", "karmic-return", "heart-swap", "yaksha-attack",
+    "682-tests", "silver-key", "096-sighting-risk", "o5-memo",
+}
+
+
+def score_event_importance(
+    event: LegendEvent,
+    participants: list[Agent],
+    *,
+    tile_has_active_player: bool = False,
+    base_importance: float = 0.1,
+) -> float:
+    """Return 0.0-1.0 importance score for tier routing."""
+    score = float(base_importance)
+    if event.event_kind in SPOTLIGHT_EVENT_KINDS and base_importance >= 0.5:
+        score = max(score, 0.7)
+    # Only 2+ HFs interacting is notable (single HFs are common)
+    if sum(1 for p in participants if p.is_historical_figure) >= 2:
+        score += 0.08
+    if len(event.relationship_changes) >= 2:
+        score += 0.05
+    if tile_has_active_player:
+        score += 0.35
+    if event.outcome == "failure" and base_importance >= 0.5:
+        score += 0.1
+    return min(1.0, max(0.0, score))
 
 
 class EventResolver:

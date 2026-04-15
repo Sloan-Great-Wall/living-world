@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 
 from living_world.core.event import EventProposal
 from living_world.core.tile import Tile
-from living_world.world_pack.loader import EventTemplate, StorytellerConfig
+from living_world.world_pack import EventTemplate, StorytellerConfig
 
 
 @dataclass

@@ -8,14 +8,14 @@ from dataclasses import dataclass
 from living_world.core.world import World
 from living_world.llm.router import EnhancementRouter
 from living_world.memory.memory_store import AgentMemoryStore
-from living_world.persistence.repository import Repository
-from living_world.statmachine.consciousness import ConsciousnessLayer
+from living_world.persistence import Repository
+from living_world.statmachine.conscious import ConsciousnessLayer
 from living_world.statmachine.historical_figures import HistoricalFigureRegistry
 from living_world.statmachine.interactions import InteractionEngine
 from living_world.statmachine.movement import MovementPolicy
 from living_world.statmachine.resolver import EventResolver
-from living_world.storyteller.tile_storyteller import TileStoryteller
-from living_world.world_pack.loader import WorldPack
+from living_world.storyteller import TileStoryteller
+from living_world.world_pack import WorldPack
 
 
 @dataclass
