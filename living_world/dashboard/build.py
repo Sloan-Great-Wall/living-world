@@ -127,18 +127,30 @@ def make_engine(world: World, loaded: list, settings: Settings, seed: int, repos
         reflect_every_ticks=settings.memory.reflect_every_ticks,
     )
     # Optional LLM-driven movement advisor
-    if settings.llm.llm_movement_enabled:
-        t2 = build_tier_client(
+    # LLM-driven movement advisor + consciousness layer share a Tier 2 client
+    tier2_client = None
+    if settings.llm.llm_movement_enabled or settings.llm.conscious_override_enabled:
+        tier2_client = build_tier_client(
             settings.llm.tier2_provider,
             ollama_model=settings.llm.ollama_tier2_model,
             ollama_url=settings.llm.ollama_base_url,
             timeout=settings.llm.ollama_timeout_seconds,
             declared_tier=2,
         )
-        if t2 is not None:
-            engine.movement.llm_advisor = LLMMoveAdvisor(t2)
-            engine.movement.llm_hf_only = settings.llm.llm_movement_hf_only
-            engine.movement.llm_chance = settings.llm.llm_movement_chance
+
+    if settings.llm.llm_movement_enabled and tier2_client is not None:
+        engine.movement.llm_advisor = LLMMoveAdvisor(tier2_client)
+        engine.movement.llm_hf_only = settings.llm.llm_movement_hf_only
+        engine.movement.llm_chance = settings.llm.llm_movement_chance
+
+    if settings.llm.conscious_override_enabled and tier2_client is not None:
+        from living_world.statmachine.consciousness import ConsciousnessLayer
+        engine.consciousness = ConsciousnessLayer(
+            tier2_client,
+            importance_threshold=settings.llm.conscious_override_threshold,
+            activation_chance=settings.llm.conscious_override_chance,
+        )
+
     hf_cfg = settings.historical_figures
     engine.hf_registry.config = PromotionConfig(
         spotlight_threshold=hf_cfg.spotlight_threshold,

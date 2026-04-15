@@ -9,6 +9,7 @@ from living_world.core.world import World
 from living_world.llm.router import EnhancementRouter
 from living_world.memory.memory_store import AgentMemoryStore
 from living_world.persistence.repository import Repository
+from living_world.statmachine.consciousness import ConsciousnessLayer
 from living_world.statmachine.historical_figures import HistoricalFigureRegistry
 from living_world.statmachine.interactions import InteractionEngine
 from living_world.statmachine.movement import MovementPolicy
@@ -48,6 +49,7 @@ class TickEngine:
         self.packs = {p.pack_id: p for p in packs}
         self.rng = random.Random(seed)
         self.resolver = EventResolver(world, random.Random(seed + 1))
+        self.consciousness: ConsciousnessLayer | None = None  # wired by build.py
         self.hf_registry = HistoricalFigureRegistry(world)
         self.movement = MovementPolicy(world, random.Random(seed + 2))
         self.interactions = InteractionEngine(world, random.Random(seed + 3))
@@ -102,7 +104,9 @@ class TickEngine:
                 template = self._event_template(prop.pack_id, prop.event_kind)
                 if template is None:
                     continue
-                event = self.resolver.realize(prop, template, t)
+                event = self.resolver.realize(
+                    prop, template, t, consciousness=self.consciousness,
+                )
                 if event is None:
                     continue
                 # enhancement via Tier 2/3 router (mutates event in place)

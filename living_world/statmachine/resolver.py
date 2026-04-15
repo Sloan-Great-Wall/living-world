@@ -118,6 +118,7 @@ class EventResolver:
         proposal: EventProposal,
         template: EventTemplate,
         tick: int,
+        consciousness=None,
     ) -> LegendEvent | None:
         participants = self._eligible_participants(proposal, template)
         min_participants = int((template.trigger_conditions or {}).get("min_participants", 1))
@@ -130,7 +131,19 @@ class EventResolver:
             self.rng.shuffle(participants)
             participants = participants[:max_participants]
 
+        # ─── Subconscious: roll the dice ───
         outcome = self._roll_outcome(template, participants)
+
+        # ─── Conscious: LLM may override ───
+        verdict = None
+        if consciousness is not None and consciousness.should_activate(template):
+            verdict = consciousness.consider(proposal, template, participants, self.world)
+            if verdict is not None:
+                if verdict.vetoes:
+                    return None   # character wouldn't do this
+                if verdict.adjusts:
+                    outcome = verdict.outcome  # override subconscious roll
+
         outcome_spec = (template.outcomes or {}).get(outcome, {})
 
         event = LegendEvent(
@@ -153,4 +166,13 @@ class EventResolver:
             event, participants,
             base_importance=float(template.base_importance),
         )
+        # If consciousness intervened, annotate so UI can show the ⟡ mark
+        if verdict is not None and verdict.adjusts:
+            event.stat_changes.setdefault("_consciousness", {})
+            event.stat_changes["_consciousness"]["override"] = 1.0
+            if verdict.reason:
+                event.template_rendering = (
+                    event.template_rendering
+                    + f"  ⟡ {verdict.reason}"
+                )
         return event

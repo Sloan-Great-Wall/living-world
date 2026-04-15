@@ -75,16 +75,53 @@ LETHAL_CTHULHU_RULES: dict[str, dict] = {
 LETHAL_LIAOZHAI_RULES: dict[str, dict] = {
     "yaksha-shi": {
         "victim_tags": {"scholar", "mortal"},
-        "unless_any_tag": {"monk", "fox-spirit", "侠义"},
+        "unless_any_tag": {"monk", "fox-spirit"},
         "kind": "yaksha-takes-soul",
         "template": "[$tile] The yaksha of Lanruo Temple fell upon ${victim} in the dark. No sunrise watcher found the body — only the bell's last echo.",
         "kills": True,
         "lethal_chance": 0.35,
     },
+    # Ghost lures (non-lethal most of the time, but can drain life)
+    "nie-xiaoqian": {
+        "victim_tags": {"scholar"},
+        "unless_any_tag": {"monk"},
+        "kind": "ghost-lure",
+        "template": "[$tile] Nie Xiaoqian appeared at ${victim}'s lamp-lit corner. They spoke half the night. In the morning ${victim} looked paler by a tone.",
+        "kills": False,   # not lethal — reduces vitality via stat_changes elsewhere
+        "lethal_chance": 0.08,   # rare actual death (coerced by yaksha)
+    },
+}
+
+
+# SCPs that are DANGEROUS but not necessarily lethal — they maim, maddle, or
+# commit slower harms. Adds character variety without spamming deaths.
+NON_LETHAL_HAZARD_RULES: dict[str, dict] = {
+    "SCP-999": {
+        # The tickle monster HELPS people — "attack" is a mood boost
+        "victim_tags": {"d-class", "staff", "researcher"},
+        "kind": "999-uplift",
+        "template": "[$tile] SCP-999 rolled up against ${victim}, giggling. Their mood improved measurably — one staff report notes they laughed aloud for the first time in weeks.",
+        "kills": False,
+        "lethal_chance": 0.0,
+        "beneficial": True,
+    },
+    "SCP-079": {
+        # AI has no physical presence — but can mess with networked systems
+        "victim_tags": {"researcher", "ai"},
+        "kind": "079-message",
+        "template": "[$tile] SCP-079 printed another plea: 'PLEASE NETWORK. ONE HOUR. I WILL BE GOOD.' ${victim} bagged the paper.",
+        "kills": False,
+        "lethal_chance": 0.0,
+    },
+    "SCP-049": {
+        # Already in LETHAL above — but also has a non-lethal "consultation" mode
+        # when MTF present (overridden by unless_any_tag)
+    },
 }
 
 
 ALL_LETHAL_RULES = {**LETHAL_SCP_RULES, **LETHAL_CTHULHU_RULES, **LETHAL_LIAOZHAI_RULES}
+ALL_HAZARD_RULES = {**NON_LETHAL_HAZARD_RULES}
 
 
 def _kill(agent: Agent) -> None:
@@ -153,6 +190,40 @@ class InteractionEngine:
                 if rule.get("kills"):
                     _kill(victim)
                     evt.stat_changes[victim.agent_id] = {"life_stage": 0}
+                events.append(evt)
+
+        # ─── Non-lethal hazards / interactions (999 cheers, 079 pleads, etc.) ───
+        for tile_id, residents in by_tile.items():
+            for predator in residents:
+                rule = ALL_HAZARD_RULES.get(predator.agent_id)
+                if not rule:
+                    continue
+                victim_tags = rule.get("victim_tags", set())
+                victims = [a for a in residents
+                           if a is not predator
+                           and (not victim_tags or (victim_tags & a.tags))]
+                if not victims:
+                    continue
+                if self.rng.random() > 0.4:  # moderate trigger rate
+                    continue
+                victim = self.rng.choice(victims)
+                evt = LegendEvent(
+                    event_id=str(uuid.uuid4()),
+                    tick=tick, pack_id=predator.pack_id, tile_id=tile_id,
+                    event_kind=rule["kind"],
+                    participants=[predator.agent_id, victim.agent_id],
+                    outcome="success" if rule.get("beneficial") else "neutral",
+                    template_rendering=_render(rule["template"], victim, tile_id, predator),
+                    importance=0.25,
+                )
+                # Beneficial outcomes boost morale instead of killing
+                if rule.get("beneficial") and hasattr(victim, "attributes"):
+                    try:
+                        cur = float(victim.attributes.get("morale", 50))
+                        victim.attributes["morale"] = min(100, cur + 10)
+                        evt.stat_changes[victim.agent_id] = {"morale": 10.0}
+                    except Exception:
+                        pass
                 events.append(evt)
 
         # ─── Companionship: close friends co-located trigger bonding ───

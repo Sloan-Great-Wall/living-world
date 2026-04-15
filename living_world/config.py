@@ -39,23 +39,31 @@ class LLMSettings(BaseModel):
     openai_base_url: str | None = None
     openai_api_key: str | None = None
 
-    # ─── Advanced LLM-driven features (all opt-in, all more expensive) ───
-    # Dynamic dialogue: at Tier 3, LLM writes full narrative from persona+memory
-    # instead of template substitution. 1 LLM call per spotlight event.
-    dynamic_dialogue_enabled: bool = False
+    # ─── Subconscious + Conscious architecture ─────────────────────────
+    # Rules = subconscious (always running). LLM = conscious (probabilistic,
+    # overrides subconscious at high-importance moments).
 
-    # Debate Phase: multi-agent round (orchestrator + N stakeholders + synth).
-    # 5-7 LLM calls per triggered event. Very rich, very slow.
-    debate_enabled: bool = False
+    # Dynamic dialogue: conscious narrative at Tier 3
+    dynamic_dialogue_enabled: bool = True
+
+    # Debate Phase: conscious multi-voice synthesis for spotlight events
+    debate_enabled: bool = True
     debate_threshold: float = 0.75
     debate_min_stakeholders: int = 3
     debate_max_stakeholders: int = 5
 
-    # LLM-driven movement: historical figures ask the LLM where to go.
-    # Off by default — one LLM call per eligible tick per agent.
-    llm_movement_enabled: bool = False
+    # LLM-driven movement: historical figures decide via LLM
+    llm_movement_enabled: bool = True
     llm_movement_hf_only: bool = True
     llm_movement_chance: float = 0.3
+
+    # Conscious event override — when a rule-proposed event is important
+    # enough, the LLM reviews it through the participants' perspective and
+    # may APPROVE, ADJUST (different outcome), or VETO (character wouldn't do
+    # this). Activation chance scales with importance.
+    conscious_override_enabled: bool = True
+    conscious_override_threshold: float = 0.50  # min importance to consider
+    conscious_override_chance: float = 0.50     # % of eligible proposals activated
 
 
 class BudgetSettings(BaseModel):
