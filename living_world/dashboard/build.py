@@ -7,11 +7,11 @@ from pathlib import Path
 
 from living_world.config import Settings
 from living_world.core.world import World
-from living_world.llm import EnhancementRouter, MockTier2Client, MockTier3Client, OllamaClient, TierBudget
+from living_world.llm import EnhancementRouter, OllamaClient, TierBudget
 from living_world.llm.base import LLMClient
 from living_world.llm.dialogue import DialogueGenerator
 from living_world.llm.move_advisor import LLMMoveAdvisor
-from living_world.memory import AgentMemoryStore, MockEmbedder, OllamaEmbedder
+from living_world.memory import AgentMemoryStore, OllamaEmbedder
 from living_world.persistence import MemoryRepository, PostgresRepository
 from living_world.persistence.repository import Repository
 from living_world.statmachine.debate import DebatePhase
@@ -28,8 +28,6 @@ def build_tier_client(
     timeout: float,
     declared_tier: int,
 ) -> LLMClient | None:
-    if provider == "mock":
-        return MockTier2Client() if declared_tier == 2 else MockTier3Client()
     if provider == "ollama":
         return OllamaClient(
             model=ollama_model,
@@ -105,13 +103,10 @@ def build_repository(settings: Settings) -> Repository:
 def build_memory_store(settings: Settings) -> AgentMemoryStore | None:
     if not settings.memory.enabled or settings.memory.embedder == "none":
         return None
-    if settings.memory.embedder == "ollama":
-        embedder = OllamaEmbedder(
-            model=settings.memory.ollama_embed_model,
-            base_url=settings.llm.ollama_base_url,
-        )
-    else:
-        embedder = MockEmbedder()
+    embedder = OllamaEmbedder(
+        model=settings.memory.ollama_embed_model,
+        base_url=settings.llm.ollama_base_url,
+    )
     return AgentMemoryStore(embedder=embedder)
 
 

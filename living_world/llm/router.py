@@ -73,7 +73,7 @@ class EnhancementRouter:
         self.world = world
 
     def _build_prompt(self, event: LegendEvent) -> str:
-        # Structured prompt so mock clients can parse out pack/kind/body.
+        # Compact structured prompt for plain Tier 2 enhancement.
         return (
             f"[PACK={event.pack_id}]"
             f"[KIND={event.event_kind}]"

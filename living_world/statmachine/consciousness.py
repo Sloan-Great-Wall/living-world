@@ -8,7 +8,7 @@ Design (from user spec):
                            When conscious overrides, its answer wins over the rule roll.
 
 This sits BETWEEN storyteller (proposes) and resolver (rolls). Keep the interface
-narrow so you can unit-test with a mock LLM.
+narrow so you can unit-test with an in-process fake LLM client.
 """
 
 from __future__ import annotations

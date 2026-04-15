@@ -669,12 +669,12 @@ with st.sidebar:
         with st.form("all_settings", clear_on_submit=False):
             st.markdown("<div class='section-label'>LLM</div>", unsafe_allow_html=True)
             tier2_provider = st.selectbox(
-                "Tier 2 provider", ["none", "mock", "ollama"],
-                index=["none", "mock", "ollama"].index(_settings.llm.tier2_provider),
+                "Tier 2 provider", ["none", "ollama"],
+                index=["none", "ollama"].index(_settings.llm.tier2_provider),
             )
             tier3_provider = st.selectbox(
-                "Tier 3 provider", ["none", "mock", "ollama"],
-                index=["none", "mock", "ollama"].index(_settings.llm.tier3_provider),
+                "Tier 3 provider", ["none", "ollama"],
+                index=["none", "ollama"].index(_settings.llm.tier3_provider),
             )
             t2m = st.text_input("Tier 2 model", _settings.llm.ollama_tier2_model)
             t3m = st.text_input("Tier 3 model", _settings.llm.ollama_tier3_model)
@@ -686,8 +686,8 @@ with st.sidebar:
             )
             mem_enabled = st.toggle("Agent memory", _settings.memory.enabled)
             mem_embed = st.selectbox(
-                "Embedder", ["none", "mock", "ollama"],
-                index=["none", "mock", "ollama"].index(_settings.memory.embedder),
+                "Embedder", ["none", "ollama"],
+                index=["none", "ollama"].index(_settings.memory.embedder),
             )
             i18n_enabled = st.toggle("Output translation", _settings.i18n.enabled)
             i18n_target = st.selectbox(

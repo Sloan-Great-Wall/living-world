@@ -115,12 +115,11 @@ class DialogueGenerator:
         if text.endswith('"'):
             text = text[:-1]
 
-        # Defensive: if the LLM (mock or misbehaving real) echoed parts of the
+        # Defensive: if the LLM echoed parts of the
         # prompt back, fall back to template instead of polluting the chronicle.
         suspect_markers = (
             "CHARACTERS\n", "LOCATION:", "Now write", "You are a quiet",
             "Output the narrative ONLY", "Base narrative",
-            "(mock provider",
         )
         if any(m in text for m in suspect_markers):
             return event.template_rendering

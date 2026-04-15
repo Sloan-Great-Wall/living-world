@@ -12,7 +12,7 @@ from rich.table import Table
 from living_world.config import load_settings
 from living_world.core.world import World
 from living_world.dashboard.build import build_repository
-from living_world.llm import EnhancementRouter, MockTier2Client, MockTier3Client, OllamaClient
+from living_world.llm import EnhancementRouter, OllamaClient
 from living_world.tick_loop import TickEngine
 from living_world.world_pack import load_all_packs
 
@@ -24,17 +24,13 @@ DEFAULT_PACKS_DIR = Path(__file__).resolve().parent.parent / "world_packs"
 
 def _make_router(tier2: str, tier3: str, ollama_model: str) -> EnhancementRouter:
     """Construct EnhancementRouter based on cli flags.
-    tier2/tier3 in {'none','mock','ollama'}.
+    tier2/tier3 in {'none','ollama'}.
     """
     t2 = None
     t3 = None
-    if tier2 == "mock":
-        t2 = MockTier2Client()
-    elif tier2 == "ollama":
+    if tier2 == "ollama":
         t2 = OllamaClient(model=ollama_model, declared_tier=2)
-    if tier3 == "mock":
-        t3 = MockTier3Client()
-    elif tier3 == "ollama":
+    if tier3 == "ollama":
         t3 = OllamaClient(model=ollama_model, declared_tier=3)
     return EnhancementRouter(tier2=t2, tier3=t3)
 
@@ -57,12 +53,12 @@ def run(
     days: int = typer.Option(10, help="How many virtual days to simulate."),
     seed: int = typer.Option(42, help="Random seed."),
     packs_dir: Path = typer.Option(DEFAULT_PACKS_DIR, help="Base directory containing packs."),
-    tier2: str = typer.Option("none", help="Tier 2 backend: none | mock | ollama"),
-    tier3: str = typer.Option("none", help="Tier 3 backend: none | mock | ollama"),
+    tier2: str = typer.Option("none", help="Tier 2 backend: none | ollama"),
+    tier3: str = typer.Option("none", help="Tier 3 backend: none | ollama"),
     ollama_model: str = typer.Option("gemma3:4b", help="Ollama model name if tier2/3=ollama"),
     persist: bool = typer.Option(False, help="Enable persistence (uses settings.yaml backend)"),
 ) -> None:
-    """Run the simulation. Use --tier2=ollama --ollama-model gemma3:4b for real Tier 2 on MacBook."""
+    """Run the simulation. Use --tier2=ollama --ollama-model gemma3:4b for local LLM narrative."""
     pack_ids = [p.strip() for p in packs.split(",") if p.strip()]
     console.log(f"Loading packs: {pack_ids} from {packs_dir}")
     world, loaded = _bootstrap_world(packs_dir, pack_ids)

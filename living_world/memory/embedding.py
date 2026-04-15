@@ -1,4 +1,4 @@
-"""Embedding clients — abstract + Ollama backend + mock for tests.
+"""Embedding clients — abstract + Ollama backend.
 
 Default local embedder: `nomic-embed-text` via Ollama (768d, small, open-weights).
 Swap to BGE-M3 (1024d) when GPU server is available.
@@ -6,7 +6,6 @@ Swap to BGE-M3 (1024d) when GPU server is available.
 
 from __future__ import annotations
 
-import hashlib
 from abc import ABC, abstractmethod
 
 import httpx
@@ -21,22 +20,6 @@ class EmbeddingClient(ABC):
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         return [self.embed(t) for t in texts]
-
-
-class MockEmbedder(EmbeddingClient):
-    """Deterministic hash-based pseudo-embedding — tests only, NOT semantically meaningful."""
-
-    dim = 128
-
-    def embed(self, text: str) -> list[float]:
-        h = hashlib.sha256(text.encode("utf-8")).digest()
-        # Stretch 32 bytes to `dim` floats in [-1, 1]
-        out: list[float] = []
-        i = 0
-        while len(out) < self.dim:
-            out.append((h[i % 32] / 127.5) - 1.0)
-            i += 1
-        return out
 
 
 class OllamaEmbedder(EmbeddingClient):

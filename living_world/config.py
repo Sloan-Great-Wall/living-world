@@ -18,7 +18,7 @@ import yaml
 from pydantic import BaseModel, Field
 
 
-ProviderName = Literal["none", "mock", "ollama"]
+ProviderName = Literal["none", "ollama"]
 
 
 # ---- Tunable groups ----
@@ -122,7 +122,7 @@ class MemorySettings(BaseModel):
     """Agent memory / embedding config."""
 
     enabled: bool = True
-    embedder: Literal["none", "mock", "ollama"] = "ollama"
+    embedder: Literal["none", "ollama"] = "ollama"
     ollama_embed_model: str = "nomic-embed-text"
     reflect_every_ticks: int = 7
     recall_top_k: int = 5

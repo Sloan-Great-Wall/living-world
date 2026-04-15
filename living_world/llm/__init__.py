@@ -1,20 +1,16 @@
-"""LLM clients — Tier 2 (small) and Tier 3 (large) + translation.
+"""LLM clients — Ollama (local) or None (pure rules).
 
-Stage A ships with a mock Tier 2 that just decorates templates, so routing
-and budget logic can be tested without GPU. Swap in `Phi4Client` once a vLLM
-endpoint is available.
+`EnhancementRouter` drives tier routing. If a tier's client is None, events
+at that tier fall back to pure template rendering (subconscious rules).
 """
 
 from living_world.llm.base import LLMClient, LLMResponse
-from living_world.llm.mock import MockTier2Client, MockTier3Client
 from living_world.llm.ollama import OllamaClient
 from living_world.llm.router import EnhancementRouter, TierBudget
 
 __all__ = [
     "LLMClient",
     "LLMResponse",
-    "MockTier2Client",
-    "MockTier3Client",
     "OllamaClient",
     "EnhancementRouter",
     "TierBudget",

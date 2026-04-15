@@ -171,9 +171,8 @@ class DebatePhase:
             out = (resp.text or "").strip().strip('"')
         except Exception:
             out = event.template_rendering
-        # Defensive: reject obvious prompt echoes from mock / misbehaving LLMs
-        suspect_markers = ("VOICES:", "Now write", "Base:", "(mock provider",
-                           "EVENT:", "You are the narrator")
+        # Defensive: reject obvious prompt echoes from a misbehaving LLM
+        suspect_markers = ("VOICES:", "Now write", "Base:", "EVENT:", "You are the narrator")
         if any(m in out for m in suspect_markers):
             out = event.template_rendering
         if len(out) < 40:

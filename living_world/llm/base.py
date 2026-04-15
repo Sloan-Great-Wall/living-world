@@ -1,4 +1,4 @@
-"""Abstract LLM client — concrete impls: MockTier2Client, Phi4Client (vLLM), ..."""
+"""Abstract LLM client — concrete impls: OllamaClient, (future) Phi4Client (vLLM), ..."""
 
 from __future__ import annotations
 
