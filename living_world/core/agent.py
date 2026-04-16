@@ -64,6 +64,8 @@ class Agent(BaseModel):
     life_stage: LifeStage = LifeStage.PRIME
     age: int = 20
     current_tile: str = ""
+    x: float = 0.0  # position within tile (or world, for continuous map)
+    y: float = 0.0
     current_goal: str | None = None
     inventory: list[Item] = Field(default_factory=list)
     relationships: dict[str, Relationship] = Field(default_factory=dict)

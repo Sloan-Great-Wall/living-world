@@ -130,7 +130,27 @@ def load_pack(path: Path) -> WorldPack:
             for tl in raw.get("tiles", []) or []:
                 tiles.append(Tile(**tl))
 
+    # Auto-layout tiles if they don't have coordinates set
+    import math
+    cols = max(1, int(math.ceil(math.sqrt(len(tiles)))))
+    spacing = 130.0
+    for i, tile in enumerate(tiles):
+        if tile.x == 0.0 and tile.y == 0.0:
+            tile.x = (i % cols) * spacing + spacing / 2
+            tile.y = (i // cols) * spacing + spacing / 2
+
     return WorldPack(manifest, personas, events, tiles, path)
+
+
+def _offset_pack_tiles(packs: list["WorldPack"]) -> None:
+    """Give each pack's tiles a Y offset so they don't overlap on the map."""
+    y_cursor = 0.0
+    for pack in packs:
+        max_y = 0.0
+        for tile in pack.tiles:
+            tile.y += y_cursor
+            max_y = max(max_y, tile.y + tile.radius + 40)
+        y_cursor = max_y + 60  # gap between packs
 
 
 def load_all_packs(base: Path, pack_ids: list[str]) -> list[WorldPack]:
@@ -142,4 +162,5 @@ def load_all_packs(base: Path, pack_ids: list[str]) -> list[WorldPack]:
         if not p.exists():
             raise FileNotFoundError(f"pack directory not found: {p}")
         out.append(load_pack(p))
+    _offset_pack_tiles(out)
     return out
