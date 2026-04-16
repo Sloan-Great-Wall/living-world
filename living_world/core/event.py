@@ -42,7 +42,8 @@ class LegendEvent(BaseModel):
     pack_id: str
     tile_id: str
     event_kind: str
-    participants: list[str]  # agent_ids
+    participants: list[str]  # agent_ids (direct actors)
+    witnesses: list[str] = Field(default_factory=list)  # agent_ids present but not acting
     outcome: str  # "success" | "failure" | "neutral" | custom
     stat_changes: dict[str, dict[str, float]] = Field(default_factory=dict)
     # stat_changes[agent_id]["attribute_name"] = delta

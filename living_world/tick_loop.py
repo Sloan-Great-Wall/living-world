@@ -10,7 +10,7 @@ from living_world.llm.router import EnhancementRouter
 from living_world.memory.memory_store import AgentMemoryStore
 from living_world.persistence import Repository
 from living_world.statmachine.conscious import ConsciousnessLayer
-from living_world.statmachine.consequences import ConsequencePropagator
+from living_world.statmachine.consequences import ConsequenceEngine
 from living_world.statmachine.historical_figures import HistoricalFigureRegistry
 from living_world.statmachine.interactions import InteractionEngine
 from living_world.statmachine.movement import MovementPolicy
@@ -55,7 +55,7 @@ class TickEngine:
         self.hf_registry = HistoricalFigureRegistry(world)
         self.movement = MovementPolicy(world, random.Random(seed + 2))
         self.interactions = InteractionEngine(world, random.Random(seed + 3))
-        self.consequences = ConsequencePropagator(world, random.Random(seed + 4))
+        self.consequences = ConsequenceEngine(world, random.Random(seed + 4))
         self.router = router or EnhancementRouter()
         self.repository = repository
         self.memory = memory
@@ -115,24 +115,15 @@ class TickEngine:
                     metadata={"event_id": event.event_id, "kind": event.event_kind},
                 )
 
-        # ── CHAIN REACTION: propagate consequences ──
-        reactions = self.consequences.propagate(event, t)
-        for reaction in reactions:
+        # ── CONSEQUENCES: stat changes + rare description mutations ──
+        # No recursion — changes persist on agents, next tick reacts naturally.
+        for reaction in self.consequences.apply(event):
             self.router.enhance(reaction)
             self.world.record_event(reaction)
             stats.reactions += 1
             if reaction.importance >= 0.6:
                 stats.spotlight_candidates += 1
             self.hf_registry.observe_event(reaction)
-            # Memory for reaction participants too
-            if self.memory is not None and reaction.importance >= 0.1:
-                for aid in reaction.participants:
-                    self.memory.remember(
-                        agent_id=aid, tick=t,
-                        doc=reaction.best_rendering(),
-                        kind="raw", importance=reaction.importance,
-                        metadata={"event_id": reaction.event_id, "kind": reaction.event_kind},
-                    )
 
     def step(self) -> TickStats:
         self.world.current_tick += 1

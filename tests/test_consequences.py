@@ -25,22 +25,20 @@ def test_lethal_event_propagates_fear_to_witnesses():
     engine = TickEngine(world, packs, seed=42)
     engine.run(60)
 
-    # Check for reaction events
-    reaction_events = [
+    # Check for witness reactions (stat-layer ripple)
+    witness_events = [
         e for e in world.events_since(1)
-        if e.event_kind.startswith("reaction-to-")
+        if e.event_kind.startswith("witness-")
     ]
-    # After 60 days with lethal SCPs, there should be at least one reaction
-    assert len(reaction_events) > 0, "No reaction events generated — consequence chain not firing"
+    assert len(witness_events) > 0, "No witness events — consequence stat-layer not firing"
 
-    # Check for threshold-triggered events
-    threshold_events = [
+    # Check for description-layer mutations
+    mutation_events = [
         e for e in world.events_since(1)
-        if e.event_kind in ("escape-attempt", "breakdown", "insubordination", "madness")
+        if e.event_kind.startswith("mutation-")
     ]
-    # These may or may not fire depending on RNG; just verify no crash
-    print(f"  reaction events: {len(reaction_events)}")
-    print(f"  threshold events: {len(threshold_events)}")
+    print(f"  witness events: {len(witness_events)}")
+    print(f"  mutation events: {len(mutation_events)}")
 
 
 def test_chain_depth_is_bounded():

@@ -178,12 +178,21 @@ class InteractionEngine:
                     continue
 
                 victim = self.rng.choice(victims)
+                # Snapshot witnesses BEFORE the kill — anyone alive in tile
+                # who is not the predator or victim.
+                witness_ids = [
+                    a.agent_id for a in residents
+                    if a.agent_id != predator.agent_id
+                    and a.agent_id != victim.agent_id
+                    and a.is_alive()
+                ]
                 evt = LegendEvent(
                     event_id=str(uuid.uuid4()),
                     tick=tick, pack_id=predator.pack_id, tile_id=tile_id,
                     event_kind=rule["kind"],
                     participants=[predator.agent_id, victim.agent_id],
-                    outcome="failure",  # fatal outcome = "failure" for victim
+                    witnesses=witness_ids,
+                    outcome="failure",
                     template_rendering=_render(rule["template"], victim, tile_id, predator),
                     importance=0.85,
                 )
