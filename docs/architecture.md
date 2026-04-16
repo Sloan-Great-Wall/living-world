@@ -1,302 +1,218 @@
 # System Architecture Overview
 
-> 截至 2026-04-15 讨论确定的整体架构及其设计原理。
-> 这份文档是 [product-direction.md](product-direction.md), [tech-glossary.md](tech-glossary.md), [flow-loops.md](flow-loops.md), [stat-machine-design.md](stat-machine-design.md) 的综合视图。
+> As of 2026-04-16. Reflects the implemented codebase, not aspirational plans.
 
 ---
 
-## 0. 一句话概括
+## 0. One-liner
 
-**一个由 stat machine 驱动、由分层 LLM 加持、以 world pack 组织内容、以真实地理位置锚定的 living world simulator, 玩家通过 DnD 跑团风格交互进入并影响这个世界。**
-
----
-
-## 1. 设计原则 (架构背后的"为什么")
-
-这五条原则决定了所有下游技术选择:
-
-### 原则 1: LLM 是加层, 不是基底
-世界的"活着"不依赖 LLM 能不能用。Tier 1 (纯 Python 规则) 必须独立能跑出有戏剧感的 legend log。LLM 只负责"让同样的事件读起来更生动"。这保证了成本可控 + 不被单一供应商锁死。
-
-### 原则 2: Stateless LLM + Scoped Memory
-所有 agent 的"持久人格"不靠常驻进程,靠**每次 cold-start 时从向量数据库检索该 agent 的记忆**。LLM 本身始终是 stateless 函数。这是 2026 工业共识。
-
-### 原则 3: 分层按重要度调用
-不是所有事件都值得花同样的钱。用 **importance scoring** 把事件分给三层 (固定规则 / 本地小模型 / 在线大模型), 90%+ 流量走 Tier 1。
-
-### 原则 4: World Pack 解耦
-世界观不是硬编码在代码里, 是数据驱动的可插拔模块。一个 pack 自带 persona 池 + 事件表 + storyteller 人格。可单独运行也可叠加运行。
-
-### 原则 5: 先文字后 AR
-DnD 跑团式文字体验是产品灵魂。AR/LBS 是交付形态, 是包装。如果在 web 文字版都不好玩, AR 拯救不了。
+**A stat-machine-driven, LLM-enhanced, world-pack-organized living world simulator where agents move in continuous 2D space, accumulate consequences across ticks, and optionally gain LLM consciousness at high-importance moments.**
 
 ---
 
-## 2. 分层架构全貌
+## 1. Design Principles
+
+### Principle 1: LLM is a layer, not the foundation
+The world runs on pure Python rules (Tier 1). LLM (Tier 2/3 via Ollama) makes events more vivid but is never required. Set all providers to `"none"` and the world still self-runs indefinitely.
+
+### Principle 2: Stateless LLM + Scoped Memory
+Agent personality persists through vector-DB-backed episodic memory retrieved at call time. The LLM itself is always a stateless function call.
+
+### Principle 3: Tiered cost control
+Importance scoring routes 95%+ of events to Tier 1 (zero cost). Only high-importance events reach Tier 2 (Ollama local) or Tier 3 (Ollama or future cloud API). Daily token budgets auto-downgrade when exceeded.
+
+### Principle 4: World Pack decoupling
+Content is data, not code. Each world pack is a self-contained directory of YAML files (personas, events, tiles, storyteller config). Add a pack without touching Python.
+
+### Principle 5: English source of truth, locale overlays for display
+All content and LLM prompts are English. Chinese (or other language) display is handled by optional locale overlays (`world_packs/*/locale/zh/`) and a runtime translation layer (`i18n.py`).
+
+---
+
+## 2. Module Layout
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ L7  Presentation Layer                                   │
-│  ├─ Stage A: 内部 Web Dashboard (Next.js)                │
-│  ├─ Stage B: 玩家 Web 客户端 (文字跑团 UI + 骰子)         │
-│  ├─ Stage C: iOS/Android 原生 app (高德 SDK + ARKit)     │
-│  └─ Stage D: AR + 收集/对战/社交功能                      │
-└────────────────────┬────────────────────────────────────┘
-                     │ REST / WebSocket
-┌────────────────────▼────────────────────────────────────┐
-│ L6  API Gateway                                          │
-│  ├─ 鉴权 (手机号 + 实名制)                                 │
-│  ├─ 限流 (per-user Tier 3 budget)                         │
-│  └─ 反作弊 (Stage C+ 的 GPS 伪造检测)                     │
-└────────────────────┬────────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│ L5  Orchestration Layer                                  │
-│  Tick Loop (asyncio) — 驱动整个世界心跳                   │
-│  ├─ Player Session Loop    (Flow 1)                      │
-│  ├─ World Tick Loop        (Flow 2)                      │
-│  ├─ Agent Decision Graph   (Flow 3, 每个 agent 冷启动)    │
-│  └─ Debate Phase           (Flow 4, 多 agent 并发博弈)    │
-│                                                          │
-│  MVP 用 plain asyncio; 复杂度上来后迁移 LangGraph         │
-└────────────────────┬────────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│ L4  Decision Engine (三层 stat machine)                  │
-│                                                          │
-│  ┌────────────────────────────────────────────────┐     │
-│  │ Tier 3: 在线强力模型 (云 API)                     │     │
-│  │  DeepSeek V3 (主力) / Qwen-Max (备份)           │     │
-│  │  Kimi (长 context 专用)                         │     │
-│  │  Spotlight + Debate Phase + Reflection          │     │
-│  │  importance ≥ 0.6, ~ ¥0.05-1 / call             │     │
-│  └──────────────────┬─────────────────────────────┘     │
-│                     ▲                                    │
-│                   升级                                   │
-│                     │                                    │
-│  ┌──────────────────┴─────────────────────────────┐     │
-│  │ Tier 2: 本地小模型 (自托管)                       │     │
-│  │  Qwen2.5-7B / DeepSeek-V2-Lite                  │     │
-│  │  Legend 润色 + 路人对话                          │     │
-│  │  importance 0.2-0.6, ~ ¥0.001 / call            │     │
-│  └──────────────────┬─────────────────────────────┘     │
-│                     ▲                                    │
-│                   升级                                   │
-│                     │                                    │
-│  ┌──────────────────┴─────────────────────────────┐     │
-│  │ Tier 1: 固定规则 (纯 Python, 零成本)              │     │
-│  │  ├─ AI Storyteller (RimWorld 风, tile 级节奏)     │     │
-│  │  ├─ Agent Stat Machine (太吾/鬼谷风, 属性+事件)    │     │
-│  │  └─ Historical Figure Registry (DF 风, 分级模拟)  │     │
-│  │  importance < 0.2, 95%+ 流量                     │     │
-│  └─────────────────────────────────────────────────┘    │
-└────────────────────┬────────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│ L3  World State Layer                                    │
-│  ├─ PostgreSQL (agents / tiles / events / relationships) │
-│  ├─ pgvector (per-agent episodic memory embeddings)      │
-│  ├─ Redis (热数据: 当前 tick / awake agent 缓存)          │
-│  └─ Event Log (append-only, CQRS 风格)                   │
-└────────────────────┬────────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│ L2  World Pack Layer (数据驱动, 内容可插拔)                │
-│  world_packs/                                            │
-│    ├─ scp/       (persona + 事件表 + storyteller + tile) │
-│    ├─ cthulhu/   (同上)                                   │
-│    ├─ liaozhai/  (同上)                                   │
-│    └─ cross_pack_events.yaml (可选: 跨 pack 交织事件)     │
-└────────────────────┬────────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│ L1  Infrastructure                                       │
-│  ├─ Geography: 高德 SDK + GCJ-02 坐标系 + H3 tile         │
-│  ├─ LLM Providers: DeepSeek / Qwen / Kimi / 百炼          │
-│  ├─ Self-hosted: vLLM (Qwen2.5-7B) on 4×A10              │
-│  ├─ Embedding: BGE-M3 (自托管) or 百炼 API               │
-│  └─ Observability: Prometheus + Grafana + OpenTelemetry  │
-└─────────────────────────────────────────────────────────┘
+living-world/
+├── lw                          # one-command launcher (bash)
+├── pyproject.toml              # hatchling build + deps
+├── settings.yaml               # user-editable runtime config
+├── docker-compose.yml          # postgres + pgvector + redis (optional)
+├── sql/init.sql                # persistence schema
+│
+├── world_packs/                # content — 3 self-contained worlds
+│   ├── scp/                    # 21 personas, 36 events, 12 tiles
+│   │   ├── pack.yaml
+│   │   ├── personas/*.yaml
+│   │   ├── events/*.yaml
+│   │   ├── tiles/*.yaml
+│   │   └── locale/zh/          # Chinese overlay (display_name, templates)
+│   ├── liaozhai/               # 20 personas, 36 events, 9 tiles + locale/zh/
+│   └── cthulhu/                # 20 personas, 33 events, 9 tiles + locale/zh/
+│
+├── living_world/
+│   ├── cli.py                  # Typer CLI (run / digest / list-packs / dashboard)
+│   ├── config.py               # pydantic Settings — all tunables
+│   ├── tick_loop.py            # TickEngine — main simulation loop
+│   ├── factory.py              # bootstrap_world + make_engine (shared by CLI + dashboard)
+│   ├── storyteller.py          # RimWorld-style per-tile event scheduler
+│   ├── world_pack.py           # YAML loader → WorldPack runtime objects
+│   ├── persistence.py          # Repository protocol + MemoryRepository + PostgresRepository
+│   ├── i18n.py                 # Translation layer (OllamaTranslator / NoopTranslator)
+│   ├── locale.py               # LocaleOverlay + LocaleRegistry (zh overlay reader)
+│   │
+│   ├── core/                   # data models (pydantic)
+│   │   ├── agent.py            # Agent (x/y coords, attributes, relationships, inventory)
+│   │   ├── event.py            # EventProposal + LegendEvent + importance enums
+│   │   ├── tile.py             # Tile (x/y center, radius, allowed_packs)
+│   │   └── world.py            # World (in-memory state: agents + tiles + event log)
+│   │
+│   ├── statmachine/
+│   │   ├── resolver.py         # D&D dice-roll resolver + importance scoring (merged)
+│   │   ├── consequences.py     # Two-layer change engine (stat ripples + description mutations)
+│   │   ├── conscious.py        # ConsciousnessLayer + DebatePhase (merged)
+│   │   ├── movement.py         # Tag-aware agent movement between tiles
+│   │   ├── interactions.py     # Lethal encounters, companionship, flight
+│   │   └── historical_figures.py  # Promotion/demotion registry
+│   │
+│   ├── llm/
+│   │   ├── base.py             # LLMClient protocol
+│   │   ├── ollama.py           # OllamaClient (only real LLM backend)
+│   │   ├── router.py           # EnhancementRouter (importance → tier routing)
+│   │   ├── dialogue.py         # DialogueGenerator (Tier 3 dynamic narrative)
+│   │   └── move_advisor.py     # LLMMoveAdvisor (historical figures decide via LLM)
+│   │
+│   ├── memory/
+│   │   ├── embedding.py        # OllamaEmbedder
+│   │   └── memory_store.py     # AgentMemoryStore (episodic + reflection)
+│   │
+│   └── dashboard/              # Streamlit UI
+│       ├── app.py              # main view
+│       ├── map_view.py         # SVG world-map renderer (Canvas planned, not built)
+│       ├── codex.py            # Story Library view
+│       └── styles.css
+│
+└── tests/                      # 24 tests, all green
+    ├── test_smoke.py
+    ├── test_consequences.py
+    ├── test_importance.py
+    ├── test_memory.py
+    ├── test_i18n.py
+    ├── test_locale.py
+    └── test_persistence.py
 ```
 
 ---
 
-## 3. 数据流: 一个事件从产生到玩家看见的完整路径
-
-以"玩家 A 在 wujin-lane tile 遇到聊斋女鬼聂小倩, 询问她的身世"为例:
+## 3. Data Flow: One Tick
 
 ```
-1. [L1] 玩家 GPS 定位到 H3 cell X
-         │
-2. [L2] 查询 cell X 绑定的 tile = wujin-lane (来自 liaozhai pack)
-         │
-3. [L3] 读取 wujin-lane tile 内的 active agents
-         └─ 命中 Nie-Xiaoqian (historical figure, liaozhai pack)
-         │
-4. [L5] 玩家发起对话 → 触发 Agent Decision Graph (Flow 3)
-         │
-5. [L4] importance scoring:
-         ├─ historical figure: +0.3
-         ├─ player-touched: +0.4
-         └─ 总分 0.7 → Tier 3
-         │
-6. [L3] 为 Nie-Xiaoqian 拼 5 段 context:
-         ├─ persona_card (固定)
-         ├─ world_snapshot (wujin-lane 当前状态 + 旁边谁在)
-         ├─ retrieved_reflections (pgvector 检索 top-6)
-         ├─ recent_raw_events (最近 10 条)
-         └─ current_prompt (玩家的话)
-         │
-7. [L4 Tier 3] 调 DeepSeek V3, 玩家看到 Nie-Xiaoqian 的回复
-         │
-8. [L3] Write memory:
-         ├─ 本次对话 embed 进 pgvector
-         ├─ 玩家-Xiaoqian 关系好感度 +N
-         └─ wujin-lane 事件 log append 一条
-         │
-9. [L4 Tier 1] 触发后续 stat machine updates:
-         └─ Xiaoqian 的 "被知晓身世" 属性 +1 (可能影响未来事件)
-         │
-10.[L7] 返回玩家 UI, 骰子动画 + 回复文字 + 关系变化提示
+TickEngine.step()
+    │
+    ├─ MovementPolicy.tick()
+    │   (tag-aware + optional LLM advisor for historical figures)
+    │
+    ├─ InteractionEngine.tick()
+    │   (lethal encounters, companionship, flight → LegendEvents)
+    │   └─ each event → _process_event()
+    │
+    ├─ For each tile: TileStoryteller.tick_daily()
+    │   → EventProposals
+    │   → EventResolver.realize()
+    │       ├─ Subconscious: D&D dice roll
+    │       └─ Conscious: LLM may APPROVE / ADJUST / VETO (if importance high enough)
+    │   → LegendEvent
+    │   └─ _process_event()
+    │
+    ├─ _process_event() pipeline:
+    │   ├─ EnhancementRouter.enhance()     (importance → tier 1/2/3 routing)
+    │   ├─ World.record_event()
+    │   ├─ Repository.append_event()       (persistence)
+    │   ├─ HistoricalFigureRegistry.observe_event()  (promote notable agents)
+    │   ├─ AgentMemoryStore.remember()     (episodic memory)
+    │   └─ ConsequenceEngine.apply()       (two-layer: stat ripples + description mutations)
+    │       └─ reaction events also routed + recorded
+    │
+    ├─ Periodic: demote inactive HFs (every 7 ticks)
+    ├─ Periodic: reflect (compress memories for HFs, every N ticks)
+    └─ Periodic: snapshot world state to repository (every N ticks)
 ```
-
-全链路用时预期 **3-8 秒** (主要是 Tier 3 的延迟), 玩家端有骰子动画和"思索中..."填充等待感。
 
 ---
 
-## 4. 三个关键子系统的原理
+## 4. Key Subsystems
 
-### 4.1 Memory 子系统
+### 4.1 Consequence Engine (NEW — `statmachine/consequences.py`)
 
-**问题**: LLM 是 stateless 的, 怎么让 agent "记得" 玩家和其他 agent?
+The rewritten consequence system has **two layers**:
 
-**原理**: 分三层时间尺度存储:
-
-| 层 | 存储 | 时间尺度 | 检索方式 |
+| Layer | Frequency | What changes | Example |
 |---|---|---|---|
-| **Raw Events** | PostgreSQL event log | 小时-天 | 时间倒序 top-N |
-| **Episodic Embeddings** | pgvector, per-agent | 周-月 | 语义相似度 top-K |
-| **Reflections** | pgvector, per-agent (高优先级 flag) | 月-年 | 优先被检索 |
-| **Persona Card** | 静态文件 | 永久 | 每次都带 |
+| **Stat layer** | Every qualifying event | Numeric attributes, relationships, inventory | D-class witnesses SCP-173 kill → fear +25, morale -15 |
+| **Description layer** | Rare, conditional | Tags, persona_card, life_stage, goals | Investigator sanity <= 10 → 20% chance: loses "investigator" tag, gains "corrupted" |
 
-每次 Tier 2/3 调用前, 按 "5 段式 context composition" 从这四层各取一部分拼成 prompt。
+**No chain depth limit.** Within a single tick, consequences are applied once per event. The next tick's movement, storyteller, and interactions naturally react to changed attributes. The chain unfolds across ticks, not recursively within one.
 
-**为什么分层**: 近期原始事件信噪比高但量大, 必须压缩成 reflection。Reflection 是 Stanford Smallville 的核心创新——把"过去一周发生的 37 件事"压缩成"这个 agent 开始信任玩家"。
+### 4.2 Consciousness + Debate (merged — `statmachine/conscious.py`)
 
-### 4.2 Decision Routing (三层调用)
+Two LLM-driven overlays on top of the rule machine:
 
-**问题**: 如何保证 95% 流量走零成本路径?
+- **ConsciousnessLayer**: Per-event verdict (APPROVE / ADJUST / VETO). Activates probabilistically based on importance. Can override a dice-roll outcome.
+- **DebatePhase**: For top-importance events, an orchestrator LLM picks 3-5 stakeholders, each generates a first-person reaction via a worker LLM, then the orchestrator synthesizes a final narrative. Triggered by EnhancementRouter when importance >= debate_threshold.
 
-**原理**: 每个待处理事件先算 **importance score** (0-1), 按阈值分流:
-
-```
-score = 参与者权重 + 事件类型权重 + 关系网影响 + 玩家在场加分
-     0.7 ─────────── Tier 3 (在线大模型)
-     0.2 ─────────── Tier 2 (本地小模型)
-     0.0 ─────────── Tier 1 (纯规则)
-```
-
-**关键**: 阈值不是写死的, 而是**受日预算动态调整**。今日 Tier 3 预算用掉 80% → 阈值自动上调到 0.75, 减少触发量。这个机制让单日成本有硬上限。
-
-### 4.3 World Pack 插件机制
-
-**问题**: 如何让 SCP / 克苏鲁 / 聊斋 既能独立又能混合?
-
-**原理**: 每个 pack 是一个自包含目录:
+### 4.3 Language Isolation (`locale.py` + `i18n.py`)
 
 ```
-world_packs/liaozhai/
-├── pack.yaml              # 元信息: 名称/调性/storyteller 人格
-├── personas/              # 角色档案 (YAML + 可选 interview transcript)
-│   ├── nie-xiaoqian.yaml
-│   ├── ying-ning.yaml
-│   └── ...
-├── events/                # 事件表
-│   ├── daily.yaml         # 日常事件
-│   ├── spotlight.yaml     # spotlight 事件
-│   └── relationships.yaml # 关系驱动事件
-├── tiles/                 # 场景类型
-│   └── tile_types.yaml    # "市井", "书斋", "荒野" 等
-├── storyteller.yaml       # 该 pack 的 AI Storyteller 配置
-└── prompts/               # pack-specific prompt 模板
-    └── narration.md       # 聊斋调性的叙述模板
+English YAML (source of truth)          Chinese overlay (display only)
+  world_packs/scp/personas/049.yaml       world_packs/scp/locale/zh/personas/049.yaml
+  world_packs/scp/events/daily.yaml       world_packs/scp/locale/zh/events/daily.yaml
+
+LLM pipeline: always English
+Display pipeline: settings.yaml display.locale → "en" or "zh"
+  "en" → show English as-is
+  "zh" → LocaleOverlay for static content + OllamaTranslator for generated text
 ```
 
-启动时按 `--packs scp,cthulhu,liaozhai` 加载。每个 agent 的 `pack_id` 字段标记归属, tile 有可选 `preferred_packs` 字段控制"哪个 pack 的 agent 倾向住在这里"。
+### 4.4 Continuous-Space Map
 
-**Cross-pack** 在独立文件 `cross_pack_events.yaml` 定义, 只在多 pack 启动时激活。这个设计让**任一 pack 都可以独立跑通 Stage A**——纯聊斋世界可以跑, 纯 SCP 世界可以跑, 也可以三个混合跑。
+Both `Agent` and `Tile` have `x`/`y` float coordinates. Tiles define a center + radius. Agents are placed within tiles. The `world_pack.py` loader auto-layouts tiles in a grid if no coordinates are set, and offsets pack tile groups vertically when multiple packs load.
+
+Currently rendered as SVG in the dashboard. A Canvas-based world map component is designed ([ui-redesign-spec.md](ui-redesign-spec.md)) but **not yet implemented**.
+
+### 4.5 Importance Scoring + Tier Routing
+
+Importance scoring lives in `resolver.py` (merged from former `importance.py`). The `EnhancementRouter` in `llm/router.py` uses thresholds to route events:
+
+- **Tier 1** (importance < 0.35): Template rendering only. Zero LLM cost.
+- **Tier 2** (0.35 <= importance < 0.65): Ollama-enhanced narrative.
+- **Tier 3** (importance >= 0.65): Dynamic dialogue + possible debate phase.
+
+Thresholds are configurable in `settings.yaml` under `importance`.
 
 ---
 
-## 5. 关键技术选型及理由
+## 5. LLM Backend
 
-| 选型 | 选它的理由 | 备胎 |
-|---|---|---|
-| **DeepSeek V3** (Tier 3 主力) | 国内最强综合性价比, 2026 价格 ¥2-4/1M tokens | Qwen-Max (贵 5x 但稳定) |
-| **Qwen2.5-7B** (Tier 2) | 国内 SOTA 小模型, 中文强, 开源可自托管 | DeepSeek-V2-Lite (MoE 稍贵但效果稍强) |
-| **PostgreSQL + pgvector** | 关系型 + 向量一体, 事务一致性 | 分开用 PG + Chroma/Pinecone (复杂且贵) |
-| **Redis** (热数据) | 毫秒级读写, 成熟 | KeyDB (开源 fork, 改天再换) |
-| **vLLM** (Tier 2 自托管) | 吞吐最强, 生产级 | SGLang / TGI |
-| **BGE-M3** (embedding) | 中英双语 SOTA, 开源 | 百炼 text-embedding-v3 (按量付费) |
-| **高德地图** | 国内覆盖 + 开发文档友好 + SDK 齐全 | 腾讯地图 (更好集成微信) |
-| **ARKit** (iOS) | 国内 iOS 唯一选择, 稳定 | - |
-| **ARCore China** | 华为/小米/OPPO/vivo 原生集成 | - |
-| **Plain asyncio** (MVP) | 够用, 不欠技术债 | LangGraph (Stage C+ 再考虑) |
-| **Next.js** (dashboard) | 前端生态成熟, SSR/SSG 都好 | 纯 React SPA (功能够但 SSR 弱) |
+**Only two provider options**: `"ollama"` or `"none"`.
+
+- `"ollama"` — connects to a local Ollama instance. Default model: `gemma3:4b`.
+- `"none"` — no LLM calls. World runs on pure rules (Tier 1 only).
+
+Mock clients have been removed entirely. All LLM features (dynamic_dialogue, debate, conscious_override, llm_movement) default to ON in settings.yaml but gracefully degrade if Ollama is unreachable.
 
 ---
 
-## 6. 为什么不选这些 (常见问题)
+## 6. Persistence
 
-### 为什么不用 Claude
-**不能在中国合规使用**。Anthropic 未在中国设立服务, 且直接调用 api.anthropic.com 涉及数据出境。即便技术上可行, 合规审查过不了。所有 Tier 3 能力由国产大模型承担。架构本身是"LLM 无关"的, 接入哪家只是换 adapter。
+`persistence.py` provides a `Repository` protocol with two implementations:
 
-### 为什么不用 LangChain/LangGraph
-MVP 阶段的控制流足够简单, asyncio 几十行就能写完。LangGraph 的价值在**复杂分支+checkpoint 恢复**, 我们 Stage C 之后再评估是否需要。过早引入 = 技术债 + 黑盒。
-
-### 为什么不一开始就做 AR
-AR 是**交付形态**, 不是**产品核心**。Stage A (模拟器) 没跑通时做 AR 是浪费钱。Dwarf Fortress / 太吾绘卷都是纯文字/低视觉就好玩——**好世界不靠画面**。
-
-### 为什么不用 Unity 跨平台一次性做 iOS + Android
-Unity 对 ARKit/ARCore 的打磨始终落后原生。我们的 AR 体验要求高, iOS-first 原生开发更靠谱。Android 作为 Stage C 第二批上, 可以评估 Unity 还是双原生。
-
-### 为什么不直接让 LLM 模拟整个世界, 省掉 Tier 1
-**成本**。10 万 DAU × 30 分钟/天 × 每 agent 每 tick 一次 LLM call = 单日 $$$$$$$$$ 量级。无论多便宜的模型, 这个量级都不可持续。**"LLM 无关的世界自转" 是必须的。**
-
-### 为什么不用 Smallville 的直接实现
-Smallville 有两个缺陷对我们产品致命: (1) **25 agent 规模**, 我们要 1500+; (2) **纯 LLM 驱动**, 成本架构不可持续。我们保留 Smallville 的思想 (memory stream + reflection + planning), 但架构完全重新设计。
+- **MemoryRepository** (default): In-memory, no external deps. For tests and single-session runs.
+- **PostgresRepository**: psycopg3-backed, requires `pip install -e '.[db]'`. Full CRUD for agents, tiles, events, relationships.
 
 ---
 
-## 7. 现有代码与目标架构的 gap
+## 7. Why This Architecture Works
 
-现有 `site-zero` 代码目前的状态:
-
-| 组件 | 现状 | 目标 |
-|---|---|---|
-| Tick loop | ✅ 有 (`runner.py`) | 需要重构为 L5 Orchestration 层, 分 phase |
-| Agent perception | ✅ 有 (`perception_pov.py`) | 可复用 |
-| Memory (vector) | ⚠️ Chroma | 迁移到 pgvector |
-| LLM adapter | ⚠️ Ollama | 抽象成 Tier 2/3 adapter, Ollama 作为 Tier 2 选项 |
-| World layout | ⚠️ 硬编码房间图 | 迁移到 H3 tile + pack 内 tile 配置 |
-| Entities | ⚠️ 写死 SCP roster | 迁移到 `world_packs/scp/personas/` |
-| SCP tick logic | ⚠️ 部分硬编码 | 迁移到 pack 内事件表 + Tier 1 stat machine |
-| Storyteller | ❌ 没有 | 新建 |
-| Historical Figures | ❌ 没有 | 新建 |
-| 3-tier routing | ❌ 没有 | 新建 |
-| Debate Phase | ❌ 没有 | 新建 |
-| Player | ❌ 没有 | Stage B 开始引入 |
-
-**大部分现有代码可以作为重构基础**, 但核心架构需要"把 SCP 特化代码抽象成 pack + 插入 Tier/Storyteller 层"。这是 Stage A.0 的主要工作。
-
----
-
-## 8. 小结: 这个架构为什么站得住
-
-三个核心保证:
-
-1. **成本**: Tier 1 cover 95% 流量 + Tier 3 日预算硬上限 → 单用户月成本 ≤ ¥30
-2. **扩展性**: World pack 插件化 → 加一个新 IP 不需要改核心代码
-3. **抗风险**: Tier 3 全挂了 Tier 2 顶; Tier 2 全挂了 Tier 1 顶; 世界永远自转
-
-这三条合起来的意思是: **我们选择了一个在最坏情况下也能交付基础体验的架构, 在最好情况下能交付惊艳体验**。这种"带降级策略的分层设计"是所有长期能活的大规模系统的共同特征, 无论它是 CDN、数据库, 还是现在的 AI living world。
+1. **Cost**: Tier 1 handles 95%+ of events at zero cost. Token budgets cap daily spend.
+2. **Extensibility**: World packs are pure YAML. Add a new IP without touching Python.
+3. **Resilience**: If LLM is down, the world keeps running on rules. Consequences persist on agents, next tick reacts naturally.
+4. **Simplicity**: Flattened module structure (no deep subpackage nesting). `storyteller.py`, `world_pack.py`, `i18n.py`, `persistence.py`, `factory.py` are all top-level modules.

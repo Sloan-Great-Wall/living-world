@@ -1,221 +1,173 @@
 # Core Flow Loops
 
-> 产品运行时的四张关键流程图，从宏观到微观。
-> Last updated: 2026-04-15
-
-这四张图不是 LangGraph 语法，是**概念级 flow diagram**。MVP 用 plain `asyncio` 写死即可，等复杂度上来再迁 LangGraph。
+> Runtime flow diagrams. Reflects the implemented `tick_loop.py` and supporting modules.
+> Last updated: 2026-04-16
 
 ---
 
-## Flow 1: Player Session Loop (玩家会话层)
+## Flow 1: TickEngine.step() — One Virtual Day
 
-玩家打开 app 到关闭的单次会话。
-
-```
-玩家打开 app
-   │
-   ▼
-GPS + VPS / 退化 GPS 定位
-   │
-   ▼
-拉取附近 tile 的 active agent list
-   │ (按 agent 的 tier 拉取: dormant 摘要 + awake 全量)
-   ▼
-渲染 AR / map 视图
-   │
-   ▼
-┌──────────────────────────────────────┐
-│ 玩家交互循环 (长时驻留)                │
-│                                        │
-│  检测玩家进入 agent 视野               │
-│   → agent 进入 awake tier              │
-│   → agent 主动打招呼 (如有 memory)     │
-│                                        │
-│  玩家对话 / 给道具 / 委托任务 / 旁观   │
-│   → 触发 Agent Decision (Flow 3)       │
-│   → 可能触发 Debate Phase (Flow 4)     │
-│                                        │
-│  世界事件推送 (spotlight event 通知)    │
-│  ← ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ │
-└──────────────────────────────────────┘
-   │
-   ▼
-玩家退出
-   │
-   ▼
-持久化玩家状态 (位置, 关系快照, 未读事件)
-   │
-   ▼
-附近 agent 降级回 dormant tier
-```
-
----
-
-## Flow 2: World Tick Loop (世界自转层)
-
-整个世界的心跳，7×24 运行在服务端。
+The main simulation loop. Each call to `step()` advances the world by one tick (one virtual day).
 
 ```
-每秒一次 scheduler 唤醒
-   │
-   ├── Dormant tier tick (5-30 min 频率)
-   │      │
-   │      ▼
-   │   批量读取所有 dormant agent
-   │      │
-   │      ▼
-   │   执行 stat machine 规则
-   │   (属性缓变 + 事件表掷骰 + 关系衰减)
-   │      │
-   │      ▼
-   │   批量写回 world state
-   │
-   ├── Awake tier tick (玩家附近触发, 频率随玩家密度)
-   │      │
-   │      ▼
-   │   for each awake agent:
-   │      Perception → Recall → Decision (Haiku) → Commit
-   │      (这是 Flow 3 的单次执行)
-   │
-   ├── Spotlight event trigger?
-   │      │ yes
-   │      ▼
-   │   启动 Debate Phase (Flow 4)
-   │
-   └── Reflection tick (每日低峰时段)
-          │
-          ▼
-       for each agent with enough new events:
-          读取过去 24h raw events
-             │
-             ▼
-          Sonnet 压缩成 narrative summary
-             │
-             ▼
-          写入 reflection table, 提升检索优先级
+TickEngine.step()
+    │
+    ├─── Movement Phase ─────────────────────────────────────────────
+    │    MovementPolicy.tick()
+    │      ├─ For each living agent: evaluate tag-affinity weights per tile
+    │      ├─ Optional: LLMMoveAdvisor (historical figures only, 30% chance)
+    │      │    └─ Tier 2 LLM suggests destination given persona + recent events
+    │      └─ Update agent.current_tile, tile.resident_agents
+    │
+    ├─── Interaction Phase ──────────────────────────────────────────
+    │    InteractionEngine.tick()
+    │      ├─ Scan all tiles for predator-victim co-location
+    │      ├─ Apply lethal rules (SCP-173, 049, 682, 106, 096, yaksha, ...)
+    │      ├─ Apply companionship + flight rules
+    │      └─ Each emergent event → _process_event()
+    │
+    ├─── Storyteller Phase ──────────────────────────────────────────
+    │    For each tile:
+    │      TileStoryteller.tick_daily(tick)
+    │        ├─ Check tension curve vs. target (breathing room if too high)
+    │        ├─ Personality factor (peaceful=0.35, balanced=0.7, chaotic=1.1)
+    │        ├─ Weighted random pick from event pool, respecting cooldowns
+    │        └─ Return 0-N EventProposals
+    │      │
+    │      For each proposal:
+    │        EventResolver.realize(proposal, template, tick, consciousness)
+    │          ├─ Find eligible participants in tile (tag filter)
+    │          ├─ D&D dice roll: d20 + stat bonus + mod vs. DC
+    │          ├─ ConsciousnessLayer.consider() [optional, importance-gated]
+    │          │    └─ APPROVE → proceed | ADJUST → override outcome | VETO → skip
+    │          ├─ Apply stat_changes + relationship_changes to participants
+    │          ├─ Render template string with participant names
+    │          └─ Compute importance score
+    │        │
+    │        → LegendEvent → _process_event()
+    │
+    ├─── _process_event() Pipeline ──────────────────────────────────
+    │    EnhancementRouter.enhance(event)
+    │      ├─ importance < 0.35 → Tier 1 (keep template)
+    │      ├─ 0.35 <= imp < 0.65 → Tier 2 (Ollama enhanced_rendering)
+    │      └─ imp >= 0.65 → Tier 3 (dynamic dialogue + debate if >= 0.75)
+    │    │
+    │    World.record_event(event)          — append to event log
+    │    Repository.append_event(event)     — persist if backend configured
+    │    HistoricalFigureRegistry.observe_event(event)  — promote notable agents
+    │    AgentMemoryStore.remember(event)   — episodic memory for participants
+    │    │
+    │    ConsequenceEngine.apply(event)
+    │      ├─ Stat layer: ripple attribute changes to witnesses
+    │      └─ Description layer: check for rare identity mutations
+    │      → reaction LegendEvents (also routed, recorded, and promoted)
+    │
+    ├─── Periodic Tasks ─────────────────────────────────────────────
+    │    Every 7 ticks: demote inactive historical figures
+    │    Every N ticks: reflect (compress memories for HFs)
+    │    Every N ticks: snapshot full world state to repository
+    │
+    └─── Return TickStats
 ```
 
 ---
 
-## Flow 3: Agent Decision Graph (单个 agent 单次决策)
+## Flow 2: Consequence Chain (Across Ticks)
 
-每次 agent "动一下"的内部流程。这是系统里调用最频繁的循环。
+Consequences do NOT recurse within a tick. They unfold naturally across ticks:
 
 ```
-   输入: current_event
-   (玩家对话 / 邻居事件 / 内部状态变化)
-        │
-        ▼
-   load persona_card (agent_id)
-        │
-        ▼
-   retrieve_reflections (vector DB, top-k)
-   ─ 捞该 agent 过去的高层 narrative
-        │
-        ▼
-   retrieve_recent_events (timeline, 最近 N 条)
-   ─ 短期 working memory
-        │
-        ▼
-   build_world_snapshot
-   ─ 所在 tile 信息 / 时间 / 附近 agent / 活跃事件
-        │
-        ▼
-   五段式 prompt composition
-   [persona_card | world_snapshot |
-    retrieved_reflections | recent_events |
-    current_prompt]
-        │
-        ▼
-   model routing
-   ┌─ 日常对话 / 小决定 → Haiku
-   ├─ 复杂推理 / 长对话 → Sonnet
-   └─ 关键剧情节点 → Opus
-        │
-        ▼
-   call Claude
-        │
-        ▼
-   ┌─ needs tool? ─────┐
-   │ yes                │ no
-   ▼                    ▼
- execute tool        commit decision
- (read memory,            │
-  search, RAG...)         ▼
-   │                 write to world state
-   ▼ (loop)               │
-   回 call Claude           ▼
-                     remember (写 memory + embedding)
-                           │
-                           ▼
-                     trigger stat machine updates
-                     (好感度 / 属性 / 道具)
+Tick 1:  SCP-682 breach event
+           │
+           ├─ Stat layer: witnesses gain fear +20, morale -10
+           ├─ Description layer: D-class with fear >=85 → 30% chance "traumatized" tag
+           └─ Witness-reaction events recorded
+                │
+Tick 2:  MovementPolicy sees high-fear agents
+           │
+           ├─ Traumatized D-class flees tile (flight behavior in interactions.py)
+           ├─ Storyteller in original tile: tension high → fewer new events (breathing room)
+           └─ Storyteller in destination tile: newcomer may trigger "encounter" events
+                │
+Tick 3:  New events fire with the refugee as participant
+           │
+           └─ Consequences ripple again...
+```
+
+This natural unfolding produces emergent narrative arcs without any artificial recursion depth management.
+
+---
+
+## Flow 3: Enhancement Router Decision Tree
+
+```
+LegendEvent arrives at EnhancementRouter
+    │
+    ├─ Check daily budget
+    │   ├─ Tier 3 budget exhausted? → force downgrade to Tier 2
+    │   └─ Tier 2 budget exhausted? → force downgrade to Tier 1
+    │
+    ├─ importance < tier2_threshold (0.35)?
+    │   └─ Tier 1: template_rendering stays as-is
+    │
+    ├─ importance < tier3_threshold (0.65)?
+    │   └─ Tier 2: Ollama generates enhanced_rendering
+    │       └─ On failure: fall back to Tier 1 template
+    │
+    └─ importance >= tier3_threshold?
+        ├─ Tier 3: dynamic dialogue (if enabled)
+        │   └─ On failure: fall back to enhanced_rendering or template
+        ├─ importance >= debate_threshold (0.75)?
+        │   └─ DebatePhase.run(): multi-voice synthesis
+        │       └─ On failure: fall back to previous rendering
+        └─ Write spotlight_rendering
 ```
 
 ---
 
-## Flow 4: Debate Phase Graph (博弈相位 — 核心玩法)
-
-多方利益 agent 就同一事件发表立场并汇总。这是我们产品**区别于普通 NPC 对话**的核心。
+## Flow 4: Debate Phase (Multi-Agent LLM Round)
 
 ```
-事件触发
-(玩家做出选择 / NPC 主动引爆事件 /
- 世界级 spotlight event)
-        │
-        ▼
-Orchestrator (Opus) 接收事件
-        │
-        ▼
-识别利益相关方 (stakeholders)
- ─ 从 world state 拉"对此事件有立场"的 agent
- ─ 按相关性打分, 选 top-N (通常 3-7 个)
-        │
-        ▼
-为每个 stakeholder 生成 debate brief
- (事件描述 + 该 agent 的既有立场 + 可能的冲突点)
-        │
-        ▼
-   ┌──────────────────────┐
-   │ 并发派发 (asyncio.gather) │
-   │                        │
-   │   Agent A (Sonnet)     │──┐
-   │   Agent B (Sonnet)     │──┤
-   │   Agent C (Sonnet)     │──┤  每个 worker 带自己
-   │   Agent D (Sonnet)     │──┤  persona + retrieved memory
-   │   ...                  │──┤  输出: 立场 + 理由 + 情感
-   └──────────────────────┘──┘
-        │
-        ▼
-Orchestrator 汇总
- ─ 识别共识 / 冲突点 / 极端立场
- ─ 裁定事件走向 (或留悬念交给玩家下一步)
-        │
-        ▼
-生成叙事报告 (给玩家)
- + 写回每个参与 agent 的 memory
- + 更新 agent 之间的关系图 (好感度, 仇恨值...)
- + 可能触发后续 spotlight event (连环事件)
-        │
-        ▼
-推送给玩家 (如在线) 或存为"回来时展示"
+High-importance event (>= debate_threshold)
+    │
+    ▼
+Step 1: Pick stakeholders
+    ├─ Start with event participants
+    ├─ Add tile co-residents + pack historical figures as candidates
+    ├─ Orchestrator (Tier 3) LLM selects 3-5 from candidate roster
+    └─ Fallback: top up with historical figures from same pack
+    │
+    ▼
+Step 2: Generate takes (concurrent per stakeholder)
+    ├─ Each stakeholder's persona + goal + event context → Worker (Tier 2) LLM
+    └─ Output: 30-60 word first-person reaction per stakeholder
+    │
+    ▼
+Step 3: Synthesize
+    ├─ All voices + event context → Orchestrator (Tier 3) LLM
+    └─ Output: 90-140 word literary narrative paragraph
+    │
+    ▼
+spotlight_rendering set on the event
 ```
 
-### Debate Phase 的设计要点
-
-1. **Stakeholder 选择**是关键：选少了没张力，选多了成本爆炸。**3-7 个是 sweet spot**
-2. **Worker 之间不直接对话**：全部经 orchestrator 中转，避免 N² 消息风暴 (Anthropic 官方推荐)
-3. **每个 worker 只发言一轮**：不做多轮 debate，成本太高。想要多轮可以拆成多个 tick
-4. **Orchestrator 的裁定不是"选一个立场赢"**：而是"描述事件在这些立场影响下走向了 X"
-5. **失败降级**：worker 超时 → 用 persona_card 规则默认立场代替
+Workers never communicate directly. All routing goes through the orchestrator to avoid N-squared message complexity.
 
 ---
 
-## 这些 Loop 在代码里的对应
+## Code Mapping
 
-| Flow | 现有 `site-zero` 代码 | 缺口 |
+| Flow | Primary Module | Key Function |
 |---|---|---|
-| Flow 1 | 无 (需新建 client 层) | 完全缺失 |
-| Flow 2 | [runner.py](../site-zero/site_zero/runner.py) 的 tick loop | 缺 tier 分级、缺 scheduler |
-| Flow 3 | `apply_scp173_tick_async` 等函数 | 架构已有雏形, 差 model routing |
-| Flow 4 | 完全缺失 | 最关键的新增模块 |
+| Main tick | `tick_loop.py` | `TickEngine.step()` |
+| Movement | `statmachine/movement.py` | `MovementPolicy.tick()` |
+| Interactions | `statmachine/interactions.py` | `InteractionEngine.tick()` |
+| Storytelling | `storyteller.py` | `TileStoryteller.tick_daily()` |
+| Resolution | `statmachine/resolver.py` | `EventResolver.realize()` |
+| Importance | `statmachine/resolver.py` | `score_event_importance()` |
+| Tier routing | `llm/router.py` | `EnhancementRouter.enhance()` |
+| Consequences | `statmachine/consequences.py` | `ConsequenceEngine.apply()` |
+| Consciousness | `statmachine/conscious.py` | `ConsciousnessLayer.consider()` |
+| Debate | `statmachine/conscious.py` | `DebatePhase.run()` |
+| Memory | `memory/memory_store.py` | `AgentMemoryStore.remember()` / `.reflect()` |
+| Bootstrap | `factory.py` | `bootstrap_world()` / `make_engine()` |

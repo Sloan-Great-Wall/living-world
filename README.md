@@ -1,41 +1,47 @@
 # living-world
 
-Stage A MVP — no-player, non-VR, auto-running virtual world simulator.
-Three worldviews run side-by-side: **SCP Foundation**, **Cthulhu Mythos**, **Liaozhai (聊斋志异)** — each a self-contained pack of characters, events, and locations.
+Stage A MVP -- no-player, non-VR, auto-running virtual world simulator.
 
-Agents move between rooms, interact, form relationships, and die. LLMs (local via Ollama, or cloud) enhance narrative at key moments. The whole thing has a Streamlit dashboard with a live map and floating Chronicle log.
+Three worldviews run side-by-side: **SCP Foundation**, **Cthulhu Mythos**, **Liaozhai**. Each is a self-contained pack of characters, events, and locations.
+
+Agents move in continuous 2D space, interact, form relationships, accumulate consequences, and die. LLMs (local via Ollama) enhance narrative at key moments. A Streamlit dashboard provides a live map and floating chronicle log.
 
 ---
 
 ## Quick start
 
 ```bash
+git clone https://github.com/Sloan-Great-Wall/living-world.git
 cd living-world
 ./lw                   # creates venv, installs deps, launches dashboard
 ```
 
-First run auto-installs dependencies. After that, `./lw` just opens the dashboard at <http://localhost:8501>.
+First run auto-installs dependencies. After that, `./lw` opens the dashboard at <http://localhost:8501>.
 
 Other commands:
 ```bash
-./lw dashboard         # default — launches the Streamlit UI
+./lw dashboard         # default -- launches the Streamlit UI
 ./lw run               # CLI simulation (no UI)
-./lw digest            # CLI — print chronicle to terminal
-./lw test              # pytest suite (17 tests)
+./lw digest            # CLI -- print chronicle to terminal
+./lw list-packs        # show available world packs
+./lw test              # pytest suite (24 tests)
 ./lw install           # reinstall deps
 ```
 
-### Using real LLMs (optional)
+### Using LLMs (optional)
 
 ```bash
 brew install ollama
 ollama pull gemma3:4b   # 3GB, runs on any 16GB MacBook
 ```
-Then in the Dashboard → Settings:
+
+Then in the Dashboard Settings panel (or `settings.yaml`):
 - `tier2_provider: ollama`
 - `tier3_provider: ollama`
 
-Save & reload. Chronicle narratives will now be LLM-enhanced instead of template strings.
+All LLM features default ON: dynamic dialogue, debate, conscious override, LLM-driven movement. If Ollama is unreachable, everything degrades gracefully to pure-rule Tier 1.
+
+The only LLM provider options are `"ollama"` and `"none"` (pure rules). There are no mock clients.
 
 ---
 
@@ -43,58 +49,71 @@ Save & reload. Chronicle narratives will now be LLM-enhanced instead of template
 
 ```
 living-world/
-├── lw                         # one-command launcher (bash)
-├── pyproject.toml             # hatchling + deps (ui/db/llm extras)
-├── settings.yaml              # user-editable runtime config
-├── docker-compose.yml         # postgres + pgvector + redis (optional)
-├── sql/init.sql               # persistence schema
-├── .streamlit/config.toml     # Streamlit theme + minimal toolbar
+├── lw                          # one-command launcher (bash)
+├── pyproject.toml              # hatchling + deps (ui/db/llm extras)
+├── settings.yaml               # user-editable runtime config
+├── docker-compose.yml          # postgres + pgvector + redis (optional)
+├── sql/init.sql                # persistence schema
 │
-├── world_packs/               # content — 3 self-contained worlds
+├── world_packs/                # content -- 3 self-contained worlds
 │   ├── scp/
-│   │   ├── pack.yaml          # storyteller config
-│   │   ├── personas/*.yaml    # 21 character cards
-│   │   ├── events/*.yaml      # 36 event templates
-│   │   └── tiles/*.yaml       # 12 locations
-│   ├── liaozhai/              # 20 personas / 36 events / 9 tiles
-│   └── cthulhu/               # 20 personas / 33 events / 9 tiles
+│   │   ├── pack.yaml           # storyteller config
+│   │   ├── personas/*.yaml     # 21 character cards (English)
+│   │   ├── events/*.yaml       # 36 event templates
+│   │   ├── tiles/*.yaml        # 12 locations
+│   │   └── locale/zh/          # Chinese display overlay
+│   ├── liaozhai/               # 20 personas / 36 events / 9 tiles + locale/zh/
+│   └── cthulhu/                # 20 personas / 33 events / 9 tiles + locale/zh/
 │
 ├── living_world/
-│   ├── cli.py                 # Typer CLI (run/digest/dashboard)
-│   ├── config.py              # pydantic Settings (LLM, memory, routing...)
-│   ├── tick_loop.py           # main simulation loop
+│   ├── cli.py                  # Typer CLI (run / digest / list-packs / dashboard)
+│   ├── config.py               # pydantic Settings (all tunables)
+│   ├── tick_loop.py            # TickEngine -- main simulation loop
+│   ├── factory.py              # bootstrap_world + make_engine (shared CLI + dashboard)
+│   ├── storyteller.py          # RimWorld-style per-tile event scheduler
+│   ├── world_pack.py           # YAML loader -> WorldPack runtime objects
+│   ├── persistence.py          # Repository protocol + Memory/Postgres implementations
+│   ├── i18n.py                 # Translation layer (Ollama or noop)
+│   ├── locale.py               # Locale overlay reader (zh display content)
 │   │
-│   ├── core/                  # data models
-│   │   ├── agent.py           # Agent pydantic schema
-│   │   ├── event.py           # LegendEvent + importance tiers
-│   │   ├── tile.py            # Tile (location)
-│   │   └── world.py           # World state (in-memory)
+│   ├── core/                   # data models
+│   │   ├── agent.py            # Agent (x/y coords, attributes, relationships, inventory)
+│   │   ├── event.py            # EventProposal + LegendEvent + importance tiers
+│   │   ├── tile.py             # Tile (x/y center, radius)
+│   │   └── world.py            # World state (in-memory)
 │   │
-│   ├── world_pack/            # plugin loader — reads YAML into WorldPack
-│   ├── storyteller/           # RimWorld-style per-tile event scheduler
 │   ├── statmachine/
-│   │   ├── resolver.py        # D&D dice-roll event resolver
-│   │   ├── importance.py      # importance scoring → tier routing
-│   │   ├── movement.py        # tag-aware agent movement between tiles
-│   │   ├── historical_figures.py  # promotion/demotion registry
-│   │   └── interactions.py    # lethal encounters, companionship, flight
+│   │   ├── resolver.py         # D&D dice-roll resolver + importance scoring
+│   │   ├── consequences.py     # Two-layer change engine (stat ripples + description mutations)
+│   │   ├── conscious.py        # ConsciousnessLayer + DebatePhase
+│   │   ├── movement.py         # Tag-aware agent movement
+│   │   ├── interactions.py     # Lethal encounters, companionship, flight
+│   │   └── historical_figures.py  # Promotion/demotion registry
 │   │
-│   ├── memory/                # pgvector-backed episodic memory + reflection
-│   ├── persistence/           # Postgres/in-memory repository pattern
-│   ├── llm/                   # Tier 2/3 routing + Ollama/mock clients
-│   ├── i18n/                  # output translation layer (en → zh via Gemma)
+│   ├── llm/                    # Tier 2/3 routing + Ollama client
+│   │   ├── base.py             # LLMClient protocol
+│   │   ├── ollama.py           # OllamaClient (only real LLM backend)
+│   │   ├── router.py           # EnhancementRouter
+│   │   ├── dialogue.py         # Dynamic dialogue generator (Tier 3)
+│   │   └── move_advisor.py     # LLM movement advisor for historical figures
 │   │
-│   └── dashboard/             # Streamlit UI
-│       ├── app.py             # main view
-│       ├── build.py           # engine/repo/memory factories
-│       ├── map_view.py        # SVG world-map renderer
-│       └── codex.py           # Story Library view (personas/stories/tiles)
+│   ├── memory/                 # Episodic memory + reflection
+│   │   ├── embedding.py        # OllamaEmbedder
+│   │   └── memory_store.py     # AgentMemoryStore
+│   │
+│   └── dashboard/              # Streamlit UI
+│       ├── app.py              # main view
+│       ├── map_view.py         # SVG world-map renderer
+│       ├── codex.py            # Story Library view
+│       └── styles.css
 │
-└── tests/                     # pytest (17 tests, all green)
+└── tests/                      # 24 tests, all green
     ├── test_smoke.py
+    ├── test_consequences.py
     ├── test_importance.py
     ├── test_memory.py
     ├── test_i18n.py
+    ├── test_locale.py
     └── test_persistence.py
 ```
 
@@ -103,48 +122,50 @@ living-world/
 ## Architecture at a glance
 
 ```
-User → Dashboard (Streamlit)
-          │
-          ▼
-      TickEngine ─── runs one virtual day
-          │
-          ├─ MovementPolicy        (tag-aware: monks stay at temples, D-class flee SCPs)
-          ├─ InteractionEngine     (emergent: SCP-173 unobserved + D-class in room = death)
-          ├─ TileStoryteller × N   (per-tile event candidates w/ tension curve)
-          ├─ EventResolver         (D&D DC roll → outcome → stat/relationship changes)
-          ├─ HistoricalFigureReg.  (promote notable agents to finer simulation)
-          ├─ EnhancementRouter     (importance score → Tier 1/2/3 routing)
-          │     ├─ Tier 1: rule-based templates (zero cost)
-          │     ├─ Tier 2: Phi-4 / Gemma 3 / Ollama (mid cost, local)
-          │     └─ Tier 3: DeepSeek V3 / Gemma 4 / cloud (high quality)
-          └─ MemoryStore           (pgvector — raw events + weekly reflections)
-               │
-               ▼
+User -> Dashboard (Streamlit)
+          |
+          v
+      TickEngine -- runs one virtual day per step()
+          |
+          |-- MovementPolicy        (tag-aware + optional LLM advisor)
+          |-- InteractionEngine     (lethal encounters, companionship, flight)
+          |-- TileStoryteller x N   (per-tile event candidates, tension curve)
+          |-- EventResolver         (D&D DC roll, conscious override option)
+          |-- ConsequenceEngine     (stat ripples + rare description mutations)
+          |-- EnhancementRouter     (importance -> tier 1/2/3 routing)
+          |     |-- Tier 1: rule-based templates (zero cost)
+          |     |-- Tier 2: Ollama local (enhanced narrative)
+          |     '-- Tier 3: Ollama (dynamic dialogue + debate)
+          |-- HistoricalFigureReg.  (promote notable agents)
+          '-- MemoryStore           (episodic memory + periodic reflection)
+               |
+               v
        Repository (in-memory | Postgres+pgvector)
-               │
-               ▼
+               |
+               v
        Dashboard re-renders: SVG map + Chronicle card + Agent card
 ```
 
-**See [architecture.md](../docs/architecture.md) for the full design.**
+See [docs/architecture.md](docs/architecture.md) for the full design.
 
 ---
 
-## Current stats (2026-04-15)
+## Current stats
 
 | Metric | Value |
 |---|---|
 | Packs | 3 (SCP + Cthulhu + Liaozhai) |
-| Personas | 61 (all English) |
+| Personas | 61 (all English, with zh locale overlays) |
 | Event templates | 105 |
 | Tiles | 30 |
-| Emergent lethal rules | 7 |
-| Tests | 17/17 green |
-| 60-day mock run | ~570 events, ~9 deaths, ~20 HF promotions |
+| Lethal encounter rules | 7 |
+| Consequence stat ripples | 11 |
+| Description mutations | 6 |
+| Tests | 24/24 green |
 
 ---
 
-## Extending — add a new world pack
+## Extending -- add a new world pack
 
 ```bash
 mkdir -p world_packs/mypack/{personas,events,tiles}
@@ -209,6 +230,13 @@ events:
         template: "[$tile] ${a} skimmed a few pages."
 ```
 
+Optional Chinese overlay at `world_packs/mypack/locale/zh/personas/alice.yaml`:
+```yaml
+agent_id: alice
+display_name: "爱丽丝"
+persona_card: "简短中文描述。"
+```
+
 Then:
 ```bash
 ./lw run --packs mypack --days 10
@@ -217,79 +245,44 @@ Then:
 
 ---
 
-## Extending — add movement logic to a new tag
-
-Edit `living_world/statmachine/movement.py`:
-
-```python
-TAG_TILE_AFFINITY = {
-    # existing...
-    "my-new-role": {"my-library": 3.0, "outside": 0.3},
-}
-```
-
-Higher weight = more likely to move to that tile type.
-Weight < 0.05 = effectively forbidden (physical logic).
-
----
-
-## Extending — add a lethal encounter rule
-
-Edit `living_world/statmachine/interactions.py`:
-
-```python
-LETHAL_SCP_RULES = {
-    # existing SCP-173, 049, 682...
-    "SCP-MY-ENTITY": {
-        "victim_tags": {"d-class", "researcher"},
-        "unless_any_tag": {"field-agent"},   # MTF protects
-        "kind": "my-entity-incident",
-        "template": "[$tile] ${victim} was caught off-guard by SCP-MY-ENTITY. ...",
-        "kills": True,
-        "lethal_chance": 0.5,
-    },
-}
-```
-
-The interaction engine scans every tile each tick; if a predator and victim are co-located and the rule matches, it rolls and may kill.
-
----
-
 ## Design documents
-
-Higher-level design lives in the repo root's `docs/` folder (gitignored for privacy):
 
 | Doc | Contents |
 |---|---|
-| `docs/product-direction.md` | Stage A/B/C/D roadmap; why three worlds |
-| `docs/architecture.md` | Layer-by-layer system design |
-| `docs/stat-machine-design.md` | Tier 1/2/3 routing & importance scoring |
-| `docs/tech-glossary.md` | Terminology reference |
-| `docs/next-steps.md` | Non-blocking work streams |
+| [docs/product-direction.md](docs/product-direction.md) | Why this product, Direction A rationale |
+| [docs/architecture.md](docs/architecture.md) | Full system architecture |
+| [docs/stat-machine-design.md](docs/stat-machine-design.md) | Consequence engine + tier routing |
+| [docs/tech-glossary.md](docs/tech-glossary.md) | Terminology reference |
+| [docs/flow-loops.md](docs/flow-loops.md) | Runtime flow diagrams |
+| [docs/mvp-roadmap.md](docs/mvp-roadmap.md) | Stage A/B/C/D roadmap |
+| [docs/next-steps.md](docs/next-steps.md) | Remaining Stage A work |
+| [docs/ui-redesign-spec.md](docs/ui-redesign-spec.md) | Canvas map spec (planned, not built) |
 
 ---
 
 ## Key design principles
 
-1. **LLM is optional, not required.** Tier 1 (pure rules) can run the world indefinitely with zero tokens.
-2. **World content is data, not code.** YAML drives everything — add a pack without touching Python.
-3. **Movement follows physical logic.** Tag-to-tile affinity tables enforce rules like "monks stay in temples, D-class cannot enter restricted zones."
-4. **Death is real.** Deceased agents persist in history but are removed from active simulation.
-5. **State is cheap, UI is presentation.** Session state drives everything; the Streamlit dashboard is a thin view layer.
+1. **LLM is optional, not required.** Tier 1 (pure rules) runs the world indefinitely with zero tokens.
+2. **World content is data, not code.** YAML drives everything -- add a pack without touching Python.
+3. **English is source of truth.** Chinese (and future locales) are display overlays, not primary content.
+4. **Consequences persist, chains unfold across ticks.** No recursion depth limit. Changes on agents naturally trigger reactions in subsequent ticks.
+5. **Death is real.** Deceased agents persist in history but are removed from active simulation.
+6. **UI is a view, not a source of truth.** All state lives in `World`; the dashboard re-renders from it.
 
 ---
 
 ## Known limitations
 
-- Map agent clicks don't work — Streamlit URL navigation breaks auto-play. Use the `Inspect agent` dropdown in the Chronicle card instead.
+- SVG map -- no zoom/pan, no animation. Canvas replacement is designed but not built.
+- Streamlit URL navigation breaks auto-play timer. Use native widgets for agent selection.
 - `backdrop-filter` (glassmorphism) is Chrome/Safari only; Firefox falls back to opaque panels.
-- No persistent world state across dashboard restarts yet (Postgres schema exists, repository works, but not hooked into dashboard workflow by default).
+- Postgres persistence works but is not default-enabled in dashboard workflow.
 
 ---
 
 ## License
 
 MIT for the code. Content packs follow their source licenses:
-- SCP Foundation → CC BY-SA 3.0 (attribution required)
-- Cthulhu Mythos (Lovecraft) → public domain
-- Liaozhai Zhiyi → public domain
+- SCP Foundation: CC BY-SA 3.0 (attribution required)
+- Cthulhu Mythos (Lovecraft): public domain
+- Liaozhai Zhiyi: public domain
