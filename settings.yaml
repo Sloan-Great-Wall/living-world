@@ -8,13 +8,16 @@ llm:
   openai_base_url: null
   openai_api_key: null
   dynamic_dialogue_enabled: true
-  debate_enabled: false
+  debate_enabled: true
   debate_threshold: 0.75
   debate_min_stakeholders: 3
   debate_max_stakeholders: 5
   llm_movement_enabled: true
   llm_movement_hf_only: true
   llm_movement_chance: 0.3
+  conscious_override_enabled: true
+  conscious_override_threshold: 0.5
+  conscious_override_chance: 0.5
 budget:
   tier2_tokens_per_day: 1000000
   tier3_tokens_per_day: 200000
