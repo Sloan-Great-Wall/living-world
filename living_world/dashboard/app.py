@@ -6,7 +6,7 @@ import html as _html
 from pathlib import Path
 
 import streamlit as st
-import streamlit.components.v1 as components
+
 
 try:
     from streamlit_autorefresh import st_autorefresh
@@ -327,11 +327,11 @@ if st.session_state.show_codex:
     st.caption("Every authored character, story, and location · the source material the world draws from.")
     tp, ts, tl = st.tabs(["Characters", "Stories", "Locations"])
     with tp:
-        components.html(render_persona_codex_html(_all_packs), height=900, scrolling=True)
+        st.html(render_persona_codex_html(_all_packs), height=900)
     with ts:
-        components.html(render_story_codex_html(_all_packs), height=900, scrolling=True)
+        st.html(render_story_codex_html(_all_packs), height=900)
     with tl:
-        components.html(render_tiles_codex_html(_all_packs), height=800, scrolling=True)
+        st.html(render_tiles_codex_html(_all_packs), height=800)
     st.stop()
 
 if st.session_state.world is None:
