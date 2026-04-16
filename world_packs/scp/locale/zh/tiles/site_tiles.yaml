@@ -1,0 +1,37 @@
+tiles:
+  - tile_id: con-173
+    display_name: 收容室 173
+    description: 10 x 10 米混凝土加固收容室, 常年强光照明, 摄像头永不眨眼。
+  - tile_id: lab-floor-3
+    display_name: 三层研究区
+    description: 研究员主要活动区域, 报告撰写、样本分析、会议。
+  - tile_id: d-holding
+    display_name: D 级人员居住区
+    description: D 级人员的营房区, 简陋双层床 + 公共淋浴 + 食堂。
+  - tile_id: con-049
+    display_name: 收容室 049
+    description: 瘟疫医生专用带观察窗的诊疗室。
+  - tile_id: con-096
+    display_name: 收容室 096
+    description: 无窗、无镜、无影像记录设备的纯黑房间。
+  - tile_id: con-682
+    display_name: 收容池 682
+    description: 酸液浸泡池与复合装甲内层, 永远有两架 MTF 待命。
+  - tile_id: con-079
+    display_name: 收容室 079
+    description: 法拉第笼内的一张办公桌与一台古董电脑。无线网完全屏蔽。
+  - tile_id: con-106
+    display_name: 收容室 106
+    description: 带诱饵密室的多层物理陷阱环境。
+  - tile_id: lounge
+    display_name: 员工休息区
+    description: 咖啡机、旧沙发、白板上一串没擦的数据。
+  - tile_id: briefing-room
+    display_name: 任务简报室
+    description: 一张长桌, 墙上挂着今天的全球异常热点图。
+  - tile_id: o5-chamber
+    display_name: O5 议会室
+    description: 13 把椅子, 无人完整见过所有议员。
+  - tile_id: corridor-a
+    display_name: A 区走廊
+    description: 连接研究区与收容区的主走廊, 永远在打蜡。

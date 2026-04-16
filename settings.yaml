@@ -54,6 +54,11 @@ i18n:
   provider: ollama
   ollama_translate_model: gemma3:4b
   cache_size: 4096
+
+display:
+  locale: en                # en | zh — controls which static content version is shown
+  translate_generated: false # if true + locale=zh, LLM-generated text gets translated too
+
 persistence:
   backend: memory
   postgres_dsn: postgresql://lw:lw_dev_only@localhost:5433/living_world

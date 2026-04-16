@@ -135,6 +135,14 @@ class PersistenceSettings(BaseModel):
     snapshot_every_ticks: int = 10
 
 
+class DisplaySettings(BaseModel):
+    """What the user sees. Completely separate from what the LLM receives."""
+    locale: Literal["en", "zh"] = "en"
+    # "en" → show English source content as-is + no translation of generated text
+    # "zh" → show Chinese locale overlay for static content + translate generated text
+    translate_generated: bool = False  # if True AND locale=zh, LLM output gets translated
+
+
 class DashboardSettings(BaseModel):
     host: str = "localhost"
     port: int = 8501
@@ -152,6 +160,7 @@ class Settings(BaseModel):
     simulation: SimulationSettings = Field(default_factory=SimulationSettings)
     memory: MemorySettings = Field(default_factory=MemorySettings)
     i18n: I18nSettings = Field(default_factory=I18nSettings)
+    display: DisplaySettings = Field(default_factory=DisplaySettings)
     persistence: PersistenceSettings = Field(default_factory=PersistenceSettings)
     dashboard: DashboardSettings = Field(default_factory=DashboardSettings)
 
