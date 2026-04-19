@@ -314,90 +314,49 @@ hr { border: none; border-top: 1px solid #15171f; margin: 18px 0; }
 }
 
 /* =========================================================================
-   World Map as full-page background + floating cards on top (glassmorphism)
+   Layout — normal document flow (no position:fixed)
    ========================================================================= */
-.map-backdrop {
-    position: fixed;
-    top: 0;
-    left: 21rem;          /* sidebar width — adjust if Streamlit changes */
-    right: 0;
-    bottom: 0;
-    z-index: 0;
-    overflow: auto;
-    padding: 24px 40px 40px 40px;
-    pointer-events: auto;
-}
-.map-backdrop svg { max-width: 100%; height: auto; }
 
-/* Collapsed sidebar — map expands full width */
-[data-testid="stSidebar"][aria-expanded="false"] ~ .main .map-backdrop,
-[data-testid="collapsedControl"]:not([style*="display: none"]) ~ * .map-backdrop {
-    left: 0;
-}
-
-/* Make Streamlit's main container transparent + z-index above map */
+/* Main container — transparent bg, full width, comfortable padding */
 .stApp > .main, .main .block-container {
     background: transparent !important;
 }
 .main .block-container {
-    padding: 0 !important;
+    padding: 16px 24px 24px 24px !important;
     max-width: 100% !important;
-    position: relative;
-    z-index: 5;
 }
 
-/* Dock bottom — fixed position bottom strip for cards. Cards in HTML inside this
-   div are positioned at the BOTTOM of the viewport, floating over the map. */
-.dock-bottom {
-    position: fixed;
-    left: calc(21rem + 24px);  /* after sidebar */
-    right: 24px;
-    bottom: 24px;
-    z-index: 20;
+/* Canvas map — rendered via streamlit.components.v1.html() which creates
+   a sized iframe. The iframe gets width/height from the components.html()
+   call; we only need to round its corners for visual consistency. */
+iframe[title^="streamlit_"] {
+    border-radius: 10px;
+}
+
+/* Live banner — inline, not fixed */
+.live-banner {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 16px; margin-bottom: 12px;
+    border-color: rgba(110,196,110,0.25);
+}
+
+/* Bottom panels — two-column grid for agent card + chronicle */
+.bottom-panels {
     display: grid;
     gap: 16px;
-    pointer-events: none;   /* pass-through by default */
+    margin-top: 16px;
 }
-.dock-bottom > * { pointer-events: auto; }  /* re-enable on children */
-/* When sidebar collapsed */
-[data-testid="stSidebar"][aria-expanded="false"] ~ * .dock-bottom,
-[data-testid="collapsedControl"] ~ * .dock-bottom {
-    left: 24px;
-}
-/* 1 card (chronicle only) = single column; 2 cards = two-column */
-.dock-bottom.with-agent { grid-template-columns: 1fr 1fr; }
-.dock-bottom.chronicle-only { grid-template-columns: 1fr; }
+.bottom-panels.with-agent { grid-template-columns: 1fr 1fr; }
+.bottom-panels.chronicle-only { grid-template-columns: 1fr; }
 
-/* Inspect selector — floats over the Chronicle card header, right side.
-   Streamlit container `inspect_bar` becomes `.st-key-inspect_bar` in the DOM. */
+/* Inspect agent selector — inline, not fixed */
 .st-key-inspect_bar {
-    position: fixed !important;
-    right: 38px !important;
-    bottom: calc(38vh + 14px) !important;  /* align with chronicle title row */
-    z-index: 25 !important;
-    width: 240px !important;
-    max-width: 40vw;
+    margin-bottom: 8px;
 }
 .st-key-inspect_bar .stSelectbox > div > div {
     background: rgba(10, 12, 20, 0.85) !important;
     border-color: rgba(255,255,255,0.08) !important;
-    backdrop-filter: blur(8px);
     font-size: 12.5px !important;
-}
-
-/* Top-dock for live banner */
-.dock-top {
-    position: fixed;
-    top: 14px;
-    left: calc(21rem + 24px);
-    right: 24px;
-    z-index: 20;
-    pointer-events: none;
-}
-.dock-top > * { pointer-events: auto; }
-[data-testid="stSidebar"][aria-expanded="false"] ~ * .dock-top,
-[data-testid="collapsedControl"] ~ * .dock-top {
-    left: 24px;
 }
 
 /* Floating glass card — semi-transparent panel that sits over map */

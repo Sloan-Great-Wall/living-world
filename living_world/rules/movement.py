@@ -94,6 +94,8 @@ class MovementPolicy:
         llm_advisor=None,       # optional LLMMoveAdvisor
         llm_hf_only: bool = True,
         llm_chance: float = 0.3,  # when LLM applies, how often to use it
+        goal_bonus: float = 1.0,  # multiplier for tiles matching agent goal keywords
+        memory_store=None,        # optional AgentMemoryStore — passed to LLM advisor
     ) -> None:
         self.world = world
         self.rng = rng or random.Random()
@@ -103,9 +105,50 @@ class MovementPolicy:
         self.llm_advisor = llm_advisor
         self.llm_hf_only = llm_hf_only
         self.llm_chance = llm_chance
+        self.goal_bonus = goal_bonus
+        self.memory_store = memory_store
+
+    # Goal-keyword stop-words — too generic to drive routing.
+    _GOAL_STOPWORDS: frozenset[str] = frozenset({
+        "the", "a", "an", "to", "of", "in", "on", "at", "for", "with", "from",
+        "by", "and", "or", "but", "is", "are", "was", "were", "be", "been",
+        "do", "does", "did", "have", "has", "had", "will", "would", "should",
+        "i", "me", "my", "you", "your", "he", "she", "it", "we", "they",
+        "find", "get", "go", "come", "see", "make", "take", "some", "any",
+    })
+
+    def _goal_tokens(self, agent) -> set[str]:
+        """Lowercased meaningful tokens from current_goal + weekly_plan."""
+        bag: list[str] = []
+        if agent.current_goal:
+            bag.append(agent.current_goal)
+        plan = agent.get_weekly_plan() if hasattr(agent, "get_weekly_plan") else {}
+        for key in ("goals_this_week", "seek"):
+            items = plan.get(key) if isinstance(plan, dict) else None
+            if isinstance(items, list):
+                bag.extend(str(x) for x in items)
+        if not bag:
+            return set()
+        out: set[str] = set()
+        for blob in bag:
+            for raw in str(blob).lower().split():
+                w = "".join(c for c in raw if c.isalnum() or c == "-")
+                if len(w) > 2 and w not in self._GOAL_STOPWORDS:
+                    out.add(w)
+        return out
+
+    def _goal_match_multiplier(self, tokens: set[str], tile) -> float:
+        if not tokens:
+            return 1.0
+        hay = f"{tile.display_name} {tile.tile_type}".lower()
+        for w in tokens:
+            if w in hay:
+                return self.goal_bonus
+        return 1.0
 
     def _candidate_tiles_weighted(self, agent) -> list[tuple[str, float]]:
-        """(tile_id, weight) pairs respecting pack rules + tag affinities."""
+        """(tile_id, weight) pairs respecting pack rules + tag affinities + goal bonus."""
+        goal_tokens = self._goal_tokens(agent)
         out: list[tuple[str, float]] = []
         for t in self.world.all_tiles():
             if t.tile_id == agent.current_tile:
@@ -115,6 +158,7 @@ class MovementPolicy:
             w = _tile_affinity_score(agent.tags, t.tile_type)
             if w <= 0.01:
                 continue  # hard-excluded by physical logic
+            w *= self._goal_match_multiplier(goal_tokens, t)
             out.append((t.tile_id, w))
         return out
 
@@ -132,14 +176,42 @@ class MovementPolicy:
         return tiles
 
     def _move_agent(self, agent, to_tile_id: str) -> None:
-        """Update world state: remove from old tile, add to new."""
+        """Update world state: remove from old tile, add to new, and place
+        the agent at a real (x, y) inside the new tile.
+
+        The (x, y) is stable per (agent, tile) pair — same agent re-entering
+        the same tile lands on the same spot. This means the spatial layout
+        is now actually meaningful (not just visual jitter), making it
+        cheap to upgrade to true continuous-2D logic later: distance
+        checks, line-of-sight, corridor encounters all just need to start
+        reading agent.x / agent.y instead of agent.current_tile.
+        """
         old_tile = self.world.get_tile(agent.current_tile) if agent.current_tile else None
         if old_tile and agent.agent_id in old_tile.resident_agents:
             old_tile.resident_agents.remove(agent.agent_id)
         agent.current_tile = to_tile_id
         new_tile = self.world.get_tile(to_tile_id)
-        if new_tile and agent.agent_id not in new_tile.resident_agents:
+        if new_tile is None:
+            return
+        if agent.agent_id not in new_tile.resident_agents:
             new_tile.resident_agents.append(agent.agent_id)
+        # Place the agent at a stable spot inside the new tile.
+        agent.x, agent.y = self._spot_in_tile(agent, new_tile)
+
+    @staticmethod
+    def _spot_in_tile(agent, tile) -> tuple[float, float]:
+        """Deterministic per-(agent, tile) coordinate inside the tile circle.
+
+        HF agents cluster nearer the centre (radius * 0.35 max), ordinary
+        agents spread wider (radius * 0.7 max). The angle is derived from
+        a hash so the same agent re-entering lands in the same spot.
+        """
+        import math
+        h = hash((agent.agent_id, tile.tile_id)) & 0xFFFFFFFF
+        angle = ((h & 0xFFFF) / 0xFFFF) * math.tau
+        max_radius = tile.radius * (0.35 if agent.is_historical_figure else 0.7)
+        dist = ((h >> 16) / 0xFFFF) * max_radius
+        return tile.x + math.cos(angle) * dist, tile.y + math.sin(angle) * dist
 
     def _weighted_choice(self, candidates: list[tuple[str, float]]) -> str:
         total = sum(w for _, w in candidates)
@@ -153,7 +225,7 @@ class MovementPolicy:
 
     def tick(self) -> list[tuple[str, str, str]]:
         """Run one movement tick. Returns list of (agent_id, from_tile, to_tile)."""
-        moves: list[tuple[str, str, str]] = []
+        moves: list[tuple[str, str, str, str]] = []
         for agent in list(self.world.living_agents()):
             # Anchored entities do not move (SCP-173, Cthulhu, etc.)
             if ANCHORED_TAGS & agent.tags:
@@ -173,6 +245,7 @@ class MovementPolicy:
                 continue
 
             dest: str | None = None
+            method = "rule-affinity"
 
             # LLM advisor override — only for historical figures (if opt-in)
             use_llm = (
@@ -183,6 +256,8 @@ class MovementPolicy:
             if use_llm:
                 try:
                     dest = self.llm_advisor.suggest(agent, self.world, candidates)
+                    if dest is not None:
+                        method = "llm-advisor"
                 except Exception:
                     dest = None
 
@@ -192,10 +267,11 @@ class MovementPolicy:
                 friend_cands = [(t, w) for t, w in candidates if t in friend_tiles]
                 if friend_cands and self.rng.random() < self.friend_pull:
                     dest = self._weighted_choice(friend_cands)
+                    method = "rule-relationship"
                 else:
                     dest = self._weighted_choice(candidates)
 
             from_tile = agent.current_tile
             self._move_agent(agent, dest)
-            moves.append((agent.agent_id, from_tile, dest))
+            moves.append((agent.agent_id, from_tile, dest, method))
         return moves

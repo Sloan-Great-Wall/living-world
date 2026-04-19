@@ -9,9 +9,16 @@ attributes:
   arcane_knowledge: 90
   social: 60
   firearms: 40
-alignment: lawful_neutral
+alignment: lawful_good
 tags: [cthulhu, investigator, academic, armed]
 life_stage: elder
 age: 68
 current_tile: miskatonic-library
 current_goal: 确认最新一次教团活动的范围
+inventory:
+  - name: 'Necronomicon copy (annotated)'
+    tags: [cursed, restricted, scholarly]
+    power: 0
+  - name: 'service revolver'
+    tags: [weapon, mundane]
+    power: 4

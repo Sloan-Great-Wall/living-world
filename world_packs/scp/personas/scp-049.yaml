@@ -14,3 +14,10 @@ life_stage: elder
 age: 600
 current_tile: con-049
 current_goal: 'find the next patient who needs curing'
+inventory:
+  - name: 'beaked plague mask'
+    tags: [anomaly, signature, mask]
+    power: 0
+  - name: 'surgeon''s tools, pre-modern'
+    tags: [weapon, anomaly, ritual]
+    power: 6

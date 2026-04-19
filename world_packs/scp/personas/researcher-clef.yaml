@@ -9,7 +9,7 @@ attributes:
   social: 40
   survival: 99
   firearms: 95
-alignment: chaotic_neutral
+alignment: chaotic_evil
 tags: [scp, foundation, researcher, field-agent, armed]
 life_stage: prime
 age: 47
@@ -19,3 +19,7 @@ relationships:
   - target_id: Dr-Bright
     affinity: -10
     kind: rival-colleague
+inventory:
+  - name: 'sidearm with anti-anomalous ammunition'
+    tags: [weapon, anti-anomaly]
+    power: 12

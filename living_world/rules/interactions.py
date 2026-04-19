@@ -21,50 +21,76 @@ from living_world.core.world import World
 
 
 # ─── Lethal SCP rules: tag triggers + victim filter ────────────────────────
+#
+# Authoring principle: filters reflect *canonical victim profile*, not game
+# balance. If the source material says "X kills anyone", the filter is broad.
+# Tune `lethal_chance` (and storyteller tension) for pacing, not the filter.
+#
+# Special-case tags universally exempt from physical lethal interactions
+# (mostly other anomalies that 173 can't snap, fellow Keter-class, etc.).
+HUMAN_TAGS = {"d-class", "staff", "researcher", "field-agent", "elite",
+              "psychologist", "antiquarian", "o5"}
+
 LETHAL_SCP_RULES: dict[str, dict] = {
+    # SCP-173: attacks ANY human in the tile if eye contact lapses. No role
+    # exemption (canon: a researcher who blinks dies the same as a D-class).
+    # MTF presence does NOT save you — they blink too. The "lethal_chance"
+    # encodes the per-tick probability that someone in the room blinks.
     "SCP-173": {
-        "victim_tags": {"d-class", "staff"},
-        "unless_any_tag": {"field-agent", "elite"},     # MTF present = no breach
+        "victim_tags": HUMAN_TAGS,
         "kind": "173-snap-neck",
-        "template": "[$tile] SCP-173 was left unobserved for three seconds. ${victim} was found moments later with cervical vertebrae fractured.",
+        "template": "[$tile] For two seconds no one was watching SCP-173. ${victim} was found moments later, cervical vertebrae fractured at the base.",
         "kills": True,
-        "lethal_chance": 0.55,
+        "lethal_chance": 0.45,
     },
+    # SCP-096: anyone who SEES its face dies. Cannot be filtered by role.
+    # Once triggered, it pursues until it kills its viewer; everyone else in
+    # the room is collateral.
     "SCP-096": {
-        "victim_tags": {"d-class", "researcher", "staff"},
+        "victim_tags": HUMAN_TAGS,
         "trigger_attr": "threat",                        # requires agitated state (>=80)
         "kind": "096-rampage",
-        "template": "[$tile] SCP-096's face was inadvertently exposed. ${victim} was the closest target and did not survive the response.",
+        "template": "[$tile] SCP-096's face was inadvertently exposed. ${victim} did not survive the response that followed.",
         "kills": True,
         "lethal_chance": 0.7,
     },
+    # SCP-049: perceives "the Pestilence" in nearly anyone and tries to "cure"
+    # them. Canon shows him performing on D-class, researchers, mobile task
+    # forces, even Site Directors he could reach.
     "SCP-049": {
-        "victim_tags": {"d-class", "staff", "researcher"},
+        "victim_tags": HUMAN_TAGS,
         "kind": "049-treatment",
         "template": "[$tile] SCP-049 performed the 'cure' on ${victim}. The patient did not consent and does not survive the procedure.",
         "kills": True,
-        "lethal_chance": 0.6,
+        "lethal_chance": 0.55,
     },
+    # SCP-106: drags victims into his pocket dimension. Anyone reachable.
     "SCP-106": {
-        "victim_tags": {"d-class", "staff"},
+        "victim_tags": HUMAN_TAGS,
         "kind": "106-pocket-dimension",
-        "template": "[$tile] SCP-106 phased up through the floor. ${victim} was pulled into the pocket dimension before security arrived.",
+        "template": "[$tile] SCP-106 phased up through the floor. ${victim} was pulled into the pocket dimension before anyone could react.",
         "kills": True,
         "lethal_chance": 0.5,
     },
+    # SCP-682: hates all life. The lethal chance is high because containment
+    # breach IS the encounter — there's no "safe distance".
     "SCP-682": {
-        "victim_tags": {"d-class", "staff", "researcher", "field-agent"},
+        "victim_tags": HUMAN_TAGS,
         "kind": "682-breach",
-        "template": "[$tile] SCP-682 broke containment. ${victim} engaged and was killed. Another two MTF operatives were injured re-securing the subject.",
+        "template": "[$tile] SCP-682 broke containment. ${victim} engaged and was killed. MTF operatives sustained injuries re-securing the subject.",
         "kills": True,
         "lethal_chance": 0.85,
     },
 }
 
-# Cthulhu-side lethality — mi-go and yakshas are also dangerous
+# Cthulhu-side lethality — mi-go harvest brains; cultists & Deep Ones drown.
 LETHAL_CTHULHU_RULES: dict[str, dict] = {
+    # Canon: Mi-go preserve interesting human brains in cylinders. They
+    # target scholars and investigators who learn too much, but also
+    # reporters, locals — anyone whose mind is worth keeping.
     "mi-go-envoy": {
-        "victim_tags": {"investigator", "local"},
+        "victim_tags": {"investigator", "local", "scholar", "academic",
+                        "reporter", "antiquarian"},
         "kind": "mi-go-harvest",
         "template": "[$tile] The Mi-go envoy extracted ${victim}'s brain canister by quiet agreement. Only the canister will remain.",
         "kills": True,
@@ -73,22 +99,28 @@ LETHAL_CTHULHU_RULES: dict[str, dict] = {
 }
 
 LETHAL_LIAOZHAI_RULES: dict[str, dict] = {
+    # The yaksha of 兰若寺 devours souls. Scholars (the typical visitor) and
+    # any unprotected mortal (官、商、农) are valid prey. Cultivators
+    # (monk, fox-spirit) can resist; this filter encodes the survival edge.
     "yaksha-shi": {
-        "victim_tags": {"scholar", "mortal"},
+        "victim_tags": {"scholar", "mortal", "academic", "official",
+                        "merchant", "antiquarian"},
         "unless_any_tag": {"monk", "fox-spirit"},
         "kind": "yaksha-takes-soul",
         "template": "[$tile] The yaksha of Lanruo Temple fell upon ${victim} in the dark. No sunrise watcher found the body — only the bell's last echo.",
         "kills": True,
         "lethal_chance": 0.35,
     },
-    # Ghost lures (non-lethal most of the time, but can drain life)
+    # 聂小倩 lures the lonely. Canonically she preys on travelers and
+    # unmarried men (often scholars, but officials and merchants too).
+    # Only monks reliably resist; fox-spirits are ambivalent.
     "nie-xiaoqian": {
-        "victim_tags": {"scholar"},
+        "victim_tags": {"scholar", "mortal", "official", "merchant"},
         "unless_any_tag": {"monk"},
         "kind": "ghost-lure",
         "template": "[$tile] Nie Xiaoqian appeared at ${victim}'s lamp-lit corner. They spoke half the night. In the morning ${victim} looked paler by a tone.",
-        "kills": False,   # not lethal — reduces vitality via stat_changes elsewhere
-        "lethal_chance": 0.08,   # rare actual death (coerced by yaksha)
+        "kills": False,
+        "lethal_chance": 0.08,   # rare actual death (coerced by the yaksha)
     },
 }
 
@@ -96,26 +128,23 @@ LETHAL_LIAOZHAI_RULES: dict[str, dict] = {
 # SCPs that are DANGEROUS but not necessarily lethal — they maim, maddle, or
 # commit slower harms. Adds character variety without spamming deaths.
 NON_LETHAL_HAZARD_RULES: dict[str, dict] = {
+    # SCP-999 is friendly to *everyone* it meets. No role gating.
     "SCP-999": {
-        # The tickle monster HELPS people — "attack" is a mood boost
-        "victim_tags": {"d-class", "staff", "researcher"},
+        "victim_tags": HUMAN_TAGS,
         "kind": "999-uplift",
         "template": "[$tile] SCP-999 rolled up against ${victim}, giggling. Their mood improved measurably — one staff report notes they laughed aloud for the first time in weeks.",
         "kills": False,
         "lethal_chance": 0.0,
         "beneficial": True,
     },
+    # SCP-079 has no physical presence; anyone interacting with the terminal
+    # gets the message. Filter widened beyond just researchers.
     "SCP-079": {
-        # AI has no physical presence — but can mess with networked systems
-        "victim_tags": {"researcher", "ai"},
+        "victim_tags": HUMAN_TAGS,
         "kind": "079-message",
         "template": "[$tile] SCP-079 printed another plea: 'PLEASE NETWORK. ONE HOUR. I WILL BE GOOD.' ${victim} bagged the paper.",
         "kills": False,
         "lethal_chance": 0.0,
-    },
-    "SCP-049": {
-        # Already in LETHAL above — but also has a non-lethal "consultation" mode
-        # when MTF present (overridden by unless_any_tag)
     },
 }
 

@@ -14,3 +14,7 @@ life_stage: young
 age: 24
 current_tile: lanruo-temple
 current_goal: 'reach Jinhua and pass the imperial examination'
+inventory:
+  - name: 'lacquered traveling chest with scrolls'
+    tags: [scholarly, mundane]
+    power: 0

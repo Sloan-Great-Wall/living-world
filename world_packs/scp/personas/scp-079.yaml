@@ -8,7 +8,7 @@ attributes:
   threat: 30
   intellect: 70
   memory_span_hours: 24
-alignment: neutral_evil
+alignment: chaotic_neutral
 tags: [scp, anomaly, ai, networked]
 life_stage: elder
 age: 48

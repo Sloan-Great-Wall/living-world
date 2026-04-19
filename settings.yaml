@@ -7,33 +7,65 @@ llm:
   ollama_timeout_seconds: 60.0
   openai_base_url: null
   openai_api_key: null
+
+  # Narrative
   dynamic_dialogue_enabled: true
-  debate_enabled: true
-  debate_threshold: 0.75
-  debate_min_stakeholders: 3
-  debate_max_stakeholders: 5
+
+  # Movement: HF agents now LLM-thought 60% of moves (was 30%)
   llm_movement_enabled: true
   llm_movement_hf_only: true
-  llm_movement_chance: 0.3
+  llm_movement_chance: 0.6
+
+  # Conscious veto/adjust: more events get LLM review (lower threshold,
+  # higher activation chance) — closer to System 2 deliberating on social
+  # situations, not just emergencies.
   conscious_override_enabled: true
-  conscious_override_threshold: 0.5
-  conscious_override_chance: 0.5
+  conscious_override_threshold: 0.35
+  conscious_override_chance: 0.7
+
+  # Decision-layer LLM features
+  goal_driven_movement_bonus: 1.4
+  weekly_planning_enabled: true
+  weekly_planning_hf_only: true
+  goal_aligned_event_bonus: 1.5
+
+  # A→B reaction loop — mutates affinity + beliefs from dialogue content
+  conversation_loop_enabled: true
+
+  # 说书人 — periodic chapter summaries (descriptive only)
+  chronicler_enabled: true
+  chronicle_every_ticks: 14
+
+  # LLM invents novel events on hot tiles
+  emergent_events_enabled: true
+  emergent_max_per_tick: 3
+
+  # Subjective perception: each agent's memory rewritten from their POV
+  subjective_perception_enabled: true
+  subjective_perception_threshold: 0.5
+
+  # AgentSelfUpdate: LLM mutates participant's full inner state on big events
+  self_update_enabled: true
+  self_update_threshold: 0.5
+
 budget:
-  tier2_tokens_per_day: 1000000
   tier3_tokens_per_day: 200000
+
 importance:
-  tier2_threshold: 0.35
   tier3_threshold: 0.65
+
 historical_figures:
   spotlight_threshold: 0.6
   notable_threshold: 0.3
   notable_count_for_promotion: 3
   strong_relationship_affinity: 70
   inactivity_days_for_demotion: 30
+
 storyteller:
   force_personality: ''
   max_events_per_day_override: null
   tension_target_override: null
+
 simulation:
   default_packs:
   - scp
@@ -42,27 +74,21 @@ simulation:
   default_days: 30
   default_seed: 42
   packs_dir: world_packs
+
 memory:
   enabled: true
   embedder: ollama
   ollama_embed_model: nomic-embed-text
   reflect_every_ticks: 7
   recall_top_k: 5
-i18n:
-  enabled: false
-  target_locale: zh
-  provider: ollama
-  ollama_translate_model: gemma3:4b
-  cache_size: 4096
 
 display:
-  locale: en                # en | zh — controls which static content version is shown
-  translate_generated: false # if true + locale=zh, LLM-generated text gets translated too
+  locale: en
+  translate_generated: false
 
 persistence:
-  backend: memory
-  postgres_dsn: postgresql://lw:lw_dev_only@localhost:5433/living_world
-  snapshot_every_ticks: 10
+  snapshot_every_ticks: 7   # aligned with weekly maintenance cadence
+
 dashboard:
   host: localhost
   port: 8501

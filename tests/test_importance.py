@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from living_world.core.agent import Agent
 from living_world.core.event import LegendEvent
-from living_world.statmachine.resolver import score_event_importance
+from living_world.rules.resolver import score_event_importance
 
 
 def _agent(aid: str, hf: bool = False) -> Agent:

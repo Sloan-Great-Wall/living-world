@@ -91,3 +91,65 @@ class Agent(BaseModel):
             self.relationships[other_id] = rel
         rel.affinity = max(-100, min(100, rel.affinity + delta))
         rel.last_interaction_tick = tick
+
+    # ── Beliefs (stored in state_extra so no schema change) ──
+    # Convention: state_extra["beliefs"] is a dict[str, str] mapping
+    # topic/agent-id to a terse belief sentence. These are evolved by the
+    # dialogue loop and other LLM-driven pathways.
+
+    def get_beliefs(self) -> dict[str, str]:
+        beliefs = self.state_extra.get("beliefs")
+        if not isinstance(beliefs, dict):
+            return {}
+        return beliefs
+
+    def set_belief(self, topic: str, belief: str) -> None:
+        if not topic or not belief:
+            return
+        beliefs = self.state_extra.setdefault("beliefs", {})
+        beliefs[topic] = belief[:200]  # clamp to something sensible
+
+    def get_weekly_plan(self) -> dict:
+        plan = self.state_extra.get("weekly_plan")
+        return plan if isinstance(plan, dict) else {}
+
+    # ── Internal mind: needs / emotions / motivations ──
+    # Following AgentSociety's structured-mind model. Stored in state_extra
+    # to avoid schema migration; promoted to first-class fields if they stay.
+    #
+    # needs:       Maslow-like drives, decay/grow over time, in [0, 100].
+    #              hunger / safety / belonging / esteem / autonomy.
+    # emotions:    short-half-life affect, in [0, 100]. Decays toward
+    #              baseline. fear / joy / anger / sadness / surprise.
+    # motivations: short text strings — current driving urges, set by LLM.
+
+    _DEFAULT_NEEDS = {"hunger": 30.0, "safety": 70.0, "belonging": 50.0,
+                       "esteem": 50.0, "autonomy": 50.0}
+    _DEFAULT_EMOTIONS = {"fear": 0.0, "joy": 30.0, "anger": 0.0,
+                          "sadness": 0.0, "surprise": 0.0}
+
+    def get_needs(self) -> dict[str, float]:
+        n = self.state_extra.get("needs")
+        if not isinstance(n, dict):
+            n = dict(self._DEFAULT_NEEDS)
+            self.state_extra["needs"] = n
+        return n
+
+    def get_emotions(self) -> dict[str, float]:
+        e = self.state_extra.get("emotions")
+        if not isinstance(e, dict):
+            e = dict(self._DEFAULT_EMOTIONS)
+            self.state_extra["emotions"] = e
+        return e
+
+    def get_motivations(self) -> list[str]:
+        m = self.state_extra.get("motivations")
+        return m if isinstance(m, list) else []
+
+    def adjust_need(self, key: str, delta: float) -> None:
+        needs = self.get_needs()
+        needs[key] = max(0.0, min(100.0, needs.get(key, 50.0) + delta))
+
+    def adjust_emotion(self, key: str, delta: float) -> None:
+        emotions = self.get_emotions()
+        emotions[key] = max(0.0, min(100.0, emotions.get(key, 0.0) + delta))

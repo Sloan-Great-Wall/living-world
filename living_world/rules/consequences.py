@@ -38,60 +38,63 @@ from living_world.core.world import World
 
 
 # ══════════════════════════════════════════════════════════════
-# STAT LAYER — fires on every qualifying event, modifies numerics
+# WITNESS RIPPLE — categorical emotion writes for non-participants
 # ══════════════════════════════════════════════════════════════
+#
+# For PARTICIPANTS: see agents/self_update.py — LLM speaks as the
+# participant and reports their inner shift. Rich, nuanced.
+# For WITNESSES (here): a tiny rule-based emotion bump that decays
+# naturally via rules/decay.py. Cheap, runs on every event, no LLM.
+#
+# Why this is small now (was ~50 lines of per-event tables):
+#   - PARTICIPANTS get rich psychological treatment via agents/self_update.py
+#     (LLM speaks AS them and reports inner shifts). No need for hardcoded
+#     "fear+25" deltas anymore for participants.
+#   - WITNESSES (third parties present in the tile) still need a quick
+#     emotional reaction. Rule path here, since LLM cost would be
+#     prohibitive (witnesses can be 5-10 per event).
+#   - Writes go to agent.emotions (decays naturally via rules/decay.py),
+#     NOT to attributes (those are participant-facing identity stats).
+#   - Relationship deltas removed: they were "all witnesses hate the
+#     attacker" — too coarse. Real relationship change is content-driven
+#     via agents/dialogue.conversation_turn.
+#
+# Categories instead of per-event tables: drama / horror / shame / wonder.
+# Each event_kind maps to a category; categories define emotion deltas.
 
-@dataclass
-class StatRipple:
-    """When event_kind matches, apply numeric changes to witnesses in the same tile."""
-    event_kind: str
-    witness_tags: set[str]
-    attribute_changes: dict[str, float] = field(default_factory=dict)
-    relationship_to_victim: int = 0    # sympathy/horror toward victim
-    relationship_to_attacker: int = 0  # hatred/fear toward attacker
-    exclude_participants: bool = True
-    narrative: str = ""  # short witness-reaction text
+_HUMAN_TAGS = {"d-class", "staff", "researcher", "field-agent", "elite",
+                "psychologist", "antiquarian", "o5",
+                "investigator", "academic", "scholar", "local",
+                "reporter", "law-enforcement",
+                "mortal", "official", "merchant"}
 
+# (witness_emotion_deltas, narrative_template_for_chronicle)
+_WITNESS_REACTIONS: dict[str, dict[str, float]] = {
+    "horror":   {"fear": 25, "sadness": 10, "joy": -10},
+    "dread":    {"fear": 15, "sadness": 5},
+    "wonder":   {"surprise": 20, "joy": 5},
+    "joy":      {"joy": 15, "fear": -5},
+    "anger":    {"anger": 20, "joy": -5},
+}
 
-STAT_RIPPLES: list[StatRipple] = [
-    # SCP lethal
-    StatRipple("173-snap-neck", {"d-class", "staff", "researcher"},
-               {"fear": 25, "morale": -15}, relationship_to_attacker=-30,
-               narrative="[{tile}] {witness} saw what SCP-173 did to {victim}. They haven't spoken since."),
-    StatRipple("682-breach", {"d-class", "staff", "researcher", "field-agent"},
-               {"fear": 20, "morale": -10}, relationship_to_attacker=-20,
-               narrative="[{tile}] {witness} was in the corridor when 682 broke through."),
-    StatRipple("049-treatment", {"d-class", "staff"},
-               {"fear": 15, "morale": -8},
-               narrative="[{tile}] {witness} heard the Plague Doctor's tools through the wall."),
-    StatRipple("106-pocket-dimension", {"d-class", "staff"},
-               {"fear": 30, "morale": -20},
-               narrative="[{tile}] {witness} watched {victim} sink into the floor. The stain remains."),
-    StatRipple("096-rampage", {"d-class", "staff", "researcher"},
-               {"fear": 35, "morale": -25},
-               narrative="[{tile}] {witness} heard SCP-096's scream. Some sounds don't leave you."),
-    # Cthulhu
-    StatRipple("descent", {"investigator", "academic", "local"},
-               {"sanity": -8},
-               narrative="[{tile}] {witness} watched {victim} lose composure. A familiar dread settled deeper."),
-    StatRipple("cult-ritual", {"investigator", "local", "law-enforcement"},
-               {"sanity": -5, "arcane_knowledge": 2},
-               narrative="[{tile}] {witness} overheard fragments of the rite. They understood more than they wanted to."),
-    StatRipple("possession", {"investigator", "academic"},
-               {"sanity": -12},
-               narrative="[{tile}] {witness} was in the room when {victim}'s voice changed."),
+# event_kind → category. Anything not listed → no witness ripple.
+_EVENT_CATEGORY: dict[str, str] = {
+    # SCP lethal/dangerous
+    "173-snap-neck":         "horror",
+    "682-breach":            "horror",
+    "049-treatment":         "horror",
+    "106-pocket-dimension":  "horror",
+    "096-rampage":           "horror",
+    # SCP positive
+    "999-uplift":            "joy",
+    # Cthulhu mind-shake
+    "descent":               "dread",
+    "cult-ritual":           "dread",
+    "possession":            "horror",
     # Liaozhai
-    StatRipple("yaksha-takes-soul", {"scholar", "mortal"},
-               {"courage": -15},
-               narrative="[{tile}] {witness} smelled something wrong and whispered a sutra they didn't know they remembered."),
-    StatRipple("renlao-tryst", {"scholar", "mortal", "fox-spirit"},
-               {"charm": 3},
-               narrative="[{tile}] {witness} sensed warmth between {victim} and another. Even the lanterns seemed gentler."),
-    # Positive
-    StatRipple("999-uplift", {"d-class", "staff", "researcher"},
-               {"morale": 8, "fear": -5},
-               narrative="[{tile}] {witness} saw SCP-999 and couldn't help a half-smile."),
-]
+    "yaksha-takes-soul":     "horror",
+    "renlao-tryst":          "wonder",
+}
 
 
 # ══════════════════════════════════════════════════════════════
@@ -191,14 +194,6 @@ class ConsequenceEngine:
     def __init__(self, world: World, rng: random.Random | None = None) -> None:
         self.world = world
         self.rng = rng or random.Random()
-        self._ripple_by_kind: dict[str, list[StatRipple]] = {}
-        for r in STAT_RIPPLES:
-            self._ripple_by_kind.setdefault(r.event_kind, []).append(r)
-
-    def _apply_delta(self, agent: Agent, attr: str, delta: float) -> None:
-        cur = agent.attributes.get(attr, 50)
-        if isinstance(cur, (int, float)):
-            agent.attributes[attr] = max(0, min(100, float(cur) + delta))
 
     def _check_condition(self, agent: Agent, cond: dict[str, tuple[str, float]]) -> bool:
         for attr, (op, threshold) in cond.items():
@@ -216,60 +211,45 @@ class ConsequenceEngine:
                 return False
         return True
 
-    def _victim_name(self, event: LegendEvent) -> str:
-        if len(event.participants) >= 2:
-            v = self.world.get_agent(event.participants[1])
-            return v.display_name if v else "someone"
-        if event.participants:
-            v = self.world.get_agent(event.participants[0])
-            return v.display_name if v else "someone"
-        return "someone"
-
     def apply(self, event: LegendEvent) -> list[LegendEvent]:
-        """Process one event's consequences. Returns witness-reaction legend entries."""
+        """Process one event's consequences. Returns generated reaction events.
+
+        Now lean: witnesses get a small EMOTION ripple (decays naturally),
+        not a per-event attribute table. Per-event narrative reactions are
+        emitted as compact 'witness-*' LegendEvents only for high-impact
+        categories so the Chronicle still shows that someone was watching.
+        """
         tick = event.tick
         reactions: list[LegendEvent] = []
 
-        # ── Stat layer: ripple to witnesses ──
-        for ripple in self._ripple_by_kind.get(event.event_kind, []):
-            # Use pre-snapshotted witnesses if available, else fall back to tile scan
-            if event.witnesses:
-                witness_agents = [
-                    self.world.get_agent(wid) for wid in event.witnesses
-                ]
-                witness_agents = [a for a in witness_agents if a is not None and a.is_alive()]
-            else:
-                tile = self.world.get_tile(event.tile_id)
-                if tile is None:
-                    continue
+        # ── Witness emotion ripple (rule, no LLM) ──
+        category = _EVENT_CATEGORY.get(event.event_kind)
+        if category is not None:
+            deltas = _WITNESS_REACTIONS[category]
+            tile = self.world.get_tile(event.tile_id)
+            if tile is not None:
                 participant_ids = set(event.participants)
-                witness_agents = [
+                witnesses = [
                     a for a in self.world.agents_in_tile(tile.tile_id)
                     if a.is_alive() and a.agent_id not in participant_ids
-                ]
-            witnesses = [a for a in witness_agents if ripple.witness_tags & a.tags]
-            for witness in witnesses[:4]:
-                for attr, delta in ripple.attribute_changes.items():
-                    self._apply_delta(witness, attr, delta)
-                if ripple.relationship_to_attacker and event.participants:
-                    witness.adjust_affinity(event.participants[0], ripple.relationship_to_attacker, tick)
-                if ripple.relationship_to_victim and len(event.participants) >= 2:
-                    witness.adjust_affinity(event.participants[1], ripple.relationship_to_victim, tick)
-
-                if ripple.narrative:
-                    text = ripple.narrative.format(
-                        tile=event.tile_id,
-                        witness=witness.display_name,
-                        victim=self._victim_name(event),
-                    )
+                    and (a.tags & _HUMAN_TAGS)
+                ][:4]
+                for w in witnesses:
+                    for emotion, delta in deltas.items():
+                        w.adjust_emotion(emotion, delta)
+                # One compact synthetic event captures "someone was watching",
+                # so the Chronicle records collateral exposure. Only fired for
+                # high-impact categories to keep the log readable.
+                if witnesses and category in ("horror", "anger", "wonder"):
+                    names = ", ".join(w.display_name for w in witnesses[:3])
                     reactions.append(LegendEvent(
                         event_id=str(uuid.uuid4()), tick=tick,
-                        pack_id=witness.pack_id, tile_id=event.tile_id,
+                        pack_id=witnesses[0].pack_id, tile_id=event.tile_id,
                         event_kind=f"witness-{event.event_kind}",
-                        participants=[witness.agent_id],
+                        participants=[w.agent_id for w in witnesses],
                         outcome="neutral",
-                        template_rendering=text,
-                        importance=0.25,
+                        template_rendering=f"[{event.tile_id}] {names} were present and saw it.",
+                        importance=0.2,
                     ))
 
         # ── Description layer: check ALL agents in tile for rare mutations ──

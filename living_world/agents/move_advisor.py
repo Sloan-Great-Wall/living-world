@@ -22,18 +22,46 @@ Name: {name}
 Persona: {persona}
 Current goal: {goal}
 Currently at: {current_tile}
-
+{plan_block}{memory_block}
 CANDIDATE LOCATIONS
 {candidates}
 
-Pick ONE destination tile_id that best matches the character's persona and goal.
+Pick ONE destination tile_id that best matches the character's persona, goal, plan, and memories.
 Output ONLY the tile_id, nothing else. Example: "market-street".
 Tile id:"""
 
 
 class LLMMoveAdvisor:
-    def __init__(self, client: LLMClient) -> None:
+    def __init__(self, client: LLMClient, memory_store=None) -> None:
         self.client = client
+        self.memory_store = memory_store
+
+    def _plan_block(self, agent: Agent) -> str:
+        plan = agent.get_weekly_plan() if hasattr(agent, "get_weekly_plan") else {}
+        if not plan:
+            return ""
+        bits: list[str] = []
+        for key in ("goals_this_week", "seek", "avoid"):
+            items = plan.get(key)
+            if isinstance(items, list) and items:
+                bits.append(f"  {key}: {', '.join(str(x) for x in items[:4])}")
+        if not bits:
+            return ""
+        return "Weekly plan:\n" + "\n".join(bits) + "\n"
+
+    def _memory_block(self, agent: Agent) -> str:
+        if self.memory_store is None:
+            return ""
+        query = agent.current_goal or agent.display_name
+        try:
+            entries = self.memory_store.recall(agent.agent_id, query, top_k=2) or []
+        except Exception:
+            return ""
+        lines = [getattr(e, "doc", "")[:120].replace("\n", " ") for e in entries]
+        lines = [l for l in lines if l]
+        if not lines:
+            return ""
+        return "Relevant memories:\n" + "\n".join(f"  - {l}" for l in lines) + "\n"
 
     def suggest(
         self,
@@ -55,6 +83,8 @@ class LLMMoveAdvisor:
             persona=(agent.persona_card or "").strip()[:280],
             goal=agent.current_goal or "(none)",
             current_tile=agent.current_tile or "(unknown)",
+            plan_block=self._plan_block(agent),
+            memory_block=self._memory_block(agent),
             candidates=cand_text,
         )
         try:

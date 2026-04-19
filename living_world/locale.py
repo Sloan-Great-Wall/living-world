@@ -12,7 +12,7 @@ Architecture:
   3. DISPLAY (UI output):
      If user locale = "en", show English as-is.
      If user locale = "zh", look up Chinese overlay for static content;
-     for LLM-generated text, use i18n translation layer.
+     for LLM-generated text, prompt the LLM to use the target language directly.
 
 This module provides:
   - load_locale_overlay(): reads zh/ personas and returns a dict of {field: localized_value}

@@ -55,6 +55,55 @@ class TileStoryteller:
         self.event_pool = event_pool
         self.rng = rng or random.Random()
         self.tension = TensionState()
+        # Phase E: optional goal-alignment hooks. Factory sets these when
+        # wiring up the engine; plain TickEngine usage leaves them None and
+        # the behavior is identical to before.
+        self.world = None
+        self.goal_bonus: float = 1.0
+
+    # Words carrying no signal. Keep in sync with movement._GOAL_STOPWORDS
+    # (duplicated so this module stays standalone).
+    _GOAL_STOPWORDS: frozenset[str] = frozenset({
+        "the", "a", "an", "to", "of", "in", "on", "at", "for", "with", "from",
+        "by", "and", "or", "but", "is", "are", "was", "were", "be", "been",
+        "do", "does", "did", "have", "has", "had", "will", "would", "should",
+        "i", "me", "my", "you", "your", "he", "she", "it", "we", "they",
+        "find", "get", "go", "come", "see", "make", "take", "some", "any",
+    })
+
+    def _resident_goal_tokens(self) -> set[str]:
+        """Collect goal + weekly-plan tokens from every agent currently in the tile."""
+        if self.world is None or self.goal_bonus <= 1.0:
+            return set()
+        tokens: set[str] = set()
+        for aid in self.tile.resident_agents:
+            agent = self.world.get_agent(aid)
+            if agent is None or not agent.is_alive():
+                continue
+            bag: list[str] = []
+            if agent.current_goal:
+                bag.append(agent.current_goal)
+            plan = agent.get_weekly_plan() if hasattr(agent, "get_weekly_plan") else {}
+            for key in ("goals_this_week", "seek"):
+                items = plan.get(key) if isinstance(plan, dict) else None
+                if isinstance(items, list):
+                    bag.extend(str(x) for x in items)
+            for blob in bag:
+                for raw in str(blob).lower().split():
+                    w = "".join(c for c in raw if c.isalnum() or c == "-")
+                    if len(w) > 2 and w not in self._GOAL_STOPWORDS:
+                        tokens.add(w)
+        return tokens
+
+    def _alignment_multiplier(self, tpl: EventTemplate, tokens: set[str]) -> float:
+        """Multiplier ≥1.0 when template kind/description hits any resident goal token."""
+        if not tokens:
+            return 1.0
+        hay = (tpl.event_kind + " " + (tpl.description or "")).lower()
+        for w in tokens:
+            if w in hay:
+                return self.goal_bonus
+        return 1.0
 
     def _personality_factor(self) -> float:
         """Personality shifts how often we trigger events."""
@@ -74,8 +123,14 @@ class TileStoryteller:
             available.append(tpl)
         if not available:
             return []
-        # weight by priority
-        weights = [max(0.05, tpl.base_importance + 0.05) for tpl in available]
+        # weight by priority, with optional goal-alignment boost (Phase E).
+        # When world is wired in, events whose kind/description mention a
+        # token from any resident agent's goal or weekly_plan get bumped.
+        tokens = self._resident_goal_tokens()
+        weights = [
+            max(0.05, tpl.base_importance + 0.05) * self._alignment_multiplier(tpl, tokens)
+            for tpl in available
+        ]
         picked: list[EventTemplate] = []
         remaining = list(zip(available, weights))
         for _ in range(min(n, len(available))):

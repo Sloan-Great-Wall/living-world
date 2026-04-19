@@ -1,7 +1,7 @@
 """CLI: `world-sim run|digest|list-packs|dashboard`.
 
 Thin wrapper around `factory.py` — same engine construction as the dashboard
-so advanced features (dialogue, debate, consciousness) light up automatically
+so advanced features (dialogue, conscience, planner, etc.) light up automatically
 when settings.yaml has them enabled.
 """
 
@@ -62,11 +62,9 @@ def run(
     world, engine = _build_and_run(pack_ids, days, seed, persist=persist)
 
     total_events = world.event_count()
-    router_stats = engine.router.stats
+    n = engine.narrator.stats
     console.log(
-        f"Done. {total_events} events | "
-        f"T1={router_stats.tier1} T2={router_stats.tier2} T3={router_stats.tier3} "
-        f"downgrades={router_stats.downgraded}"
+        f"Done. {total_events} events | T1={n.tier1} T3={n.tier3}"
     )
     console.log(f"Historical figures: {engine.hf_registry.summary()}")
 
@@ -107,8 +105,8 @@ def digest(
 
     console.rule("Summary")
     console.print(world.summary())
-    s = engine.router.stats
-    console.print(f"router: T1={s.tier1} T2={s.tier2} T3={s.tier3}")
+    s = engine.narrator.stats
+    console.print(f"narrator: T1={s.tier1} T3={s.tier3}")
 
 
 @app.command("list-packs")

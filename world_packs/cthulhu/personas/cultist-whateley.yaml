@@ -15,3 +15,7 @@ life_stage: young
 age: 15
 current_tile: dunwich-hills
 current_goal: 取回存于米斯卡塔尼克的某本典籍
+inventory:
+  - name: 'Liber Umbrarum (the Book of Shadows)'
+    tags: [cursed, irreplaceable, ritual, ancient]
+    power: 0

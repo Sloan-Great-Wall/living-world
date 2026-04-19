@@ -70,6 +70,30 @@ class EventResolver:
             return all_residents
         return [a for a in all_residents if required.issubset(a.tags)]
 
+    @staticmethod
+    def _inventory_bonus(participant: Agent, template: EventTemplate) -> int:
+        """Sum power of items whose tags are relevant to this event template.
+
+        An item contributes its power if any of its tags overlap the event
+        template's `required_tags` OR `event_kind`. So the monk's
+        九节锡杖 (tags: anti-anomaly) gives him +9 against an "anomaly"
+        event, but +0 against a "tea-ceremony" event.
+        """
+        if not participant.inventory:
+            return 0
+        kind_l = template.event_kind.lower()
+        req = set(template.trigger_conditions.get("required_tags") or [])
+        relevant_terms = {kind_l, *(t.lower() for t in req)}
+        bonus = 0
+        for item in participant.inventory:
+            item_terms = {kind_l, *(t.lower() for t in item.tags)}
+            # Match if any item tag appears in event's relevant terms,
+            # or any event term in item tags (substring is too loose,
+            # use exact-set overlap).
+            if item_terms & relevant_terms:
+                bonus += item.power
+        return bonus
+
     def _roll_outcome(self, template: EventTemplate, participants: list[Agent]) -> str:
         """Simple DC check. 'success' / 'failure' / 'neutral'."""
         cfg = template.dice_roll or {}
@@ -79,16 +103,21 @@ class EventResolver:
         stat = cfg.get("stat")
         mod = int(cfg.get("mod", 0))
         bonus = 0
-        if stat and participants:
-            # take the best modifier across participants
-            bonuses = []
-            for p in participants:
-                v = p.attributes.get(stat, 0)
-                if isinstance(v, (int, float)):
-                    bonuses.append(int((float(v) - 10) / 2))  # D&D-style
-            if bonuses:
-                bonus = max(bonuses)
-        roll = self.rng.randint(1, 20) + bonus + mod
+        inv_bonus = 0
+        if participants:
+            if stat:
+                bonuses = []
+                for p in participants:
+                    v = p.attributes.get(stat, 0)
+                    if isinstance(v, (int, float)):
+                        bonuses.append(int((float(v) - 10) / 2))  # D&D-style
+                if bonuses:
+                    bonus = max(bonuses)
+            # Inventory bonus: best item-power across participants. Caps at
+            # +5 so a magic sword cannot trivialise every roll.
+            inv_bonuses = [self._inventory_bonus(p, template) for p in participants]
+            inv_bonus = min(5, max(inv_bonuses)) if inv_bonuses else 0
+        roll = self.rng.randint(1, 20) + bonus + mod + inv_bonus
         if roll >= dc:
             return "success"
         if roll <= max(1, dc - 10):

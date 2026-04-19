@@ -8,9 +8,13 @@ attributes:
   insight: 95
   social: 70
   decisiveness: 70
-alignment: lawful_neutral
+alignment: lawful_evil
 tags: [scp, foundation, o5, permanent_historical]
 life_stage: elder
 age: 60
 current_tile: o5-chamber
 current_goal: 'review this week''''s Keter incident briefs'
+inventory:
+  - name: 'O5 council classification ledger'
+    tags: [classified, irreplaceable, authority]
+    power: 0

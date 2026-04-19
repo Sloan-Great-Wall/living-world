@@ -13,3 +13,7 @@ life_stage: prime
 age: 41
 current_tile: briefing-room
 current_goal: 'receive his next field assignment'
+inventory:
+  - name: 'standard MTF kit'
+    tags: [weapon, foundation-issue]
+    power: 6
