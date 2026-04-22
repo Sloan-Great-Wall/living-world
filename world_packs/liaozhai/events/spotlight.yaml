@@ -20,3 +20,84 @@ events:
         template: "[$tile] ${a} 夜入 ${b} 之室, 为其正色所拒, 惭然退去。"
       neutral:
         template: "[$tile] ${a} 与 ${b} 夜谈至三更, 未及深情。"
+
+  - event_kind: nie-xiaoqian-encounter
+    description: 宁采臣兰若寺夜遇聂小倩。
+    trigger_conditions:
+      min_participants: 2
+      max_participants: 2
+    dice_roll:
+      stat: moral_resolve
+      dc: 14
+    cooldown_days: 60
+    base_importance: 0.85
+    outcomes:
+      success:
+        relationship_changes:
+          - { delta: 40 }
+        template: "[$tile] ${a} 持身甚正, 不为色诱所动, ${b} 反生敬意, 泣诉所苦, 求其携骸归葬。"
+      failure:
+        stat_changes: [{target: any, attribute: moral_resolve, delta: -15}]
+        template: "[$tile] ${a} 把持不住, 中其妖术, 翌日齿缝渗血, 命在旦夕。"
+      neutral:
+        template: "[$tile] ${a} 闻 ${b} 抚琴一曲, 隔窗对望未语, 鸡鸣而散。"
+
+  - event_kind: painted-skin-reveal
+    description: 美人卸下人皮露出本相。
+    trigger_conditions:
+      min_participants: 2
+      max_participants: 2
+    dice_roll:
+      stat: insight
+      dc: 15
+    cooldown_days: 45
+    base_importance: 0.80
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: insight, delta: 2}]
+        template: "[$tile] ${a} 自窗隙窥见 ${b} 铺人皮于榻, 执笔点染, 大骇而退, 急访道士。"
+      failure:
+        stat_changes: [{target: any, attribute: moral_resolve, delta: -20}]
+        template: "[$tile] ${a} 不察 ${b} 真容, 心被挖去, 弃尸于地, 妻沿门乞食方得复生。"
+      neutral:
+        template: "[$tile] ${a} 对 ${b} 之异略有疑心, 然未敢深究, 姑且留之。"
+
+  - event_kind: mount-lao-taoist-test
+    description: 求仙学穿墙之术, 终败于贪。
+    trigger_conditions:
+      min_participants: 1
+      max_participants: 2
+    dice_roll:
+      stat: moral_resolve
+      dc: 13
+    cooldown_days: 30
+    base_importance: 0.65
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: moral_resolve, delta: 3}]
+        template: "[$tile] ${a} 砍柴汲水数月不辍, 道士授以穿墙诀, 临行戒以勿矜。"
+      failure:
+        stat_changes: [{target: any, attribute: moral_resolve, delta: -10}]
+        template: "[$tile] ${a} 归家炫术于妻, 撞墙额起一包如卵, 仙术尽失。"
+      neutral:
+        template: "[$tile] ${a} 在 ${b} 处旁观月下饮酒, 终未得师传, 日出辞去。"
+
+  - event_kind: cricket-emperor-tribute
+    description: 县令之子魂化促织, 救父于罪。
+    trigger_conditions:
+      min_participants: 2
+      max_participants: 3
+    dice_roll:
+      stat: insight
+      dc: 14
+    cooldown_days: 75
+    base_importance: 0.78
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: morale, delta: 10}]
+        template: "[$tile] ${a} 之子化促织, 斗败诸虫上贡内廷, 龙颜大悦, ${a} 免罪受赏。"
+      failure:
+        stat_changes: [{target: any, attribute: morale, delta: -15}]
+        template: "[$tile] ${a} 误杀贡虫, 子魂未归, 妻 ${b} 哭绝于井畔。"
+      neutral:
+        template: "[$tile] ${a} 捕得一虫, 形貌平平, 未敢上呈, 暂置笼中观望。"

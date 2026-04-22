@@ -44,3 +44,66 @@ events:
         template: "[$tile] For three hours ${a} was someone else — and returned knowing fragments they should not know."
       neutral:
         template: "[$tile] ${a} felt nothing. Nothing was what the thing wanted them to feel."
+
+  - event_kind: necronomicon-ritual
+    description: A cultist reads aloud from the Necronomicon.
+    trigger_conditions: {min_participants: 1, max_participants: 3, required_tags: [cultist]}
+    dice_roll: {stat: arcane_knowledge, dc: 16}
+    cooldown_days: 40
+    base_importance: 0.85
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: arcane_knowledge, delta: 3}]
+        template: "[$tile] ${a} read the seventh passage aloud. Something answered from beneath the floor — quietly, this time."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -20}]
+        template: "[$tile] ${a} mispronounced a single syllable. The candles burned green, and ${b} will not speak of what walked through the door."
+      neutral:
+        template: "[$tile] ${a} closed the book at the third page. Whatever was listening went back to listening elsewhere."
+
+  - event_kind: rlyeh-rises
+    description: R'lyeh briefly breaches the Pacific surface.
+    trigger_conditions: {min_participants: 1, max_participants: 4}
+    dice_roll: {stat: sanity, dc: 18}
+    cooldown_days: 180
+    base_importance: 0.95
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: sanity, delta: -10}]
+        template: "[$tile] The dream-wave crested for six hours; ${a} woke convinced the stars were almost right, then merely wrong again."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -35}]
+        template: "[$tile] R'lyeh held above the waves for a full day. Asylums filled across three continents; ${a} was among the first admitted."
+      neutral:
+        template: "[$tile] Seismographs spiked once and went quiet. ${a} logged the reading and told no one the dream they had that night."
+
+  - event_kind: yog-sothoth-summon
+    description: The key-and-gate rite is attempted at Sentinel Hill.
+    trigger_conditions: {min_participants: 2, max_participants: 3, required_tags: [cultist]}
+    dice_roll: {stat: arcane_knowledge, dc: 17}
+    cooldown_days: 90
+    base_importance: 0.90
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: arcane_knowledge, delta: 4}]
+        template: "[$tile] ${a} and ${b} traced the Voorish sign correctly; the air thickened, and a single eye opened in the empty space above the altar before closing again."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -25}]
+        template: "[$tile] The gate opened wider than ${a} intended. Something invisible passed through, broke a stone fence on its way down the hill, and was not seen again — or was seen everywhere."
+      neutral:
+        template: "[$tile] The wind rose, the chant faltered, and ${a} judged the alignment wrong. They will try again at Lammas."
+
+  - event_kind: nyarlathotep-walks
+    description: The Crawling Chaos appears in human form.
+    trigger_conditions: {min_participants: 1, max_participants: 3}
+    dice_roll: {stat: sanity, dc: 17}
+    cooldown_days: 75
+    base_importance: 0.88
+    outcomes:
+      success:
+        template: "[$tile] ${a} watched the dark stranger lecture a small crowd, recognized the cadence, and walked away before being noticed."
+      failure:
+        stat_changes: [{target: any, attribute: sanity, delta: -22}]
+        template: "[$tile] ${a} stayed for the demonstration. By dawn three townsfolk had walked into the river and ${a} could not remember refusing to."
+      neutral:
+        template: "[$tile] The stranger spoke softly to ${a}, said nothing of consequence, and was gone before the streetlamp finished flickering."

@@ -19,3 +19,70 @@ events:
         template: "[$tile] 收容系统测试中出现误报, 无实际异常。"
       neutral:
         template: "[$tile] 收容边界出现波动, 经复核属于日常扰动。"
+
+  - event_kind: mass-breach
+    description: 多个 SCP 同时突破收容。
+    trigger_conditions:
+      min_participants: 2
+      max_participants: 4
+      required_tags: [scp]
+    dice_roll:
+      stat: threat
+      dc: 18
+    cooldown_days: 60
+    base_importance: 0.92
+    outcomes:
+      success:
+        stat_changes:
+          - { target: all, attribute: threat, delta: 5 }
+        template: "[$tile] 警铃齐鸣, ${a} 与 ${b} 同时脱离收容, 全站进入红色警报。MTF 用六小时勉强重新封锁。"
+      failure:
+        stat_changes:
+          - { target: any, attribute: morale, delta: -20 }
+        template: "[$tile] 多重收容失效叠加, ${a} 突破至地表, 区域被永久封锁, 数十名员工失踪。"
+      neutral:
+        template: "[$tile] 多个收容单元短暂波动, 应急预案演练成功, 未造成实际突破。"
+
+  - event_kind: keter-lockdown
+    description: 全设施锁闭并部署机动特遣队。
+    trigger_conditions:
+      min_participants: 2
+      max_participants: 4
+      required_tags: [mtf]
+    dice_roll:
+      stat: tactical_skill
+      dc: 16
+    cooldown_days: 45
+    base_importance: 0.88
+    outcomes:
+      success:
+        stat_changes:
+          - { target: all, attribute: tactical_skill, delta: 2 }
+        template: "[$tile] ${a} 指挥的 MTF Alpha-1 在 23 分钟内锁定全部出入口, Keter 级威胁被压制。"
+      failure:
+        stat_changes:
+          - { target: any, attribute: morale, delta: -15 }
+        template: "[$tile] 锁闭过程中通讯枢纽被切断, ${a} 与外界失联两小时, 三名队员未能归队。"
+      neutral:
+        template: "[$tile] 全员演练锁闭流程, ${a} 评估认为响应时间仍需缩短 12%。"
+
+  - event_kind: o5-cover-up
+    description: O5 议会下令实施记忆抹除。
+    trigger_conditions:
+      min_participants: 1
+      max_participants: 3
+      required_tags: [o5]
+    dice_roll:
+      stat: insight
+      dc: 15
+    cooldown_days: 90
+    base_importance: 0.85
+    outcomes:
+      success:
+        template: "[$tile] ${a} 签署 B 类记忆删除令, 涉事三十七人被处理, 公开档案改写完成。"
+      failure:
+        stat_changes:
+          - { target: any, attribute: morale, delta: -10 }
+        template: "[$tile] 抹除作业中一名记者残留模糊记忆, ${a} 不得不批准更激进的二次处理。"
+      neutral:
+        template: "[$tile] ${a} 主持闭门会议, 决议存档于 13 号保险柜, 未对外执行任何动作。"

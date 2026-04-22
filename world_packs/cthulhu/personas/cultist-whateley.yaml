@@ -2,8 +2,10 @@ agent_id: wilbur-whateley
 display_name: Wilbur Whateley
 is_historical_figure: true
 persona_card: >
-  敦威治偏僻山区的畸形青年, 出生即以异常速度生长, 15 岁已成年男子身量。
-  随母习旧神秘法, 为家族宏大计划奔走。举止彬彬有礼, 眼神总在别处。
+  Misshapen youth from the isolated hills of Dunwich. Grew at an unnatural
+  speed from birth — by 15 he had a grown man's frame. Studied the old
+  secret arts under his mother; now serves a vast family plan. Outwardly
+  polite, well-spoken; his eyes always seem to focus on something else.
 attributes:
   sanity: 30
   arcane_knowledge: 75
@@ -14,7 +16,7 @@ tags: [cthulhu, cultist, non-human-ancestry]
 life_stage: young
 age: 15
 current_tile: dunwich-hills
-current_goal: 取回存于米斯卡塔尼克的某本典籍
+current_goal: retrieve a certain volume kept at Miskatonic
 inventory:
   - name: 'Liber Umbrarum (the Book of Shadows)'
     tags: [cursed, irreplaceable, ritual, ancient]
