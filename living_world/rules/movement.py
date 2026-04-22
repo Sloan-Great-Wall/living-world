@@ -80,6 +80,45 @@ def _tile_affinity_score(agent_tags: set[str], tile_type: str) -> float:
     return min(scores) * (sum(scores) / len(scores)) ** 0.5
 
 
+# ── Alignment-based tile preference (independent of tag affinity) ──
+#
+# Lawful types lean toward order/authority spaces, chaotic types toward
+# fringe/forbidden spaces. Multiplier on top of tag-affinity weight.
+# Empty/neutral alignment → 1.0 (no effect).
+
+_LAWFUL_TILES = {"o5-chamber", "operations", "law-office", "official-yard",
+                  "briefing-room", "research-floor"}
+_CHAOTIC_TILES = {"restricted", "underworld-yard", "cult-hall",
+                   "wilderness-haunt", "fox-den", "haunted-temple",
+                   "decaying-port", "cosmic-ruin"}
+_GOOD_TILES = {"social-area", "lounge", "scholar-study"}
+_EVIL_TILES = {"cult-hall", "containment-chamber", "underworld-yard"}
+
+
+def _alignment_tile_multiplier(alignment: str, tile_type: str) -> float:
+    """Multiplier ≈ 0.7 - 1.4 based on lawful/chaotic + good/evil axes."""
+    if not alignment or alignment == "neutral" or alignment == "unaligned":
+        return 1.0
+    mult = 1.0
+    # Lawful / chaotic axis
+    if alignment.startswith("lawful_") and tile_type in _LAWFUL_TILES:
+        mult *= 1.3
+    elif alignment.startswith("lawful_") and tile_type in _CHAOTIC_TILES:
+        mult *= 0.75
+    elif alignment.startswith("chaotic_") and tile_type in _CHAOTIC_TILES:
+        mult *= 1.3
+    elif alignment.startswith("chaotic_") and tile_type in _LAWFUL_TILES:
+        mult *= 0.85
+    # Good / evil axis
+    if alignment.endswith("_good") and tile_type in _GOOD_TILES:
+        mult *= 1.15
+    elif alignment.endswith("_evil") and tile_type in _EVIL_TILES:
+        mult *= 1.2
+    elif alignment.endswith("_evil") and tile_type in _GOOD_TILES:
+        mult *= 0.9
+    return mult
+
+
 class MovementPolicy:
     """Decide per-tick whether each agent moves, and where to."""
 
@@ -159,6 +198,7 @@ class MovementPolicy:
             if w <= 0.01:
                 continue  # hard-excluded by physical logic
             w *= self._goal_match_multiplier(goal_tokens, t)
+            w *= _alignment_tile_multiplier(agent.alignment, t.tile_type)
             out.append((t.tile_id, w))
         return out
 

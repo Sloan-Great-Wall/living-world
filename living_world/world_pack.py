@@ -41,6 +41,19 @@ class EventTemplate(BaseModel):
     cooldown_days: int = 0
     base_importance: float = 0.1
 
+    # Runtime usage stats — updated by storyteller after each fire.
+    # Used by Event Library panel + tail elimination.
+    fire_count: int = 0
+    importance_sum: float = 0.0  # to compute avg = importance_sum / fire_count
+    last_fired_tick: int = 0
+    # Source: "yaml" = hand-authored, "promoted" = LLM-emergent that earned
+    # promotion to the template pool via the curator.
+    source: str = "yaml"
+
+    @property
+    def avg_importance(self) -> float:
+        return self.importance_sum / self.fire_count if self.fire_count else 0.0
+
 
 class WorldPack:
     """A loaded world pack — personas + events + tiles + storyteller config."""

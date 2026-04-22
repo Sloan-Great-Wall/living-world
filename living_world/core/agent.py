@@ -123,10 +123,12 @@ class Agent(BaseModel):
     #              baseline. fear / joy / anger / sadness / surprise.
     # motivations: short text strings — current driving urges, set by LLM.
 
-    _DEFAULT_NEEDS = {"hunger": 30.0, "safety": 70.0, "belonging": 50.0,
-                       "esteem": 50.0, "autonomy": 50.0}
-    _DEFAULT_EMOTIONS = {"fear": 0.0, "joy": 30.0, "anger": 0.0,
-                          "sadness": 0.0, "surprise": 0.0}
+    # Slimmed from 5/5 to 2/3 — only the dimensions actually consumed by
+    # downstream code remain. Trim history: belonging / esteem / autonomy
+    # / sadness / surprise had no readers. Hunger drives daily routine,
+    # safety drives danger reactions; fear/joy/anger drive social tone.
+    _DEFAULT_NEEDS = {"hunger": 30.0, "safety": 70.0}
+    _DEFAULT_EMOTIONS = {"fear": 0.0, "joy": 30.0, "anger": 0.0}
 
     def get_needs(self) -> dict[str, float]:
         n = self.state_extra.get("needs")

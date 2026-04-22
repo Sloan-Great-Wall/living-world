@@ -156,6 +156,15 @@ class TickLogger:
             f"{', '.join(participants)}"
         )
 
+    def template_promoted(self, event_kind: str, pack_id: str, importance: float) -> None:
+        self._write(
+            f"  TEMPLATE_PROMOTED  [rule] {pack_id}/{event_kind} "
+            f"(imp={importance:.2f}) joined the storyteller pool"
+        )
+
+    def template_pruned(self, event_kind: str, pack_id: str) -> None:
+        self._write(f"  TEMPLATE_PRUNED  [rule] {pack_id}/{event_kind} dropped from pool")
+
     def self_update(self, agent_id: str, applied: dict) -> None:
         bits = []
         if "attribute_deltas" in applied:

@@ -53,6 +53,68 @@ def score_event_importance(
     return min(1.0, max(0.0, score))
 
 
+def _environmental_modifiers(
+    event: LegendEvent,
+    participants: list[Agent],
+    world: World,
+    *,
+    novelty_window: int = 7,
+) -> float:
+    """Return a multiplier (≈0.5-1.5) reflecting context the base score misses.
+
+    Two signals:
+
+      Novelty decay
+        Same event_kind already happened in the same tile in the last
+        `novelty_window` ticks → multiplier <1.0. The 3rd 173-snap-neck
+        this week is less newsworthy than the 1st.
+
+      Resonance with participant inner state
+        Any participant has a strong belief about a co-participant, OR
+        a co-participant's name appears in their weekly_plan / motivations
+        → multiplier >1.0. This event matters more to them personally.
+
+    Combined multiplicatively. Bounded to [0.5, 1.5] so even hot events
+    can't blow past the importance scale, and even stale ones still register.
+    """
+    multiplier = 1.0
+
+    # ── Novelty decay ──
+    since = max(1, world.current_tick - novelty_window)
+    same_in_window = sum(
+        1 for e in world.events_since(since)
+        if e.tile_id == event.tile_id and e.event_kind == event.event_kind
+    )
+    if same_in_window >= 1:
+        # 1 prior = 0.85, 2 priors = 0.72, 3 priors = 0.61 (geometric)
+        multiplier *= 0.85 ** same_in_window
+
+    # ── Resonance with participant inner state ──
+    if len(participants) >= 2:
+        ids = {p.agent_id for p in participants}
+        names_lower = {p.display_name.lower() for p in participants}
+        for p in participants:
+            others = ids - {p.agent_id}
+            # Belief topic mentions another participant id → resonance
+            beliefs = p.get_beliefs() if hasattr(p, "get_beliefs") else {}
+            if any(o in beliefs for o in others):
+                multiplier *= 1.15
+                break
+            # Weekly plan / motivations mention another participant by name
+            plan = p.get_weekly_plan() if hasattr(p, "get_weekly_plan") else {}
+            mots = p.get_motivations() if hasattr(p, "get_motivations") else []
+            blob = " ".join(
+                str(x).lower()
+                for key in ("seek", "goals_this_week", "avoid")
+                for x in (plan.get(key) or [])
+            ) + " " + " ".join(str(m).lower() for m in mots)
+            if any(n in blob for n in names_lower if n != p.display_name.lower()):
+                multiplier *= 1.15
+                break
+
+    return max(0.5, min(1.5, multiplier))
+
+
 class EventResolver:
     def __init__(self, world: World, rng: random.Random | None = None) -> None:
         self.world = world
@@ -227,10 +289,20 @@ class EventResolver:
         )
         event.template_rendering = rendering
 
-        event.importance = score_event_importance(
+        base_score = score_event_importance(
             event, participants,
             base_importance=float(template.base_importance),
         )
+        # Environmental modifiers: novelty decay + resonance with inner state.
+        # Multiplier ≈ 0.5 - 1.5; clamped at the end to [0, 1].
+        env_mult = _environmental_modifiers(event, participants, self.world)
+        event.importance = max(0.0, min(1.0, base_score * env_mult))
+        # Track usage stats so the Event Library panel + tail elimination
+        # have something to score templates by. Mutates the YAML-loaded
+        # template object in place; persists for session lifetime only.
+        template.fire_count += 1
+        template.importance_sum += event.importance
+        template.last_fired_tick = tick
         # If consciousness intervened, annotate so UI can show the ⟡ mark
         if verdict is not None and verdict.adjusts:
             event.stat_changes.setdefault("_consciousness", {})

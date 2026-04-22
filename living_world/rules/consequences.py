@@ -70,11 +70,11 @@ _HUMAN_TAGS = {"d-class", "staff", "researcher", "field-agent", "elite",
 
 # (witness_emotion_deltas, narrative_template_for_chronicle)
 _WITNESS_REACTIONS: dict[str, dict[str, float]] = {
-    "horror":   {"fear": 25, "sadness": 10, "joy": -10},
-    "dread":    {"fear": 15, "sadness": 5},
-    "wonder":   {"surprise": 20, "joy": 5},
-    "joy":      {"joy": 15, "fear": -5},
-    "anger":    {"anger": 20, "joy": -5},
+    "horror": {"fear": 25, "joy": -10},
+    "dread":  {"fear": 15},
+    "wonder": {"joy": 10},
+    "joy":    {"joy": 15, "fear": -5},
+    "anger":  {"anger": 20, "joy": -5},
 }
 
 # event_kind → category. Anything not listed → no witness ripple.
