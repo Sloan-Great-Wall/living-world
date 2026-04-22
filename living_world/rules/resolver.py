@@ -116,9 +116,15 @@ def _environmental_modifiers(
 
 
 class EventResolver:
+    # World-wide same-tick same-kind dedup: stop the same template from
+    # firing more than once across all tiles in the same virtual day.
+    # Set to None to disable; integer = max occurrences per tick across world.
+    SAME_KIND_PER_TICK_CAP: int = 1
+
     def __init__(self, world: World, rng: random.Random | None = None) -> None:
         self.world = world
         self.rng = rng or random.Random()
+        self._kind_tick_count: dict[tuple[int, str], int] = {}
 
     def _eligible_participants(
         self, proposal: EventProposal, template: EventTemplate
@@ -220,20 +226,38 @@ class EventResolver:
                     {"a": a.agent_id, "b": b.agent_id, "delta": delta}
                 )
 
+    @staticmethod
+    def _required_slots(template_str: str) -> int:
+        """Highest participant slot referenced (a=1, b=2, c=3)."""
+        needs = 0
+        for slot, n in (
+            ("$a", 1), ("$b", 2), ("$c", 3),
+            ("${a}", 1), ("${b}", 2), ("${c}", 3),
+        ):
+            if slot in template_str:
+                needs = max(needs, n)
+        return needs
+
     def _render_template(
         self,
         template_str: str,
         participants: list[Agent],
         tile_id: str,
-    ) -> str:
+    ) -> str | None:
+        """Substitute ${a/b/c} with participant names. Returns None if the
+        template references more slots than we have participants — the
+        caller should skip the event entirely rather than emit a
+        "?"-leaking narrative."""
         if not template_str:
             names = [p.display_name for p in participants]
             return f"[{tile_id}] {', '.join(names) or '(none)'} — event occurred."
+        if self._required_slots(template_str) > len(participants):
+            return None
         mapping = {
             "tile": tile_id,
-            "a": participants[0].display_name if participants else "?",
-            "b": participants[1].display_name if len(participants) >= 2 else "?",
-            "c": participants[2].display_name if len(participants) >= 3 else "?",
+            "a": participants[0].display_name if participants else "",
+            "b": participants[1].display_name if len(participants) >= 2 else "",
+            "c": participants[2].display_name if len(participants) >= 3 else "",
         }
         try:
             return Template(template_str).safe_substitute(mapping)
@@ -247,6 +271,12 @@ class EventResolver:
         tick: int,
         consciousness=None,
     ) -> LegendEvent | None:
+        # ── World-wide same-kind cap ──
+        if self.SAME_KIND_PER_TICK_CAP is not None:
+            key = (tick, proposal.event_kind)
+            if self._kind_tick_count.get(key, 0) >= self.SAME_KIND_PER_TICK_CAP:
+                return None
+
         participants = self._eligible_participants(proposal, template)
         min_participants = int((template.trigger_conditions or {}).get("min_participants", 1))
         if len(participants) < min_participants:
@@ -287,6 +317,11 @@ class EventResolver:
         rendering = self._render_template(
             outcome_spec.get("template", ""), participants, proposal.tile_id
         )
+        if rendering is None:
+            # Template requires more participants than available; drop
+            # the event so we never emit "?"-leaking narrative. Caller
+            # treats None as "skip this proposal, try another".
+            return None
         event.template_rendering = rendering
 
         base_score = score_event_importance(
@@ -303,6 +338,10 @@ class EventResolver:
         template.fire_count += 1
         template.importance_sum += event.importance
         template.last_fired_tick = tick
+        # Bump the world-wide same-kind counter only on successful realize.
+        if self.SAME_KIND_PER_TICK_CAP is not None:
+            key = (tick, proposal.event_kind)
+            self._kind_tick_count[key] = self._kind_tick_count.get(key, 0) + 1
         # If consciousness intervened, annotate so UI can show the ⟡ mark
         if verdict is not None and verdict.adjusts:
             event.stat_changes.setdefault("_consciousness", {})

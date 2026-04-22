@@ -70,7 +70,9 @@ events:
 
   - event_kind: janitor-sees-too-much
     description: 清洁工拖到了不该拖的那一块地。
-    trigger_conditions: {min_participants: 1, max_participants: 2}
+    # Template renders both ${a} and ${b}; insufficient cast → resolver
+    # skips this event (avoids "?" placeholder leaking into narrative).
+    trigger_conditions: {min_participants: 2, max_participants: 2}
     dice_roll: {stat: insight, dc: 12}
     cooldown_days: 20
     base_importance: 0.35

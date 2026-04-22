@@ -260,12 +260,19 @@ class EmergentEventProposer:
     `rules.heat.hot_tiles()` and feeds them in here one at a time.
     """
 
+    # How long a participant SET (sorted tuple of ids) is locked out
+    # of being the protagonists of a fresh emergent event. Prevents the
+    # LLM from looping the same Strelnikov+O5-03 plot beat.
+    PAIR_COOLDOWN_TICKS = 4
+
     def __init__(self, client: LLMClient) -> None:
         self.client = client
         # Diagnostic counters — track WHERE proposals die.
         self.stats = {"calls": 0, "tile_too_small": 0, "llm_error": 0,
-                       "parse_fail": 0, "validate_fail": 0, "ok": 0,
-                       "last_raw_sample": ""}
+                       "parse_fail": 0, "validate_fail": 0,
+                       "pair_cooldown": 0, "ok": 0, "last_raw_sample": ""}
+        # tick at which each participant-set was last used as emergent cast
+        self._pair_last_tick: dict[tuple[str, ...], int] = {}
 
     def propose(self, tile: Tile, world: World) -> LegendEvent | None:
         self.stats["calls"] += 1
@@ -273,7 +280,20 @@ class EmergentEventProposer:
         if len(residents) < 2:
             self.stats["tile_too_small"] += 1
             return None
-        prompt = SYSTEM_PROMPT + "\n\n" + _tile_context(tile, world) + "\n\nYour JSON:"
+        # Inject anti-fixation hints into the prompt: list which agent
+        # sets were recently used so the LLM picks fresh casts.
+        recent_pairs = [
+            ", ".join(p) for p, t in self._pair_last_tick.items()
+            if world.current_tick - t < self.PAIR_COOLDOWN_TICKS
+        ][:5]
+        avoid_block = ""
+        if recent_pairs:
+            avoid_block = (
+                "\n\nAVOID re-using these recent emergent casts "
+                "(they just had an event together):\n  - "
+                + "\n  - ".join(recent_pairs)
+            )
+        prompt = SYSTEM_PROMPT + "\n\n" + _tile_context(tile, world) + avoid_block + "\n\nYour JSON:"
         try:
             resp = self.client.complete(prompt, max_tokens=320, temperature=0.75,
                                          json_mode=True)
@@ -290,6 +310,14 @@ class EmergentEventProposer:
             self.stats["validate_fail"] += 1
             self.stats["last_raw_sample"] = (resp.text or "")[:300]
             return None
+        # Hard reject if this exact participant set is still in cooldown.
+        # The prompt-level hint isn't always honored by smaller models.
+        pair_key = tuple(sorted(cleaned["participants"]))
+        last_used = self._pair_last_tick.get(pair_key, -10**9)
+        if world.current_tick - last_used < self.PAIR_COOLDOWN_TICKS:
+            self.stats["pair_cooldown"] += 1
+            return None
+        self._pair_last_tick[pair_key] = world.current_tick
         self.stats["ok"] += 1
 
         # Apply affinity + belief updates directly on agents. The event

@@ -296,3 +296,130 @@ def test_emergent_injuries_skip_dead():
     assert out is not None
     assert out["deaths"] == ["alice"]
     assert out["injuries"] == []  # death takes precedence
+
+
+# ── Story-quality regressions (2026-04-22 6-tick run) ─────────────────────
+
+
+def test_resolver_drops_event_when_template_needs_more_participants_than_available():
+    """The "?" placeholder bug: janitor-sees-too-much template uses ${b}
+    but storyteller picked only 1 participant. Old behavior: emit
+    "${a} 看见 ? 手里拿着..." (literal "?" in text). New: drop event."""
+    import random
+    from living_world.rules.resolver import EventResolver
+    from living_world.world_pack import EventTemplate
+    from living_world.core.event import EventProposal
+    w = World()
+    w.add_tile(Tile(tile_id="t1", display_name="T1",
+                     primary_pack="scp", tile_type="hall"))
+    a = Agent(agent_id="a", pack_id="scp", display_name="Alice",
+              persona_card="x", current_tile="t1")
+    w.add_agent(a)
+
+    tpl = EventTemplate(
+        event_kind="needs-two",
+        description="needs two",
+        trigger_conditions={"min_participants": 1, "max_participants": 2},
+        outcomes={"neutral": {"template": "${a} sees ${b} sneaking by."}},
+        base_importance=0.4,
+    )
+    prop = EventProposal(
+        proposal_id="p1", pack_id="scp", tile_id="t1",
+        event_kind="needs-two", priority=0.4,
+    )
+    resolver = EventResolver(w, random.Random(0))
+    event = resolver.realize(prop, tpl, tick=1)
+    assert event is None, "resolver must skip events whose template needs ${b} when only one agent is available"
+
+
+def test_resolver_required_slots_detector():
+    from living_world.rules.resolver import EventResolver
+    assert EventResolver._required_slots("hello world") == 0
+    assert EventResolver._required_slots("$a says hi") == 1
+    assert EventResolver._required_slots("${a} meets ${b}") == 2
+    assert EventResolver._required_slots("$a · $b · $c") == 3
+
+
+def test_resolver_world_wide_same_kind_dedup_per_tick():
+    """Two tiles with the same event_kind in the same tick: only the first
+    realizes; the second is dropped to avoid same-day repetition."""
+    import random
+    from living_world.rules.resolver import EventResolver
+    from living_world.world_pack import EventTemplate
+    from living_world.core.event import EventProposal
+    w = World()
+    w.add_tile(Tile(tile_id="t1", display_name="T1", primary_pack="scp",
+                     tile_type="hall"))
+    w.add_tile(Tile(tile_id="t2", display_name="T2", primary_pack="scp",
+                     tile_type="hall"))
+    w.add_agent(Agent(agent_id="a", pack_id="scp", display_name="A",
+                       persona_card="x", current_tile="t1"))
+    w.add_agent(Agent(agent_id="b", pack_id="scp", display_name="B",
+                       persona_card="x", current_tile="t2"))
+    tpl = EventTemplate(
+        event_kind="containment-breach",
+        description="x",
+        trigger_conditions={"min_participants": 1, "max_participants": 1},
+        outcomes={"neutral": {"template": "[$tile] $a was here."}},
+        base_importance=0.7,
+    )
+    resolver = EventResolver(w, random.Random(0))
+    p1 = EventProposal(proposal_id="p1", pack_id="scp", tile_id="t1",
+                       event_kind="containment-breach", priority=0.7)
+    p2 = EventProposal(proposal_id="p2", pack_id="scp", tile_id="t2",
+                       event_kind="containment-breach", priority=0.7)
+    e1 = resolver.realize(p1, tpl, tick=5)
+    e2 = resolver.realize(p2, tpl, tick=5)
+    assert e1 is not None
+    assert e2 is None, "same kind on different tile in same tick should be deduped"
+    # Different tick: allowed again
+    e3 = resolver.realize(p2, tpl, tick=6)
+    assert e3 is not None
+
+
+def test_emergent_pair_cooldown_blocks_repeat_cast():
+    """The Strelnikov+O5-03 fixation bug: same agent set should not be
+    proposed by emergent again within PAIR_COOLDOWN_TICKS days."""
+    from living_world.agents.emergent import EmergentEventProposer
+    from living_world.llm.base import LLMResponse
+
+    class StubClient:
+        def __init__(self, narrative: str):
+            self.text = (
+                '{"event_kind":"plot","participants":["alice","bob"],'
+                '"outcome":"neutral","importance":0.5,'
+                f'"narrative":"{narrative}"}}'
+            )
+        def complete(self, prompt, max_tokens=128, temperature=0.5,
+                     json_mode=False):
+            return LLMResponse(text=self.text, tokens_in=1, tokens_out=1)
+        def available(self): return True
+
+    w = World()
+    w.add_tile(Tile(tile_id="t1", display_name="T1", primary_pack="scp",
+                     tile_type="hall"))
+    w.add_agent(Agent(agent_id="alice", pack_id="scp", display_name="A",
+                       persona_card="x", current_tile="t1"))
+    w.add_agent(Agent(agent_id="bob", pack_id="scp", display_name="B",
+                       persona_card="x", current_tile="t1"))
+    tile = w.get_tile("t1")
+
+    proposer = EmergentEventProposer(StubClient(
+        "Alice and Bob have a long enough narrative sentence here together."
+    ))
+
+    w.current_tick = 1
+    e1 = proposer.propose(tile, w)
+    assert e1 is not None and proposer.stats["ok"] == 1
+
+    # Same pair, +1 tick → should be cooldown-blocked
+    w.current_tick = 2
+    e2 = proposer.propose(tile, w)
+    assert e2 is None
+    assert proposer.stats["pair_cooldown"] == 1
+
+    # After cooldown elapses, same pair allowed again
+    w.current_tick = 1 + proposer.PAIR_COOLDOWN_TICKS
+    e3 = proposer.propose(tile, w)
+    assert e3 is not None
+    assert proposer.stats["ok"] == 2
