@@ -39,7 +39,8 @@ def render_controls_page(world: World, engine) -> None:
 
     tabs = st.tabs([
         "Agent Editor", "Memory Inspector", "Tile Inspector",
-        "Event Injector", "Emergent Trigger", "Engine Stats", "Mechanics",
+        "Event Injector", "Emergent Trigger", "Event Library",
+        "Engine Stats", "Mechanics",
     ])
 
     with tabs[0]:
@@ -53,8 +54,10 @@ def render_controls_page(world: World, engine) -> None:
     with tabs[4]:
         _render_emergent_trigger(world, engine)
     with tabs[5]:
-        _render_engine_stats(engine, world)
+        _render_event_library(engine)
     with tabs[6]:
+        _render_engine_stats(engine, world)
+    with tabs[7]:
         _render_mechanics_overview(engine)
 
 
@@ -413,46 +416,123 @@ def _render_emergent_trigger(world: World, engine) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# 4. Mechanics overview
+# Event Library — every template + its quality stats
+# ─────────────────────────────────────────────────────────────────────────
+
+def _render_event_library(engine) -> None:
+    """All loaded event templates per pack, with fire stats and source.
+
+    Hand-authored YAML templates and LLM-promoted ones live in the same
+    pool; this view shows which is which and how each is performing.
+    Curator (rules) prunes underperforming promoted templates every 7 ticks.
+    """
+    st.markdown(
+        "Every event template the storyteller can pick from. "
+        "Stats accumulate over the session (in-memory, not persisted). "
+        "**Promoted** templates were invented by the LLM as emergent "
+        "events and earned a slot in the pool by hitting importance ≥ 0.7. "
+        "Underperforming promoted templates are pruned every 7 ticks; "
+        "YAML templates are never pruned automatically."
+    )
+
+    pack_ids = sorted(engine.packs.keys())
+    if not pack_ids:
+        st.info("No packs loaded.")
+        return
+
+    pack_id = st.selectbox("Pack", pack_ids, key="lib_pack")
+    pack = engine.packs[pack_id]
+    templates = list(pack.events.values())
+
+    # Top-level summary
+    yaml_n = sum(1 for t in templates if t.source == "yaml")
+    promo_n = sum(1 for t in templates if t.source == "promoted")
+    fired_n = sum(1 for t in templates if t.fire_count > 0)
+    st.markdown(
+        f"**{len(templates)} templates** "
+        f"&middot; {yaml_n} authored / {promo_n} promoted "
+        f"&middot; {fired_n} have fired this session"
+    )
+
+    sort_by = st.radio(
+        "Sort by",
+        ["fire count (desc)", "avg importance (desc)", "last fired (desc)",
+         "alphabetical"],
+        horizontal=True, key="lib_sort",
+    )
+    show_only = st.radio(
+        "Show",
+        ["all", "fired only", "unfired (cold)", "promoted only"],
+        horizontal=True, key="lib_filter",
+    )
+
+    if show_only == "fired only":
+        templates = [t for t in templates if t.fire_count > 0]
+    elif show_only == "unfired (cold)":
+        templates = [t for t in templates if t.fire_count == 0]
+    elif show_only == "promoted only":
+        templates = [t for t in templates if t.source == "promoted"]
+
+    if sort_by == "fire count (desc)":
+        templates.sort(key=lambda t: -t.fire_count)
+    elif sort_by == "avg importance (desc)":
+        templates.sort(key=lambda t: -t.avg_importance)
+    elif sort_by == "last fired (desc)":
+        templates.sort(key=lambda t: -t.last_fired_tick)
+    else:
+        templates.sort(key=lambda t: t.event_kind)
+
+    # Render each template as a compact row
+    for tpl in templates[:80]:  # cap at 80 to keep the panel snappy
+        src_color = "#5a7fa3" if tpl.source == "yaml" else "#d4a373"
+        src_label = tpl.source.upper()
+        fired = tpl.fire_count
+        avg = tpl.avg_importance
+        avg_color = "#6ec46e" if avg >= 0.5 else ("#e8c56a" if avg >= 0.3 else "#5a6270")
+        last = f"day {tpl.last_fired_tick:03d}" if tpl.last_fired_tick else "—"
+        st.markdown(
+            f'<div style="border-bottom:1px solid #15171f;padding:8px 0">'
+            f'<div style="display:flex;align-items:baseline;gap:10px">'
+            f'<span class="mono" style="font-size:10px;background:{src_color};'
+            f'color:#0a0c14;padding:1px 6px;border-radius:2px">{src_label}</span>'
+            f'<span class="mono" style="color:#cfd4dc;font-size:13px">{tpl.event_kind}</span>'
+            f'<span class="subtle" style="font-size:11px">base imp '
+            f'<span class="mono">{tpl.base_importance:.2f}</span></span>'
+            f'<span style="flex:1"></span>'
+            f'<span class="subtle" style="font-size:11px">fired '
+            f'<span class="mono" style="color:#cfd4dc">{fired}</span></span>'
+            f'<span class="subtle" style="font-size:11px">avg imp '
+            f'<span class="mono" style="color:{avg_color}">{avg:.2f}</span></span>'
+            f'<span class="subtle" style="font-size:11px">last '
+            f'<span class="mono">{last}</span></span>'
+            f'</div>'
+            + (f'<div class="subtle" style="font-size:11px;margin-top:3px;'
+               f'padding-left:42px">{tpl.description[:200]}</div>'
+               if tpl.description else '')
+            + '</div>',
+            unsafe_allow_html=True,
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Mechanics overview
 # ─────────────────────────────────────────────────────────────────────────
 
 def _render_mechanics_overview(engine) -> None:
+    """Sources the live feature list from `living_world.queries.feature_status`
+    so the dashboard can't drift from the engine's actual state — the
+    list of features is owned by the queries module, not duplicated here.
+    """
+    from living_world.queries import feature_status
     st.markdown("Which mechanisms are active right now, read-only. "
                 "To toggle them, use **Settings** in the sidebar.")
-    rows = [
-        ("Movement: goal keyword bonus",
-         f"×{engine.movement.goal_bonus:.2f}", engine.movement.goal_bonus > 1.0),
-        ("Movement: LLM advisor",
-         "on" if engine.movement.llm_advisor is not None else "off",
-         engine.movement.llm_advisor is not None),
-        ("Consciousness layer",
-         "on" if engine.consciousness is not None else "off",
-         engine.consciousness is not None),
-        ("Weekly planner",
-         "on" if engine.agent_planner is not None else "off",
-         engine.agent_planner is not None),
-        ("Chronicler (说书人)",
-         "on" if engine.chronicler is not None else "off",
-         engine.chronicler is not None),
-        ("Emergent events",
-         "on" if engine.emergent_proposer is not None else "off",
-         engine.emergent_proposer is not None),
-        ("Conversation loop",
-         "on" if engine.conversation_loop_enabled else "off",
-         engine.conversation_loop_enabled),
-        ("Subjective perception",
-         f"on (≥{engine.perception_threshold:.2f})" if engine.perception is not None else "off",
-         engine.perception is not None),
-        ("Agent self-update",
-         f"on (≥{engine.self_update_threshold:.2f})" if engine.self_update is not None else "off",
-         engine.self_update is not None),
-    ]
-    for label, value, on in rows:
-        dot = "🟢" if on else "⚪"
+    for fs in feature_status(engine):
+        dot = "🟢" if fs.on else "⚪"
+        value = fs.detail if (fs.on and fs.detail) else ("on" if fs.on else "off")
         st.markdown(
             f"<div style='display:flex;justify-content:space-between;"
             f"padding:6px 0;border-bottom:1px solid #15171f'>"
-            f"<span>{dot} {label}</span>"
+            f"<span>{dot} {fs.name}</span>"
             f"<span class='mono subtle'>{value}</span>"
             f"</div>",
             unsafe_allow_html=True,

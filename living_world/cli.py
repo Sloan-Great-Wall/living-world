@@ -109,6 +109,79 @@ def digest(
     console.print(f"narrator: T1={s.tier1} T3={s.tier3}")
 
 
+@app.command("export-chronicle")
+def export_chronicle(
+    packs: str = typer.Option("scp,liaozhai,cthulhu", help="Packs to load."),
+    days: int = typer.Option(15, help="Days to simulate before exporting."),
+    seed: int = typer.Option(42),
+    out: Path = typer.Option(Path("chronicle.md"),
+                              help="Output Markdown file path."),
+) -> None:
+    """Run N days, then write the chronicle as Markdown to `out`.
+
+    Implements the chronicle-export feature requested 2026-04-22 — see
+    KNOWN_ISSUES.md "Chronicle export" section. Pure function lives in
+    `living_world.queries.export_chronicle_markdown`, so any other
+    consumer (web dashboard, Marimo notebook) can reuse it.
+    """
+    from living_world.queries import export_chronicle_markdown
+    pack_ids = [p.strip() for p in packs.split(",") if p.strip()]
+    world, _engine = _build_and_run(pack_ids, days, seed)
+    text = export_chronicle_markdown(world)
+    out.write_text(text, encoding="utf-8")
+    console.log(
+        f"Wrote {len(world.chapters)} chapters → [bold]{out}[/] "
+        f"({len(text):,} chars)"
+    )
+
+
+@app.command()
+def serve(
+    port: int = typer.Option(8000, help="REST API port."),
+    host: str = typer.Option("127.0.0.1"),
+    reload: bool = typer.Option(False, help="Auto-reload on code changes."),
+) -> None:
+    """Run the FastAPI sim API for the Tauri dashboard.
+
+    Pair with `cd dashboard-tauri && bun run dev` (or `bun run tauri dev`)
+    for the full game-aesthetic UI. Requires the `serve` extra:
+        pip install -e '.[serve]'
+    """
+    import uvicorn
+    console.log(f"Living World API → http://{host}:{port}")
+    uvicorn.run("living_world.web.server:app",
+                host=host, port=port, reload=reload, log_level="info")
+
+
+@app.command()
+def social(
+    packs: str = typer.Option("scp,liaozhai,cthulhu", help="Packs to load."),
+    days: int = typer.Option(10, help="Days to simulate before measuring."),
+    seed: int = typer.Option(42),
+    threshold: int = typer.Option(30, help="Min |affinity| to count as a social tie."),
+    per_pack: bool = typer.Option(True, help="Show metrics broken out per pack."),
+) -> None:
+    """Run N days, then print social-network metrics over the affinity graph.
+
+    Implements AgentSociety-style social readout — see KNOWN_ISSUES #16.
+    Useful for spotting hub characters, factions, and social isolation.
+    """
+    from living_world.metrics import compute_social_metrics
+    pack_ids = [p.strip() for p in packs.split(",") if p.strip()]
+    world, _engine = _build_and_run(pack_ids, days, seed)
+
+    agents = list(world.all_agents())
+    console.rule("Whole world")
+    console.print(compute_social_metrics(agents, min_abs_affinity=threshold).summary())
+
+    if per_pack:
+        for pid in pack_ids:
+            console.rule(pid)
+            console.print(compute_social_metrics(
+                agents, min_abs_affinity=threshold, pack_id=pid,
+            ).summary())
+
+
 @app.command("list-packs")
 def list_packs() -> None:
     """List available packs discovered in world_packs/."""

@@ -682,8 +682,7 @@ if selected_agent_obj:
     emotions_html = ""
     if emotions:
         # Color per emotion
-        emo_color = {"fear": "#c85050", "joy": "#e8c56a", "anger": "#d4673a",
-                      "sadness": "#6a7fa3", "surprise": "#b091d1"}
+        emo_color = {"fear": "#c85050", "joy": "#e8c56a", "anger": "#d4673a"}
         rows = "".join(
             _bar(k, v, emo_color.get(k, "#8a8f9c")) for k, v in emotions.items()
         )
