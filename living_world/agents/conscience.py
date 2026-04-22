@@ -137,7 +137,10 @@ class ConsciousnessLayer:
             if self.memory is not None:
                 try:
                     query = f"{template.event_kind} {proposal.tile_id}"
-                    entries = self.memory.recall(a.agent_id, query, top_k=3) or []
+                    entries = self.memory.recall(
+                        a.agent_id, query, top_k=3,
+                        current_tick=world.current_tick,
+                    ) or []
                 except Exception:
                     entries = []
                 if entries:

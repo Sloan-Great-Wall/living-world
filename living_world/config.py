@@ -51,6 +51,23 @@ class LLMSettings(BaseModel):
     ollama_tier3_model: str = "gemma3:4b"   # the "narrator" model
     ollama_timeout_seconds: float = 60.0
 
+    # Per-module overrides — leave a key out (or null) to inherit the
+    # tier default above. Use this when you want to give one module a
+    # bigger / smaller / specialty model without changing everything else.
+    #
+    # Recognized module keys:
+    #   chronicler, narrator         (default → tier3)
+    #   planner, self_update,
+    #   emergent, dialogue,
+    #   conscience, move_advisor,
+    #   perception, reflector        (default → tier2)
+    #
+    # Example settings.yaml:
+    #   ollama_module_models:
+    #     chronicler: qwen3:14b      # better prose for chapter writing
+    #     emergent:   mistral:7b     # different creativity profile
+    ollama_module_models: dict[str, str] = Field(default_factory=dict)
+
     # future: vllm / openai-compatible endpoints
     openai_base_url: str | None = None
     openai_api_key: str | None = None

@@ -40,7 +40,14 @@ class OllamaClient(LLMClient):
         except Exception:
             return False
 
-    def complete(self, prompt: str, *, max_tokens: int = 256, temperature: float = 0.7) -> LLMResponse:
+    def complete(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 256,
+        temperature: float = 0.7,
+        json_mode: bool = False,
+    ) -> LLMResponse:
         t0 = time.time()
         body: dict[str, Any] = {
             "model": self.model,
@@ -51,6 +58,11 @@ class OllamaClient(LLMClient):
                 "temperature": temperature,
             },
         }
+        # Grammar-constrained decoding — Ollama enforces valid JSON output.
+        # Requires the model to actually attempt JSON in its prompt; we pair
+        # this with prompts that already say "output a JSON object".
+        if json_mode:
+            body["format"] = "json"
         try:
             r = httpx.post(f"{self.base_url}/api/generate", json=body, timeout=self.timeout)
             r.raise_for_status()

@@ -52,6 +52,12 @@ RULES
                           arrival of something deadly, despair). Be sparing.
                           Death is real and permanent here.
      "injuries":          optional list of {"agent_id": id, "severity": "minor"|"grave"}.
+                          IMPORTANT: each entry must be a dict; agent_id MUST be
+                          one of the participants above. Do NOT put causes
+                          ("gravity", "the breach", "the storm") in this list —
+                          this field names WHO got hurt, not WHAT hurt them.
+                          Example correct: [{"agent_id": "d-9001", "severity": "grave"}]
+                          Example wrong:   ["d-9001", "gravity"]
 3. Be honest about consequence. Do NOT soften reality to protect characters.
    If a D-class provokes SCP-173, SCP-173 may snap their neck. If a cultist
    betrays the Deep Ones, they may drown. Let the world be what it is.
@@ -211,15 +217,23 @@ def _clamp_proposal(data: dict, valid_agent_ids: set[str]) -> dict | None:
                 deaths.append(aid)
 
     # Injuries — non-fatal state marker via a tag.
+    # FORGIVING: silently drop unknown entries (e.g. when the LLM puts
+    # "gravity" or other causes in this list) rather than rejecting the
+    # whole proposal. Same pattern as affinity_changes above.
     inj_raw = data.get("injuries") or []
     injuries: list[dict] = []
     if isinstance(inj_raw, list):
         for entry in inj_raw[:4]:
+            # Accept dicts only; bare strings (LLM mistakes) are dropped.
             if not isinstance(entry, dict):
                 continue
             aid = entry.get("agent_id")
             sev = entry.get("severity", "minor")
-            if aid not in valid_agent_ids or aid in deaths:
+            # Must be a known agent AND a participant. Already-dead agents
+            # in this event are skipped (death takes precedence).
+            if aid not in valid_agent_ids or aid not in participants:
+                continue
+            if aid in deaths:
                 continue
             if sev not in ("minor", "grave"):
                 sev = "minor"
@@ -248,22 +262,35 @@ class EmergentEventProposer:
 
     def __init__(self, client: LLMClient) -> None:
         self.client = client
+        # Diagnostic counters — track WHERE proposals die.
+        self.stats = {"calls": 0, "tile_too_small": 0, "llm_error": 0,
+                       "parse_fail": 0, "validate_fail": 0, "ok": 0,
+                       "last_raw_sample": ""}
 
     def propose(self, tile: Tile, world: World) -> LegendEvent | None:
+        self.stats["calls"] += 1
         residents = world.agents_in_tile(tile.tile_id)
         if len(residents) < 2:
+            self.stats["tile_too_small"] += 1
             return None
         prompt = SYSTEM_PROMPT + "\n\n" + _tile_context(tile, world) + "\n\nYour JSON:"
         try:
-            resp = self.client.complete(prompt, max_tokens=320, temperature=0.75)
+            resp = self.client.complete(prompt, max_tokens=320, temperature=0.75,
+                                         json_mode=True)
         except Exception:
+            self.stats["llm_error"] += 1
             return None
         parsed = _parse_proposal(resp.text or "")
         if parsed is None:
+            self.stats["parse_fail"] += 1
+            self.stats["last_raw_sample"] = (resp.text or "")[:300]
             return None
         cleaned = _clamp_proposal(parsed, {a.agent_id for a in residents})
         if cleaned is None:
+            self.stats["validate_fail"] += 1
+            self.stats["last_raw_sample"] = (resp.text or "")[:300]
             return None
+        self.stats["ok"] += 1
 
         # Apply affinity + belief updates directly on agents. The event
         # itself carries only the narrative and the participant list — the

@@ -36,10 +36,8 @@ Output a SINGLE JSON object — no prose outside, no code fences. Fields:
   "attribute_deltas": optional dict mapping existing attribute names to
                       integer deltas in [-25, +25]. Only adjust what would
                       plausibly shift from THIS event.
-  "needs_deltas":     optional dict over {hunger, safety, belonging,
-                      esteem, autonomy}, deltas in [-30, +30].
-  "emotions_deltas":  optional dict over {fear, joy, anger, sadness,
-                      surprise}, deltas in [-40, +40].
+  "needs_deltas":     optional dict over {hunger, safety}, deltas in [-30, +30].
+  "emotions_deltas":  optional dict over {fear, joy, anger}, deltas in [-40, +40].
   "tags_to_add":      optional list of short lowercased tags to add
                       (e.g. ["traumatized"], ["resolute"]). Max 2.
   "tags_to_remove":   optional list of tags to remove. Max 2.
@@ -54,8 +52,26 @@ Output a SINGLE JSON object — no prose outside, no code fences. Fields:
 Rules:
  - Stay in-character. Don't break the fourth wall.
  - Don't invent new events or kill anyone.
- - If nothing meaningfully changed, output {} (an empty object).
- - Be conservative: small deltas for small events.
+ - REQUIRED: if the event mattered to you at all, you MUST return at least
+   ONE non-zero delta (emotion, need, or attribute). Empty {} is only valid
+   if you literally weren't present or the event was wholly trivial.
+ - Scale deltas with intensity: a near-death moment shifts emotions by 20-35,
+   a minor surprise by 5-10. Don't undershoot dramatic events.
+
+EXAMPLE 1 — A guard who watched a colleague get killed by SCP-173:
+{"emotions_deltas": {"fear": 30, "joy": -15},
+ "needs_deltas": {"safety": -25},
+ "attribute_deltas": {"morale": -15},
+ "tags_to_add": ["shaken"],
+ "belief_update": {"topic": "scp-173", "belief": "do not blink, ever"},
+ "reflection": "I was three meters away. Three. It could have been me."}
+
+EXAMPLE 2 — A scholar who finally cornered a fox-spirit and it laughed and vanished:
+{"emotions_deltas": {"anger": 20, "joy": 10},
+ "attribute_deltas": {"resolve": 10},
+ "motivations": ["catch the fox-spirit before the next moon"],
+ "current_goal": "set a proper iron-cold trap by the willow grove",
+ "reflection": "She mocked me. Fine. Next time the iron will be ready."}
 """
 
 
@@ -103,8 +119,8 @@ def _build_prompt(agent: Agent, event: LegendEvent) -> str:
 _PROTECTED_TAGS = {"scp", "cthulhu", "liaozhai", "anomaly",
                     "great-old-one", "outer-god", "deity",
                     "permanent_historical", "d-class", "researcher"}
-_NEED_KEYS = {"hunger", "safety", "belonging", "esteem", "autonomy"}
-_EMOTION_KEYS = {"fear", "joy", "anger", "sadness", "surprise"}
+_NEED_KEYS = {"hunger", "safety"}
+_EMOTION_KEYS = {"fear", "joy", "anger"}
 _BANNED_TAGS = {"deceased", "alive", "born"}  # state changes only via rules
 
 
@@ -161,18 +177,27 @@ class AgentSelfUpdate:
 
     def __init__(self, client: LLMClient) -> None:
         self.client = client
+        # Diagnostic counters
+        self.stats = {"calls": 0, "llm_error": 0, "parse_fail": 0,
+                       "empty_dict": 0, "ok_real": 0, "ok_fallback": 0}
 
     def apply(self, agent: Agent, event: LegendEvent) -> dict:
         """Mutate the agent based on LLM-emitted delta. Returns the parsed
         delta for logging (empty dict on any failure or noise)."""
+        self.stats["calls"] += 1
         try:
             resp = self.client.complete(_build_prompt(agent, event),
-                                         max_tokens=380, temperature=0.6)
+                                         max_tokens=380, temperature=0.7,
+                                         json_mode=True)
         except Exception:
+            self.stats["llm_error"] += 1
             return {}
         data = _parse(resp.text or "")
         if data is None:
-            return {}
+            self.stats["parse_fail"] += 1
+            data = {}  # fall through to fallback path
+        if not data:
+            self.stats["empty_dict"] += 1
 
         applied: dict = {}
 
@@ -284,5 +309,33 @@ class AgentSelfUpdate:
             r = refl.strip()[:200]
             if r:
                 applied["reflection"] = r
+
+        # ── Fallback: meaningful events MUST leave a mark ──
+        # If the LLM coughed up nothing numeric on a meaningful event, inject
+        # default emotional drift so internal state actually moves. Keeps the
+        # system from going completely static when a small local model is too
+        # conservative. Threshold matches self_update_threshold (0.5) so every
+        # call that gets here is fallback-eligible.
+        numeric_keys = ("attribute_deltas", "needs_deltas", "emotions_deltas")
+        had_numeric = any(k in applied for k in numeric_keys)
+        if not had_numeric and event.importance >= 0.5:
+            outcome = (event.outcome or "neutral").lower()
+            if outcome == "failure":
+                fb_em, fb_nd = {"fear": 12.0, "joy": -8.0}, {"safety": -10.0}
+            elif outcome == "success":
+                fb_em, fb_nd = {"joy": 10.0, "fear": -5.0}, {}
+            else:
+                fb_em, fb_nd = {"fear": 5.0}, {}
+            for k, d in fb_em.items():
+                agent.adjust_emotion(k, d)
+            for k, d in fb_nd.items():
+                agent.adjust_need(k, d)
+            applied["emotions_deltas"] = fb_em
+            if fb_nd:
+                applied["needs_deltas"] = fb_nd
+            applied["_fallback"] = True
+            self.stats["ok_fallback"] += 1
+        elif had_numeric:
+            self.stats["ok_real"] += 1
 
         return applied

@@ -49,12 +49,15 @@ class LLMMoveAdvisor:
             return ""
         return "Weekly plan:\n" + "\n".join(bits) + "\n"
 
-    def _memory_block(self, agent: Agent) -> str:
+    def _memory_block(self, agent: Agent, world=None) -> str:
         if self.memory_store is None:
             return ""
         query = agent.current_goal or agent.display_name
         try:
-            entries = self.memory_store.recall(agent.agent_id, query, top_k=2) or []
+            entries = self.memory_store.recall(
+                agent.agent_id, query, top_k=2,
+                current_tick=world.current_tick if world else None,
+            ) or []
         except Exception:
             return ""
         lines = [getattr(e, "doc", "")[:120].replace("\n", " ") for e in entries]
@@ -84,7 +87,7 @@ class LLMMoveAdvisor:
             goal=agent.current_goal or "(none)",
             current_tile=agent.current_tile or "(unknown)",
             plan_block=self._plan_block(agent),
-            memory_block=self._memory_block(agent),
+            memory_block=self._memory_block(agent, world),
             candidates=cand_text,
         )
         try:

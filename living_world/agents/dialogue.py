@@ -169,7 +169,10 @@ class DialogueGenerator:
         if memory_store is not None:
             try:
                 query = f"{speaker.display_name} {event.event_kind}"
-                entries = memory_store.recall(listener.agent_id, query, top_k=3) or []
+                entries = memory_store.recall(
+                    listener.agent_id, query, top_k=3,
+                    current_tick=world.current_tick,
+                ) or []
                 listener_memories = [
                     getattr(e, "doc", "")[:140].replace("\n", " ")
                     for e in entries if getattr(e, "doc", None)
@@ -185,7 +188,8 @@ class DialogueGenerator:
         )
 
         try:
-            resp = self.client.complete(prompt, max_tokens=260, temperature=0.75)
+            resp = self.client.complete(prompt, max_tokens=260, temperature=0.75,
+                                         json_mode=True)
         except Exception:
             return neutral
         raw = (resp.text or "").strip()

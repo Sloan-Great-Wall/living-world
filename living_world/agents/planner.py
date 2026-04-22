@@ -119,6 +119,9 @@ class AgentPlanner:
 
     def __init__(self, client: LLMClient) -> None:
         self.client = client
+        # Diagnostic counters — track *why* plans don't appear.
+        self.stats = {"calls": 0, "llm_error": 0, "parse_empty": 0,
+                       "ok": 0, "last_raw_sample": ""}
 
     def plan_for_agent(
         self,
@@ -127,18 +130,31 @@ class AgentPlanner:
         memory_store=None,
     ) -> dict:
         """Generate a plan dict. Returns {} on any failure (never raises)."""
+        self.stats["calls"] += 1
         memory_snippets: list[str] | None = None
         if memory_store is not None:
             try:
                 query = agent.current_goal or agent.persona_card[:60] or agent.display_name
-                entries = memory_store.recall(agent.agent_id, query, top_k=5) or []
+                entries = memory_store.recall(
+                    agent.agent_id, query, top_k=5,
+                    current_tick=world.current_tick,
+                ) or []
                 memory_snippets = [getattr(e, "doc", "") for e in entries if getattr(e, "doc", None)]
             except Exception:
                 memory_snippets = None
 
         prompt = _build_prompt(agent, world, memory_snippets)
         try:
-            resp = self.client.complete(prompt, max_tokens=220, temperature=0.6)
+            resp = self.client.complete(prompt, max_tokens=220, temperature=0.6,
+                                         json_mode=True)
         except Exception:
+            self.stats["llm_error"] += 1
             return {}
-        return _parse_plan(resp.text or "")
+        plan = _parse_plan(resp.text or "")
+        if not plan:
+            self.stats["parse_empty"] += 1
+            # Keep one sample of what the LLM actually said so we can debug
+            self.stats["last_raw_sample"] = (resp.text or "")[:300]
+        else:
+            self.stats["ok"] += 1
+        return plan

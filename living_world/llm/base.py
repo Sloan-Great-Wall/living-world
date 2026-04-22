@@ -19,7 +19,17 @@ class LLMClient(ABC):
     """Minimal contract that every tier client must satisfy."""
 
     @abstractmethod
-    def complete(self, prompt: str, *, max_tokens: int = 512, temperature: float = 0.7) -> LLMResponse:
+    def complete(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 512,
+        temperature: float = 0.7,
+        json_mode: bool = False,
+    ) -> LLMResponse:
+        """If json_mode=True the impl should constrain output to valid JSON
+        (e.g. Ollama's `format=json` grammar). Falls back to free-form text
+        if the backend doesn't support it."""
         ...
 
     @property

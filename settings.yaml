@@ -2,8 +2,12 @@ llm:
   tier2_provider: ollama
   tier3_provider: ollama
   ollama_base_url: http://localhost:11434
-  ollama_tier2_model: gemma3:4b
-  ollama_tier3_model: gemma3:4b
+  # Tier 2 = agent-layer (frequent decisions, structured JSON output).
+  #   llama3.2:3b is small/fast (2GB) and reliable with format=json.
+  # Tier 3 = narrative-layer (literary prose, chapters, big rewrites).
+  #   gemma4:e4b stays — better prose register than the small model.
+  ollama_tier2_model: llama3.2:3b
+  ollama_tier3_model: gemma4:e4b
   ollama_timeout_seconds: 60.0
   openai_base_url: null
   openai_api_key: null

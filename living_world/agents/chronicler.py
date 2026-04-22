@@ -109,6 +109,9 @@ class Chronicler:
 
     def __init__(self, client: LLMClient) -> None:
         self.client = client
+        # Diagnostic counters
+        self.stats = {"calls": 0, "window_too_small": 0, "llm_error": 0,
+                       "parse_fail": 0, "ok": 0, "last_raw_sample": ""}
 
     def write_chapter(
         self,
@@ -119,22 +122,29 @@ class Chronicler:
         min_importance: float = 0.25,
     ) -> Chapter | None:
         """Return a Chapter or None (if nothing interesting enough happened)."""
+        self.stats["calls"] += 1
         window = [
             e for e in world.events_since(since_tick)
             if e.pack_id == pack_id and e.importance >= min_importance
         ]
         if len(window) < min_events:
+            self.stats["window_too_small"] += 1
             return None
         ranked = _rank_events(window)
         prompt = _build_prompt(pack_id, ranked)
         try:
-            resp = self.client.complete(prompt, max_tokens=420, temperature=0.55)
+            resp = self.client.complete(prompt, max_tokens=420, temperature=0.55,
+                                         json_mode=True)
         except Exception:
+            self.stats["llm_error"] += 1
             return None
         parsed = _parse(resp.text or "")
         if parsed is None:
+            self.stats["parse_fail"] += 1
+            self.stats["last_raw_sample"] = (resp.text or "")[:300]
             return None
         title, body = parsed
+        self.stats["ok"] += 1
         return Chapter(
             tick=world.current_tick,
             pack_id=pack_id,
