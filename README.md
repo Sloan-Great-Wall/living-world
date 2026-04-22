@@ -1,10 +1,12 @@
 # living-world
 
+> `$GDRIVE` in this file = `~/Library/CloudStorage/GoogleDrive-kincc9999@gmail.com/My Drive` (macOS Google Drive mount path).
+
 A no-player, auto-running virtual world simulator. Three worldviews — **SCP Foundation**, **Cthulhu Mythos**, **Liaozhai** — run side-by-side, each a self-contained pack of characters, events, and locations.
 
 Agents move in continuous 2D space, interact, form relationships, accumulate consequences, and die. Local LLMs (via Ollama) enhance narrative at high-importance moments. A Streamlit dashboard renders a live map and chronicle log.
 
-This repo contains the code, content packs, and tests. All design documents (architecture, roadmap, specs, ADRs) live in the shared vault at [`../sloan_mind/living-world/`](../sloan_mind/living-world/).
+This repo contains the code, content packs, and tests. All design documents (architecture, roadmap, specs, ADRs) live in the shared vault at [`$GDRIVE/Living-World/design/`]($GDRIVE/Living-World/design/).
 
 ---
 
@@ -66,7 +68,7 @@ See the existing `world_packs/scp/`, `world_packs/liaozhai/`, and `world_packs/c
 
 ## Where to find more
 
-All design documentation lives in [`../sloan_mind/living-world/`](../sloan_mind/living-world/):
+All design documentation lives in [`$GDRIVE/Living-World/design/`]($GDRIVE/Living-World/design/):
 
 - `docs/product-direction.md` — positioning and direction rationale
 - `docs/architecture.md` — full system architecture
@@ -79,7 +81,7 @@ All design documentation lives in [`../sloan_mind/living-world/`](../sloan_mind/
 - `docs/architecture-audit.md` / `docs/lbs-infrastructure.md` — deeper technical notes
 - `adr/` — architecture decision records
 
-Cross-project engineering principles live at [`../sloan_mind/shared/`](../sloan_mind/shared/).
+Cross-project engineering principles live at [`$GDRIVE/Shared/`]($GDRIVE/Shared/).
 
 ---
 
