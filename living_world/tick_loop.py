@@ -16,8 +16,6 @@ from living_world.agents.narrator import Narrator
 from living_world.agents.perception import SubjectivePerception
 from living_world.agents.planner import AgentPlanner
 from living_world.agents.self_update import AgentSelfUpdate
-from living_world.rules.decay import decay_needs_and_emotions
-from living_world.rules.heat import hot_tiles as _rule_hot_tiles
 from living_world.rules.consequences import ConsequenceEngine
 from living_world.rules.historical_figures import HistoricalFigureRegistry
 from living_world.rules.interactions import InteractionEngine
@@ -94,6 +92,13 @@ class TickEngine:
         # needs, emotions, beliefs, goal, motivations, reflection).
         self.self_update: AgentSelfUpdate | None = None
         self.self_update_threshold: float = 0.5
+
+        # Pipeline of phases for step(). Importable + swappable; see phases.py.
+        # Defaults to the canonical 13-stage pipeline. Tests / experiments can
+        # do `engine.pipeline = [DecayPhase(), MovementPhase()]` to isolate
+        # behaviour or `engine.pipeline.insert(0, MyInboxPhase())` to extend.
+        from living_world.phases import DEFAULT_PIPELINE
+        self.pipeline = list(DEFAULT_PIPELINE)
 
         # one storyteller per tile, using its primary pack's storyteller config
         self.storytellers: dict[str, TileStoryteller] = {}
@@ -254,7 +259,7 @@ class TickEngine:
         # ── Mark plans stale when reality disrupts them (re-plans next tick) ──
         # High-importance events invalidate the involved agents' plans; they
         # re-plan at the START of the next tick instead of waiting a week.
-        if self.agent_planner is not None and event.importance >= 0.5:
+        if self.agent_planner is not None and event.importance >= 0.4:
             for aid in event.participants:
                 agent = self.world.get_agent(aid)
                 if agent is not None and agent.is_alive():
@@ -292,6 +297,10 @@ class TickEngine:
         return count
 
     def step(self) -> TickStats:
+        """One virtual day. The 13-stage pipeline lives in `phases.py`;
+        this method just drives it. To customise, swap `self.pipeline`
+        before calling `step()` (insert/remove/reorder phases freely).
+        """
         self.world.current_tick += 1
         t = self.world.current_tick
         stats = TickStats(tick=t)
@@ -300,126 +309,15 @@ class TickEngine:
         if log:
             log.tick_start(t)
 
-        # ── Decay: needs grow, emotions normalize toward baseline (rule) ──
-        decay_needs_and_emotions(self.world)
-
-        # ── Re-plan agents whose plans became stale last tick ──
-        self._replan_stale_agents(t)
-
-        # ── Movement phase ──
-        moves = self.movement.tick()
-        stats.movements = len(moves)
-        if log:
-            for agent_id, from_tile, to_tile, method in moves:
-                log.movement(agent_id, from_tile, to_tile, method)
-
-        # ── Emergent interactions (lethal encounters, companionship, flight) ──
-        for emergent in self.interactions.tick():
-            if log:
-                log.interaction(
-                    emergent.event_kind, emergent.participants,
-                    emergent.outcome, emergent.tile_id,
-                )
-            self._process_event(emergent, stats)
-
-        # ── Storyteller-proposed events ──
-        for tile_id, st in self.storytellers.items():
-            proposals = st.tick_daily(t)
-            stats.proposals += len(proposals)
-            for prop in proposals:
-                if log:
-                    log.storyteller_proposal(tile_id, prop.event_kind, prop.priority)
-                template = self._event_template(prop.pack_id, prop.event_kind)
-                if template is None:
-                    continue
-                event = self.resolver.realize(
-                    prop, template, t, consciousness=self.consciousness,
-                )
-                if event is None:
-                    continue
-                if log:
-                    log.event_resolved(
-                        event.event_id, event.event_kind, event.tile_id,
-                        event.participants, event.outcome,
-                        roll=None, dc=None,  # resolver doesn't expose these yet
-                        importance=event.importance,
-                        conscious_verdict=None,
-                    )
-                self._process_event(event, stats)
-
-        # ── Emergent events: LLM invents novel events on hot tiles ──
-        # For top-K hottest tiles (co-located + charged with affinity), ask
-        # the LLM to invent ONE novel event grounded in who is present and
-        # how they feel. Budget-gated by emergent_max_per_tick.
-        if self.emergent_proposer is not None:
-            # Pure-rule scoring picks WHICH tiles are hot; the LLM only acts
-            # on the chosen one — keeps the agents/ layer focused.
-            hot = _rule_hot_tiles(self.world, limit=self.emergent_max_per_tick)
-            for tile in hot:
-                event = self.emergent_proposer.propose(tile, self.world)
-                if event is None:
-                    continue
-                if log:
-                    log.emergent_event(
-                        event.event_kind, event.tile_id, event.participants,
-                    )
-                self._process_event(event, stats)
-
-        # periodic demotion (every 7 days)
-        if t % 7 == 0:
-            self.hf_registry.demote_inactive(t)
-
-        # ── Chronicler (说书人) ──
-        # Every 14 ticks, read the last window of events per pack and record
-        # a chapter. This is DESCRIPTIVE ONLY — never steers future behavior.
-        if (
-            self.chronicler is not None
-            and t - self._last_chronicle_tick >= self.chronicle_every_ticks
-        ):
-            for pack_id in self.world.loaded_packs:
-                chapter = self.chronicler.write_chapter(
-                    self.world, pack_id, since_tick=max(1, self._last_chronicle_tick + 1),
-                )
-                if chapter is not None:
-                    self.world.add_chapter({
-                        "tick": chapter.tick,
-                        "pack_id": chapter.pack_id,
-                        "title": chapter.title,
-                        "body": chapter.body,
-                        "event_ids": chapter.event_ids,
-                    })
-                    if self.tick_logger:
-                        self.tick_logger.chapter_written(chapter.tick, chapter.title)
-            self._last_chronicle_tick = t
-
-        # ── Weekly agent planning ──
-        # LLM generates a short plan for each (HF) agent. Stored on
-        # state_extra["weekly_plan"] and consumed by movement + storyteller.
-        if self.agent_planner is not None and t % self.plan_every_ticks == 0:
-            targets = (
-                list(self.world.historical_figures())
-                if self.plan_hf_only
-                else [a for a in self.world.living_agents()]
-            )
-            for agent in targets:
-                plan = self.agent_planner.plan_for_agent(agent, self.world, self.memory)
-                if plan:
-                    agent.state_extra["weekly_plan"] = plan
-                    agent.state_extra["weekly_plan_tick"] = t
-                    if log:
-                        log.plan_generated(agent.agent_id, plan)
-
-        # periodic reflection (only for historical figures to save embed calls)
-        if self.memory is not None and t % self.reflect_every_ticks == 0:
-            for agent in self.world.historical_figures():
-                self.memory.reflect(agent.agent_id, t)
-
-        # periodic full-world snapshot
-        if self.repository is not None and t % self.snapshot_every_ticks == 0:
+        for phase in self.pipeline:
             try:
-                self.repository.save_world(self.world)
-            except Exception as exc:  # noqa: BLE001
-                print(f"[persist] snapshot failed: {exc}")
+                phase.run(self, t, stats)
+            except Exception as exc:  # noqa: BLE001 — phase isolation
+                # One bad phase shouldn't kill the rest of the tick.
+                if log and hasattr(log, "phase_error"):
+                    log.phase_error(phase.name, exc)
+                else:
+                    print(f"[phase {phase.name}] error: {exc!r}")
 
         stats.tier1 = self.narrator.stats.tier1
         stats.tier3 = self.narrator.stats.tier3
