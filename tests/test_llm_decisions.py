@@ -31,7 +31,11 @@ class FakeClient:
     """Stand-in LLMClient — returns a scripted response."""
     scripted: str = ""
 
-    def complete(self, prompt: str, max_tokens: int = 128, temperature: float = 0.5):
+    def complete(self, prompt: str, max_tokens: int = 128, temperature: float = 0.5,
+                 json_mode: bool = False):
+        # `json_mode` is accepted for protocol compat (real OllamaClient
+        # uses it to enable Ollama's format=json grammar); FakeClient just
+        # returns the scripted text either way.
         return LLMResponse(text=self.scripted, tokens_in=1, tokens_out=1)
 
     def available(self) -> bool:
@@ -437,15 +441,32 @@ def test_self_update_protects_critical_tags():
     assert "traumatized" in a.tags             # non-protected addition went through
 
 
-def test_self_update_returns_empty_on_garbage():
+def test_self_update_returns_empty_on_garbage_for_low_importance():
+    """Garbage LLM output AND low importance => no fallback, returns {}."""
     from living_world.agents.self_update import AgentSelfUpdate
 
     a = Agent(agent_id="x", pack_id="scp", display_name="X", persona_card="...")
     event = LegendEvent(event_id="e", tick=1, pack_id="scp", tile_id="t",
                         event_kind="x", participants=["x"], outcome="neutral",
-                        template_rendering="...", importance=0.6)
+                        template_rendering="...", importance=0.3)  # below 0.5 fallback gate
     su = AgentSelfUpdate(FakeClient(scripted="not json at all"))
     assert su.apply(a, event) == {}
+
+
+def test_self_update_fallback_kicks_in_on_garbage_for_important_event():
+    """Garbage LLM output BUT importance>=0.5 => fallback emotion delta applied."""
+    from living_world.agents.self_update import AgentSelfUpdate
+
+    a = Agent(agent_id="x", pack_id="scp", display_name="X", persona_card="...")
+    event = LegendEvent(event_id="e", tick=1, pack_id="scp", tile_id="t",
+                        event_kind="x", participants=["x"], outcome="failure",
+                        template_rendering="...", importance=0.7)
+    su = AgentSelfUpdate(FakeClient(scripted="not json at all"))
+    out = su.apply(a, event)
+    assert out.get("_fallback") is True
+    assert "emotions_deltas" in out
+    # Failure outcome => fear should rise
+    assert out["emotions_deltas"].get("fear", 0) > 0
 
 
 def test_needs_emotions_decay_rule():
@@ -480,3 +501,81 @@ def test_self_update_motivations_and_goal():
     su.apply(a, event)
     assert a.current_goal == "report Kondraki to ethics committee"
     assert "clear my conscience" in a.get_motivations()
+
+
+# ── Environmental importance modifiers ─────────────────────────────────────
+
+def test_novelty_decay_reduces_repeat_event_importance():
+    """Same event_kind in same tile within window → multiplier <1."""
+    from living_world.rules.resolver import _environmental_modifiers
+    import uuid
+
+    world = World()
+    tile = Tile(tile_id="t", display_name="T", primary_pack="scp", tile_type="hallway")
+    world.add_tile(tile)
+    a = Agent(agent_id="a", pack_id="scp", display_name="A", persona_card="...")
+    b = Agent(agent_id="b", pack_id="scp", display_name="B", persona_card="...")
+    world.add_agent(a); world.add_agent(b)
+
+    # Pre-existing identical event in window
+    world.current_tick = 5
+    prior = LegendEvent(event_id=str(uuid.uuid4()), tick=3, pack_id="scp",
+                        tile_id="t", event_kind="173-snap-neck",
+                        participants=["a"], outcome="failure",
+                        template_rendering="...", importance=0.7)
+    world.record_event(prior)
+
+    # Now scoring a NEW one of the same kind
+    new_event = LegendEvent(event_id=str(uuid.uuid4()), tick=5, pack_id="scp",
+                             tile_id="t", event_kind="173-snap-neck",
+                             participants=["a", "b"], outcome="failure",
+                             template_rendering="...", importance=0.7)
+    mult = _environmental_modifiers(new_event, [a, b], world)
+    assert mult < 1.0, f"Novelty decay should reduce multiplier, got {mult}"
+
+
+def test_resonance_lifts_importance_when_participant_in_beliefs():
+    """If participant A holds a belief topic = participant B's id → resonance."""
+    from living_world.rules.resolver import _environmental_modifiers
+    import uuid
+
+    world = World()
+    tile = Tile(tile_id="t", display_name="T", primary_pack="scp", tile_type="hallway")
+    world.add_tile(tile)
+    a = Agent(agent_id="alice", pack_id="scp", display_name="Alice", persona_card="...")
+    b = Agent(agent_id="bob",   pack_id="scp", display_name="Bob",   persona_card="...")
+    a.set_belief("bob", "I never trusted him.")  # A has belief about B
+    world.add_agent(a); world.add_agent(b)
+    world.current_tick = 5
+
+    event = LegendEvent(event_id=str(uuid.uuid4()), tick=5, pack_id="scp",
+                        tile_id="t", event_kind="confrontation",
+                        participants=["alice", "bob"], outcome="failure",
+                        template_rendering="...", importance=0.5)
+    mult = _environmental_modifiers(event, [a, b], world)
+    assert mult > 1.0, f"Resonance should lift multiplier, got {mult}"
+
+
+def test_environmental_modifier_clamped_to_safe_range():
+    """Even with many priors and resonance, multiplier stays in [0.5, 1.5]."""
+    from living_world.rules.resolver import _environmental_modifiers
+    import uuid
+
+    world = World()
+    tile = Tile(tile_id="t", display_name="T", primary_pack="scp", tile_type="hallway")
+    world.add_tile(tile)
+    a = Agent(agent_id="a", pack_id="scp", display_name="A", persona_card="...")
+    world.add_agent(a)
+    # 10 prior identical events
+    for i in range(10):
+        world.record_event(LegendEvent(
+            event_id=str(uuid.uuid4()), tick=i + 1, pack_id="scp",
+            tile_id="t", event_kind="x", participants=["a"], outcome="neutral",
+            template_rendering="...", importance=0.5,
+        ))
+    world.current_tick = 11
+    event = LegendEvent(event_id=str(uuid.uuid4()), tick=11, pack_id="scp",
+                        tile_id="t", event_kind="x", participants=["a"],
+                        outcome="neutral", template_rendering="...", importance=0.5)
+    mult = _environmental_modifiers(event, [a], world)
+    assert mult >= 0.5, f"Multiplier underflow: {mult}"

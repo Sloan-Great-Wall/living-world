@@ -16,6 +16,13 @@ ui = [
     "streamlit>=1.38",
     "streamlit-autorefresh>=1.0",
 ]
+serve = [
+    # Thin sim REST API consumed by the Tauri+Solid+TS dashboard
+    # (dashboard-tauri/). The legacy Streamlit `ui` extra above is
+    # kept alive in parallel until the Tauri app reaches feature parity.
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
 db = [
     "psycopg[binary]>=3.2",
     "redis>=5.0",
