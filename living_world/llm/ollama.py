@@ -114,14 +114,34 @@ class OllamaClient(LLMClient):
         system: str = "",
     ) -> LLMResponse:
         """Async variant — drop into asyncio.gather() to run many calls
-        in parallel against a single Ollama daemon (which itself batches
-        4 requests in parallel when started with OLLAMA_NUM_PARALLEL=4)."""
+        in parallel against a single Ollama daemon.
+
+        Bug fix 2026-04-23: when callers do `asyncio.run(gather(...))`
+        repeatedly (one per event in tick_loop), each run creates a NEW
+        event loop. A persisted httpx.AsyncClient is bound to the FIRST
+        loop and silently raises RuntimeError on subsequent runs. We
+        detect loop change and recreate. Pool reuse only persists
+        within a single asyncio.run() boundary (still useful for
+        gather()'d concurrent calls inside one event)."""
+        import asyncio
         t0 = time.time()
         body = self._build_body(prompt, max_tokens=max_tokens,
                                   temperature=temperature, json_mode=json_mode,
                                   system=system)
-        if self._async_client is None:
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+        # If the persisted client is bound to a closed/different loop, recreate.
+        client_loop = getattr(self._async_client, "_lw_loop", None)
+        if (
+            self._async_client is None
+            or client_loop is None
+            or client_loop is not current_loop
+            or client_loop.is_closed()
+        ):
             self._async_client = httpx.AsyncClient(timeout=self.timeout)
+            self._async_client._lw_loop = current_loop  # type: ignore[attr-defined]
         try:
             r = await self._async_client.post(
                 f"{self.base_url}/api/generate", json=body,
