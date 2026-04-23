@@ -136,6 +136,56 @@ def export_chronicle(
 
 
 @app.command()
+def test(
+    ticks: int = typer.Option(8, help="Smoke test sim length."),
+    skip_unit: bool = typer.Option(False, help="Skip pytest unit/invariant phase."),
+    skip_smoke: bool = typer.Option(False, help="Skip the live smoke sim."),
+) -> None:
+    """Default test command — runs pytest THEN a real smoke simulation.
+
+    The smoke phase is the canonical "is the simulator healthy?" check:
+    bootstraps 3 packs, runs `ticks` days with whatever LLM stack is
+    configured (real Ollama if up, rules-only otherwise), streams
+    events to terminal, asserts all 8 invariants. Exit code is the
+    OR of pytest and smoke results.
+
+    For pure unit/invariant testing without the live sim:
+        lw test --skip-smoke
+    For the smoke sim only:
+        lw test --skip-unit
+    """
+    import subprocess
+    import sys
+
+    overall_failed = 0
+
+    if not skip_unit:
+        console.rule("Phase 1 · pytest (unit + property + invariant)")
+        proc = subprocess.run(
+            [sys.executable, "-m", "pytest", "tests/", "-q",
+             "--ignore=tests/test_live_ollama.py"],
+            cwd=Path(__file__).resolve().parent.parent,
+        )
+        if proc.returncode != 0:
+            overall_failed += 1
+            console.print("[red]Phase 1 FAILED[/]")
+        else:
+            console.print("[green]Phase 1 passed[/]")
+
+    if not skip_smoke:
+        console.rule(f"Phase 2 · live smoke ({ticks} ticks)")
+        try:
+            smoke(ticks=ticks)
+        except typer.Exit as e:
+            if e.exit_code != 0:
+                overall_failed += 1
+
+    if overall_failed:
+        raise typer.Exit(code=1)
+    console.rule("[green]All test phases passed[/]")
+
+
+@app.command()
 def smoke(
     packs: str = typer.Option("scp,liaozhai,cthulhu",
                                 help="Comma-separated pack ids."),
