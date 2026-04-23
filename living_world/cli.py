@@ -174,11 +174,15 @@ def test(
 
     if not skip_smoke:
         console.rule(f"Phase 2 · live smoke ({ticks} ticks)")
-        try:
-            smoke(ticks=ticks)
-        except typer.Exit as e:
-            if e.exit_code != 0:
-                overall_failed += 1
+        # Run as subprocess so typer Option defaults resolve normally and
+        # rich live output streams cleanly to the inherited stdout.
+        proc = subprocess.run(
+            [sys.executable, "-m", "living_world.cli", "smoke",
+             "--ticks", str(ticks)],
+            cwd=Path(__file__).resolve().parent.parent,
+        )
+        if proc.returncode != 0:
+            overall_failed += 1
 
     if overall_failed:
         raise typer.Exit(code=1)
