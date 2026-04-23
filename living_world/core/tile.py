@@ -25,6 +25,12 @@ class Tile(BaseModel):
 
     # pack access control
     allowed_packs: list[str] = Field(default_factory=list)
+    # Cross-pack bridge (KNOWN_ISSUES #7). A liminal tile is shared
+    # across all loaded packs — agents from different worlds can meet
+    # here. Migration events (e.g. scp:portal-anomaly,
+    # liaozhai:dream-passage, cthulhu:dream-call) deposit agents into a
+    # liminal tile; from there they can interact regardless of origin.
+    is_liminal: bool = False
 
     # storyteller tuning
     tension_bias: float = 0.5

@@ -1,0 +1,95 @@
+{
+  "$schema": "../holon/packages/harness/schema/state.schema.json",
+  "project": "living-world",
+  "updated_at": "2026-04-19",
+  "version": "2.1",
+  "current_stage": 1,
+  "mode": "supervised",
+  "streams": {
+    "S1-architecture": {
+      "name": "Architecture refactor",
+      "brief_path": "sloan_mind/living-world/adr/0001-agents-rules-split.md",
+      "repos": ["living-world"]
+    }
+  },
+  "stages": {
+    "1": {
+      "name": "Architecture refactor (agents/rules split)",
+      "status": "active"
+    }
+  },
+  "tasks": [
+    {
+      "id": "L-01",
+      "stream": "S1-architecture",
+      "stage": 1,
+      "title": "Resolve ADR-0001 open questions and move to Accepted",
+      "estimate": "1d",
+      "status": "pending",
+      "description": "ADR-0001 is Proposed as of 2026-04-18. Before it can move to Accepted, the three open questions in its 'Risks and open questions' section must be resolved: (1) second-pass review of agents/emergent.py (352 LOC) and agents/self_update.py (288 LOC) for internal structure; (2) division of labor between chronicler and narrator to avoid duplicate LLM spend on overlapping event context; (3) cost-delta pass for the Tier-2 drop so the net change in per-tick LLM spend is understood rather than assumed.",
+      "repos": ["living-world"],
+      "files": [
+        "living_world/agents/emergent.py",
+        "living_world/agents/self_update.py",
+        "living_world/agents/chronicler.py",
+        "living_world/agents/narrator.py"
+      ],
+      "reference_docs": ["sloan_mind/living-world/adr/0001-agents-rules-split.md"],
+      "depends_on": [],
+      "blocked_by": [],
+      "predecessor_output": null,
+      "acceptance_criteria": [
+        "ADR-0001 status updated to Accepted with the three open questions closed in the Changelog",
+        "If emergent.py is split, the pure-rule portion lives under living_world/rules/ and no agents/ module imports from rules/ (mechanically checked with grep)",
+        "chronicler vs narrator event-budget rule documented in the ADR and reflected in tick_loop orchestration",
+        "Cost-delta note added to the ADR showing expected per-tick spend change from dropping Tier-2"
+      ],
+      "session_id": null,
+      "result": null
+    },
+    {
+      "id": "L-02",
+      "stream": "S1-architecture",
+      "stage": 1,
+      "title": "Enforce agents/ vs rules/ boundary in CI",
+      "estimate": "0.5d",
+      "status": "pending",
+      "description": "ADR-0001 specifies that `grep -r 'llm.complete' living_world/rules/` must return zero hits, forever. Today this is true by inspection but not enforced. Add a CI check (script + workflow hook, or a pytest sentinel) that fails the build if any module under living_world/rules/ calls llm.complete, and that also fails if any module under living_world/agents/ imports from living_world/rules/.",
+      "repos": ["living-world"],
+      "files": [
+        "living_world/rules/",
+        "living_world/agents/",
+        "tests/"
+      ],
+      "reference_docs": ["sloan_mind/living-world/adr/0001-agents-rules-split.md"],
+      "depends_on": [],
+      "blocked_by": [],
+      "predecessor_output": null,
+      "acceptance_criteria": [
+        "CI fails if any file under living_world/rules/ contains 'llm.complete'",
+        "CI fails if any file under living_world/agents/ has 'from living_world.rules' or 'import living_world.rules'",
+        "Invariant is documented in README or CONTRIBUTING so future contributors see it without reading the ADR"
+      ],
+      "session_id": null,
+      "result": null
+    }
+  ],
+  "external_blockers": [],
+  "decisions": [
+    {
+      "id": "L-D-0001",
+      "date": "2026-04-18",
+      "title": "Split statmachine into agents/ (LLM) and rules/ (deterministic mechanics); drop Tier-2 from LLM router",
+      "rationale": "Pre-refactor statmachine/ mixed deterministic mechanics with LLM-routed cognition, so the 'does this module cost tokens?' question could only be answered by reading the body. The three-tier LLM budget also paid a complexity tax without clear benefit — most events were either cheap enough to be pure rules or important enough to warrant a full LLM call. Splitting into agents/ (9 modules, all call llm.complete) and rules/ (7 modules, zero LLM calls) makes the boundary mechanically checkable by grep, and dropping Tier-2 collapses the budget to a binary regime that call sites can reason about in one step.",
+      "affects": ["L-01", "L-02"],
+      "adr_path": "sloan_mind/living-world/adr/0001-agents-rules-split.md",
+      "status": "proposed"
+    }
+  ],
+  "meta": {
+    "role": "project",
+    "docs_root": "sloan_mind/living-world/",
+    "initialized": "2026-04-19",
+    "notes": "Fresh seed per SM-D-010 federated-state rollout — no prior L-* entries existed in sloan_mind/state.json to migrate. Stage 1 tasks and the single decision are drawn from the in-flight ADR-0001 refactor and from observable code state (living_world/agents/ and living_world/rules/ already exist as sibling packages)."
+  }
+}

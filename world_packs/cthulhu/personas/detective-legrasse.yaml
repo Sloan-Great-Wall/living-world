@@ -7,3 +7,10 @@ tags: [cthulhu, investigator, law-enforcement, armed]
 age: 48
 current_tile: new-orleans-precinct
 current_goal: trace recent cult movement in the Gulf
+inventory:
+  - name: 'sidearm, .38'
+    tags: [weapon, mundane]
+    power: 4
+  - name: 'cult swamp evidence dossier'
+    tags: [notes, classified]
+    power: 0

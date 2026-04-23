@@ -26,14 +26,56 @@ ProviderName = Literal["none", "ollama"]
 class LLMSettings(BaseModel):
     """Which backend to use for each tier + model names."""
 
+    # ── Two LLM clients (legacy Tier 2 / Tier 3 names kept for settings.yaml
+    # compatibility). Despite the names, only TWO LLM CALL PATHS exist now:
+    #
+    #   tier2_*  → "agent-layer" client. Used by every agent/* module:
+    #              conscience, planner, move_advisor, dialogue, emergent,
+    #              perception, self_update. This is the workhorse.
+    #
+    #   tier3_*  → "narrator" client. Only used by the Narrator (narrative
+    #              rewrites of high-importance events) and the Chronicler
+    #              (chapter writing). Pick a richer model here if you want
+    #              prettier prose; cheaper agent calls then run on tier2.
+    #
+    # The historical "Tier 2 mid-tier rewrite" path was deleted in 2026-04;
+    # the slot remained because the underlying Ollama client is shared by
+    # the entire agents/ layer. Renaming would break user settings files.
+
     tier2_provider: ProviderName = "ollama"
     tier3_provider: ProviderName = "ollama"
 
     # when provider = ollama
     ollama_base_url: str = "http://localhost:11434"
-    ollama_tier2_model: str = "gemma3:4b"
-    ollama_tier3_model: str = "gemma3:4b"  # same by default for MacBook; swap to phi4 etc on GPU
+    ollama_tier2_model: str = "gemma3:4b"   # the "agent-layer" model
+    ollama_tier3_model: str = "gemma3:4b"   # the "narrator" model
     ollama_timeout_seconds: float = 60.0
+    # P4: dual-instance support. If set, tier-3 calls go to a separate
+    # Ollama daemon (run on a different port). Lets tier-2 (small/fast)
+    # and tier-3 (big/literary) saturate the GPU in parallel rather than
+    # take turns. Leave null to use ollama_base_url for both tiers.
+    # Example dual-instance recipe (M3 32GB Mac):
+    #   ollama serve --port 11434          # tier 2 (llama3.2:3b)
+    #   ollama serve --port 11435          # tier 3 (gemma4:e4b or qwen3:14b)
+    # then settings.yaml: ollama_tier3_base_url: http://localhost:11435
+    ollama_tier3_base_url: str | None = None
+
+    # Per-module overrides — leave a key out (or null) to inherit the
+    # tier default above. Use this when you want to give one module a
+    # bigger / smaller / specialty model without changing everything else.
+    #
+    # Recognized module keys:
+    #   chronicler, narrator         (default → tier3)
+    #   planner, self_update,
+    #   emergent, dialogue,
+    #   conscience, move_advisor,
+    #   perception, reflector        (default → tier2)
+    #
+    # Example settings.yaml:
+    #   ollama_module_models:
+    #     chronicler: qwen3:14b      # better prose for chapter writing
+    #     emergent:   mistral:7b     # different creativity profile
+    ollama_module_models: dict[str, str] = Field(default_factory=dict)
 
     # future: vllm / openai-compatible endpoints
     openai_base_url: str | None = None
@@ -46,42 +88,86 @@ class LLMSettings(BaseModel):
     # Dynamic dialogue: conscious narrative at Tier 3
     dynamic_dialogue_enabled: bool = True
 
-    # Debate Phase: conscious multi-voice synthesis for spotlight events
-    debate_enabled: bool = True
-    debate_threshold: float = 0.75
-    debate_min_stakeholders: int = 3
-    debate_max_stakeholders: int = 5
-
     # LLM-driven movement: historical figures decide via LLM
+    # ── LLM ratio knobs ──
+    # The defaults here are tuned to match a System-1/System-2 split that
+    # leans further toward conscious deliberation than the original ~95/5.
+    # For HF agents we now run System-2 (LLM) on most consequential
+    # decisions; ordinary agents stay rules-heavy. This mirrors the
+    # observation that protagonists in human cognition get more deliberate
+    # thought, while bystanders run on habit.
+
     llm_movement_enabled: bool = True
     llm_movement_hf_only: bool = True
-    llm_movement_chance: float = 0.3
+    llm_movement_chance: float = 0.6   # was 0.3 — HF agents now LLM-thought 60% of moves
 
-    # Conscious event override — when a rule-proposed event is important
-    # enough, the LLM reviews it through the participants' perspective and
-    # may APPROVE, ADJUST (different outcome), or VETO (character wouldn't do
-    # this). Activation chance scales with importance.
+    # Conscious event override — when a rule-proposed event happens, the LLM
+    # may APPROVE / ADJUST / VETO based on participants' personas + memory.
+    # Lower threshold (more events eligible) + higher activation chance
+    # (more of those eligible actually go to LLM) ≈ humans deliberating
+    # over a wider range of social situations, not just crises.
     conscious_override_enabled: bool = True
-    conscious_override_threshold: float = 0.50  # min importance to consider
-    conscious_override_chance: float = 0.50     # % of eligible proposals activated
+    conscious_override_threshold: float = 0.35  # was 0.50 — lower = more events get conscious review
+    conscious_override_chance: float = 0.70     # was 0.50 — more eligible events actually fire
+
+    # ── Decision-layer LLM features (goal-driven behavior) ──
+
+    # Rule-path goal bonus: tiles whose name/type contain any token from the
+    # agent's current_goal / weekly_plan get this multiplier on their affinity
+    # weight. 1.0 = disabled. No LLM call involved — cheap heuristic.
+    goal_driven_movement_bonus: float = 1.4
+
+    # Weekly planning: once every 7 ticks, call Tier-2 LLM to produce a short
+    # plan for each historical-figure agent. Plan is stored on agent.state_extra
+    # and consumed by movement + storyteller.
+    weekly_planning_enabled: bool = True
+    weekly_planning_hf_only: bool = True
+
+    # Storyteller goal-alignment bonus: events whose kind/description match a
+    # resident agent's goal or weekly plan get their weight boosted (capped).
+    goal_aligned_event_bonus: float = 1.5
+
+    # Conversation loop: 2-participant events trigger an A→B LLM reaction
+    # that mutates the listener's affinity + beliefs based on what happened.
+    # Default ON now — this is one of the three "irreplaceable" LLM paths.
+    conversation_loop_enabled: bool = True
+
+    # Chronicler (说书人): records emergent highlights as chapters.
+    # Strictly descriptive; never influences future events.
+    chronicler_enabled: bool = True
+    chronicle_every_ticks: int = 14
+
+    # Emergent event proposer: LLM invents novel events on hot tiles.
+    # Default ON: this is the System-2 source of novelty (rules can't
+    # invent new event kinds). 3/tick is brain-budget sized.
+    emergent_events_enabled: bool = True
+    emergent_max_per_tick: int = 3
+
+    # Subjective perception: every important event (importance ≥ threshold)
+    # is rewritten from each participant's first-person POV before being
+    # stored in their memory. Same event → different memory per agent.
+    # Cost: 1 LLM call per participant per qualifying event.
+    subjective_perception_enabled: bool = True
+    subjective_perception_threshold: float = 0.5
+
+    # AgentSelfUpdate: after important events, the LLM speaks AS each
+    # participant and reports how their inner state shifted (attributes,
+    # needs, emotions, beliefs, goal, motivations, reflection). Replaces
+    # the rigid pre-authored stat ripples for important events.
+    self_update_enabled: bool = True
+    self_update_threshold: float = 0.5
+
 
 
 class BudgetSettings(BaseModel):
-    """Daily token ceilings; router auto-downgrades when hit."""
+    """Daily token ceiling for the LLM-narrative pathway."""
 
-    tier2_tokens_per_day: int = 1_000_000
     tier3_tokens_per_day: int = 200_000
 
 
 class ImportanceSettings(BaseModel):
-    """Thresholds for routing to each tier.
+    """Importance threshold for routing an event to Tier-3 LLM narrative."""
 
-    Calibrated 2026-04-15: target distribution ~95% T1 / ~4% T2 / ~1% T3.
-    Raise thresholds if T2/T3 ratio creeps up; the content team should
-    earn Tier 2+ with explicit template `base_importance` settings.
-    """
-
-    tier2_threshold: float = 0.35
     tier3_threshold: float = 0.65
 
 
@@ -108,16 +194,6 @@ class SimulationSettings(BaseModel):
     packs_dir: str = "world_packs"
 
 
-class I18nSettings(BaseModel):
-    """Output translation for non-English user locales."""
-
-    enabled: bool = False
-    target_locale: Literal["en", "zh", "ja"] = "zh"
-    provider: Literal["noop", "ollama"] = "ollama"
-    ollama_translate_model: str = "gemma3:4b"
-    cache_size: int = 4096
-
-
 class MemorySettings(BaseModel):
     """Agent memory / embedding config."""
 
@@ -129,10 +205,11 @@ class MemorySettings(BaseModel):
 
 
 class PersistenceSettings(BaseModel):
-    backend: Literal["memory", "postgres"] = "memory"
-    postgres_dsn: str = "postgresql://lw:lw_dev_only@localhost:5433/living_world"
-    # how often (every N ticks) to snapshot full world state; events always append every tick
-    snapshot_every_ticks: int = 10
+    # how often (every N ticks) to snapshot full world state; events always
+    # append every tick. Aligned to 7 (weekly cadence) — same boundary as
+    # the planner / reflect / demote phases, so all maintenance happens on
+    # the same tick instead of at staggered "magic numbers".
+    snapshot_every_ticks: int = 7
 
 
 class DisplaySettings(BaseModel):
@@ -159,7 +236,6 @@ class Settings(BaseModel):
     storyteller: StorytellerOverride = Field(default_factory=StorytellerOverride)
     simulation: SimulationSettings = Field(default_factory=SimulationSettings)
     memory: MemorySettings = Field(default_factory=MemorySettings)
-    i18n: I18nSettings = Field(default_factory=I18nSettings)
     display: DisplaySettings = Field(default_factory=DisplaySettings)
     persistence: PersistenceSettings = Field(default_factory=PersistenceSettings)
     dashboard: DashboardSettings = Field(default_factory=DashboardSettings)

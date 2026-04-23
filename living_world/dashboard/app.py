@@ -6,6 +6,7 @@ import html as _html
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 try:
@@ -16,21 +17,22 @@ except ImportError:
 from living_world.config import DEFAULT_SETTINGS_PATH, Settings, load_settings, save_settings
 from living_world.factory import (
     bootstrap_world,
+    build_world_state_json,
     group_events_by_day,
     make_engine,
 )
+from living_world.tick_logger import TickLogger
+from living_world.dashboard.canvas_map import render_canvas_map
 from living_world.dashboard.codex import (
     render_persona_codex_html,
     render_story_codex_html,
     render_tiles_codex_html,
 )
+from living_world.dashboard.controls import render_controls_page
 from living_world.dashboard.map_view import (
     PACK_THEMES,
     _agent_emoji,
-    render_ticker_html,
-    render_world_svg,
 )
-from living_world.i18n import NoopTranslator, OllamaTranslator, cached
 from living_world.llm.ollama import OllamaClient
 from living_world.world_pack import load_all_packs
 
@@ -65,12 +67,21 @@ if "world" not in st.session_state:
     st.session_state.loaded_packs = None
     st.session_state.playing = False
     st.session_state.play_speed = 2  # seconds per tick
-    st.session_state.show_codex = False
     st.session_state.show_settings = False
+    st.session_state.show_controls = False
+    st.session_state.show_codex = False
 
 
 def _reset() -> None:
-    for k in ["world", "engine", "selected_agent", "loaded_packs"]:
+    # Close the logger file handle if one is open, so we don't leak fds
+    # and so the next run starts a clean log.
+    old_logger = st.session_state.get("tick_logger")
+    if old_logger is not None:
+        try:
+            old_logger.close()
+        except Exception:
+            pass
+    for k in ["world", "engine", "selected_agent", "loaded_packs", "tick_logger"]:
         st.session_state[k] = None
     st.session_state.playing = False
 
@@ -165,7 +176,8 @@ with st.sidebar:
                      width="stretch", disabled=not selected_packs):
             world, loaded = bootstrap_world(DEFAULT_PACKS_DIR, selected_packs)
             st.session_state.world = world
-            st.session_state.engine = make_engine(world, loaded, _settings, int(seed))
+            st.session_state.tick_logger = TickLogger("logs/tick.log")
+            st.session_state.engine = make_engine(world, loaded, _settings, int(seed), tick_logger=st.session_state.tick_logger)
             st.session_state.loaded_packs = selected_packs
             st.session_state.playing = True  # auto-start
             st.rerun()
@@ -198,12 +210,30 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # Story Library — navigates to the codex "page" in the main area
+    # Story Library — YAML content browser (personas, stories, locations)
     st.markdown("<div class='sidebar-nav-btn'>", unsafe_allow_html=True)
-    library_label = "Close Story Library" if st.session_state.show_codex else "Story Library"
+    library_label = (
+        "Close Story Library" if st.session_state.show_codex else "Story Library"
+    )
     if st.button(library_label, width="stretch", type="secondary",
                  key="story_library_btn"):
         st.session_state.show_codex = not st.session_state.show_codex
+        st.session_state.show_controls = False
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # World Controls — direct manipulation panel (agents, events, emergent)
+    st.markdown("<div class='sidebar-nav-btn'>", unsafe_allow_html=True)
+    controls_label = (
+        "Close World Controls" if st.session_state.show_controls else "World Controls"
+    )
+    if st.button(
+        controls_label, width="stretch", type="secondary",
+        key="world_controls_btn",
+        disabled=st.session_state.world is None,
+    ):
+        st.session_state.show_controls = not st.session_state.show_controls
+        st.session_state.show_codex = False
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -245,18 +275,25 @@ with st.sidebar:
                 "Embedder", ["none", "ollama"],
                 index=["none", "ollama"].index(_settings.memory.embedder),
             )
-            i18n_enabled = st.toggle("Output translation", _settings.i18n.enabled)
-            i18n_target = st.selectbox(
-                "Target locale", ["en", "zh", "ja"],
-                index=["en", "zh", "ja"].index(_settings.i18n.target_locale),
-            )
 
             st.markdown(
                 "<div class='section-label' style='margin-top:12px'>Routing</div>",
                 unsafe_allow_html=True,
             )
-            t2t = st.slider("Tier 2 threshold", 0.0, 1.0, _settings.importance.tier2_threshold, 0.05)
             t3t = st.slider("Tier 3 threshold", 0.0, 1.0, _settings.importance.tier3_threshold, 0.05)
+
+            st.markdown(
+                "<div class='section-label' style='margin-top:12px'>Cadences (every N ticks)</div>",
+                unsafe_allow_html=True,
+            )
+            weekly_n = st.slider(
+                "Weekly maintenance (planner / reflect / demote / snapshot)",
+                3, 21, int(_settings.memory.reflect_every_ticks), 1,
+            )
+            chronicle_n = st.slider(
+                "Chronicler chapter cadence",
+                7, 60, int(_settings.llm.chronicle_every_ticks), 1,
+            )
 
             st.markdown(
                 "<div class='section-label' style='margin-top:12px'>Storyteller</div>",
@@ -276,18 +313,39 @@ with st.sidebar:
                 "Dynamic dialogue (Tier 3 uses LLM-written narrative instead of template)",
                 _settings.llm.dynamic_dialogue_enabled,
             )
-            debate_on = st.toggle(
-                "Debate Phase (multi-agent round for spotlight events — 5+ LLM calls each)",
-                _settings.llm.debate_enabled,
-            )
-            debate_thr = st.slider(
-                "Debate trigger importance",
-                0.6, 1.0, _settings.llm.debate_threshold, 0.05,
-                disabled=not debate_on,
-            )
             llm_move_on = st.toggle(
                 "LLM-driven movement (historical figures choose tiles via LLM)",
                 _settings.llm.llm_movement_enabled,
+            )
+            weekly_plan_on = st.toggle(
+                "Weekly agent planning (HF agents get LLM-generated intentions each week)",
+                _settings.llm.weekly_planning_enabled,
+            )
+            convo_loop_on = st.toggle(
+                "Conversation loop (Tier-2+ two-agent events trigger A→B LLM reaction; "
+                "updates affinity + beliefs from content — EXPENSIVE, opt-in)",
+                _settings.llm.conversation_loop_enabled,
+            )
+            chronicler_on = st.toggle(
+                "Chronicler (说书人 — every 14 ticks, LLM records highlights as a "
+                "chapter. Observes only, does not influence future events)",
+                _settings.llm.chronicler_enabled,
+            )
+            emergent_on = st.toggle(
+                "Emergent events (LLM invents novel events on hot tiles from "
+                "persona/belief/affinity context — EXPENSIVE, opt-in)",
+                _settings.llm.emergent_events_enabled,
+            )
+            perception_on = st.toggle(
+                "Subjective perception (each agent's memory of an important "
+                "event is rewritten by LLM from their first-person POV)",
+                _settings.llm.subjective_perception_enabled,
+            )
+            self_update_on = st.toggle(
+                "Self-update on important events (LLM speaks AS the participant "
+                "and reports inner shifts — attributes, needs, emotions, goal, "
+                "motivations, beliefs, reflection. AgentSociety route)",
+                _settings.llm.self_update_enabled,
             )
 
             all_saved = st.form_submit_button("Save all")
@@ -299,12 +357,19 @@ with st.sidebar:
                         "ollama_base_url": ollama_base_url,
                         "ollama_tier2_model": t2m, "ollama_tier3_model": t3m,
                         "dynamic_dialogue_enabled": dialogue_on,
-                        "debate_enabled": debate_on,
-                        "debate_threshold": debate_thr,
-                        "llm_movement_enabled": llm_move_on},
-                "memory": {**_settings.memory.model_dump(), "enabled": mem_enabled, "embedder": mem_embed},
-                "i18n": {**_settings.i18n.model_dump(), "enabled": i18n_enabled, "target_locale": i18n_target},
-                "importance": {"tier2_threshold": t2t, "tier3_threshold": t3t},
+                        "llm_movement_enabled": llm_move_on,
+                        "weekly_planning_enabled": weekly_plan_on,
+                        "conversation_loop_enabled": convo_loop_on,
+                        "chronicler_enabled": chronicler_on,
+                        "emergent_events_enabled": emergent_on,
+                        "subjective_perception_enabled": perception_on,
+                        "self_update_enabled": self_update_on,
+                        "chronicle_every_ticks": int(chronicle_n)},
+                "memory": {**_settings.memory.model_dump(), "enabled": mem_enabled,
+                            "embedder": mem_embed, "reflect_every_ticks": int(weekly_n)},
+                "persistence": {**_settings.persistence.model_dump(),
+                                 "snapshot_every_ticks": int(weekly_n)},
+                "importance": {"tier3_threshold": t3t},
                 "storyteller": {**_settings.storyteller.model_dump(), "force_personality": force_p},
             })
             save_settings(new)
@@ -327,11 +392,16 @@ if st.session_state.show_codex:
     st.caption("Every authored character, story, and location · the source material the world draws from.")
     tp, ts, tl = st.tabs(["Characters", "Stories", "Locations"])
     with tp:
-        st.html(render_persona_codex_html(_all_packs), height=900)
+        components.html(render_persona_codex_html(_all_packs), height=900, scrolling=True)
     with ts:
-        st.html(render_story_codex_html(_all_packs), height=900)
+        components.html(render_story_codex_html(_all_packs), height=900, scrolling=True)
     with tl:
-        st.html(render_tiles_codex_html(_all_packs), height=800)
+        components.html(render_tiles_codex_html(_all_packs), height=800, scrolling=True)
+    st.stop()
+
+# World Controls page — direct manipulation of the running world
+if st.session_state.show_controls and st.session_state.world is not None:
+    render_controls_page(st.session_state.world, st.session_state.engine)
     st.stop()
 
 if st.session_state.world is None:
@@ -358,63 +428,86 @@ world = st.session_state.world
 # ── Auto-play: drive continuous simulation ──
 # When playing, the page auto-refreshes every `play_speed` seconds, and
 # each refresh advances 1 virtual day. This gives live motion to the map.
-if st.session_state.playing and st_autorefresh is not None:
-    # Advance one tick on THIS render, then schedule a refresh.
-    st.session_state.engine.run(1)
-    st_autorefresh(interval=st.session_state.play_speed * 1000, key="play_tick")
+if st.session_state.playing:
+    if st_autorefresh is None:
+        st.warning("⚠️ `streamlit-autorefresh` not installed — auto-play disabled. "
+                   "Use the **+N days** button to advance manually, or run "
+                   "`pip install streamlit-autorefresh` to enable live mode.")
+    else:
+        # Advance one tick on THIS render, then schedule a refresh.
+        try:
+            st.session_state.engine.run(1)
+        except Exception as exc:
+            st.error(f"Engine tick failed: {type(exc).__name__}: {exc}")
+            st.session_state.playing = False
+        st_autorefresh(interval=st.session_state.play_speed * 1000, key="play_tick")
 
 # Note: agent selection now happens via native Streamlit selectbox in sidebar.
 # No URL/query-param navigation — state preserved across reruns,
 # auto-play doesn't get interrupted.
 
 
-# ========== MAP as fixed background ==========
-svg = render_world_svg(world, selected_agent_id=st.session_state.selected_agent)
-st.markdown(
-    f'<div class="map-backdrop">{svg}</div>',
-    unsafe_allow_html=True,
-)
-
-# ========== TOP DOCK: Live banner ==========
+# ========== 1. LIVE BANNER (if playing) ==========
 if st.session_state.playing:
     st.markdown(
-        f"<div class='dock-top'>"
-        f"<div class='glass-card' style='display:inline-flex;align-items:center;gap:10px;"
-        f"padding:10px 16px;border-color:rgba(110,196,110,0.25);'>"
+        f"<div class='glass-card live-banner'>"
         f"<span class='live-dot'></span>"
         f"<span style='font-size:13.5px;color:#cfd4dc'>"
-        f"Live simulation &middot; day <b style='color:#e8c56a'>{world.current_tick}</b>"
-        f" &middot; advancing every {st.session_state.play_speed}s</span>"
-        f"</div></div>",
+        f"Live &middot; day <b style='color:#e8c56a'>{world.current_tick}</b>"
+        f" &middot; every {st.session_state.play_speed}s</span>"
+        f"</div>",
         unsafe_allow_html=True,
     )
 
+# ========== 2. CANVAS WORLD MAP ==========
+_world_state = build_world_state_json(
+    world, selected_agent=st.session_state.selected_agent,
+)
+# Use components.html (NOT st.html) — components.html creates a sized iframe
+# that supports JavaScript execution AND a fixed height. st.html in 1.56 has
+# no height parameter and the iframe collapses to 0px.
+components.html(render_canvas_map(_world_state), height=720, scrolling=False)
 
-# ========== BOTTOM DOCK: Agent card (if selected) + Chronicle ==========
-# Rendered as ONE BIG HTML block wrapped in .dock-bottom (position:fixed).
-# This guarantees cards truly stick to the viewport bottom over the map.
+# ========== 3. INSPECT AGENT SELECTOR ==========
+_agents_for_picker = sorted(
+    world.all_agents(),
+    key=lambda a: (not a.is_historical_figure, a.pack_id, a.display_name),
+)
+_picker_ids = ["— none —"] + [a.agent_id for a in _agents_for_picker]
+_picker_labels = {"— none —": "— none —"}
+for a in _agents_for_picker:
+    th = PACK_THEMES.get(a.pack_id, PACK_THEMES["scp"])
+    star = "★" if a.is_historical_figure else " "
+    dead = "  ✝" if not a.is_alive() else ""
+    _picker_labels[a.agent_id] = f"{star} {th['emblem']}  {a.display_name}{dead}"
+try:
+    _cur_idx = _picker_ids.index(st.session_state.selected_agent or "— none —")
+except ValueError:
+    _cur_idx = 0
 
+with st.container(key="inspect_bar"):
+    picked = st.selectbox(
+        "Inspect agent",
+        _picker_ids,
+        index=_cur_idx,
+        format_func=lambda x: _picker_labels.get(x, x),
+        label_visibility="collapsed",
+        key="inspect_agent_picker",
+    )
+    new_sel = None if picked == "— none —" else picked
+    if new_sel != st.session_state.selected_agent:
+        st.session_state.selected_agent = new_sel
+        st.rerun()
+
+# ========== 4. AGENT CARD + CHRONICLE (side by side) ==========
 selected_agent_obj = None
 if st.session_state.selected_agent:
     selected_agent_obj = world.get_agent(st.session_state.selected_agent)
 
-# Build Chronicle HTML (always shown)
-translator_for_chron = (
-    cached(
-        OllamaTranslator(
-            model=_settings.i18n.ollama_translate_model,
-            base_url=_settings.llm.ollama_base_url,
-        ),
-        max_size=_settings.i18n.cache_size,
-    )
-    if _settings.i18n.enabled and _settings.i18n.provider == "ollama"
-    else NoopTranslator()
-)
-do_translate = _settings.i18n.enabled
-
+# Build Chronicle HTML
 by_day = group_events_by_day(world)
 chron_html = [
-    '<div class="glass-card" style="max-height:38vh;overflow-y:auto;padding:16px 20px">',
+    '<div class="glass-card" style="max-height:50vh;overflow-y:auto;padding:16px 20px">',
     '<div style="display:flex;align-items:baseline;justify-content:space-between;'
     'margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.06)">'
     '<div style="font-family:\'Space Grotesk\';font-size:17px;font-weight:600;color:#f2f4f8;'
@@ -444,7 +537,7 @@ else:
             for e in events:
                 marker = "●●●" if e.tier_used == 3 else ("●●" if e.tier_used == 2 else "●")
                 tier_col = "#b091d1" if e.tier_used == 3 else ("#d4a373" if e.tier_used == 2 else "#3d4454")
-                text = translator_for_chron.translate(e.best_rendering(), target="zh") if do_translate else e.best_rendering()
+                text = e.best_rendering()
                 chron_html.append(
                     f'<div style="color:#cfd4dc;font-size:12.5px;line-height:1.6;'
                     f'margin:2px 0 2px 8px;border-left:1px solid {th["accent"]}40;padding-left:10px">'
@@ -481,6 +574,41 @@ if selected_agent_obj:
             f'<div class="section-label" style="margin-top:12px">Attributes</div>'
             f'<div>{attr_rows}</div>'
         )
+
+    # Beliefs (LLM-evolved, stored in state_extra)
+    belief_html = ""
+    _beliefs = agent.get_beliefs()
+    if _beliefs:
+        belief_rows = "".join(
+            f'<div style="padding:4px 0;border-bottom:1px dashed rgba(255,255,255,0.04);font-size:11.5px">'
+            f'<span class="mono" style="color:{th["glow"]};font-size:10px">{esc(topic)}</span>'
+            f'<div style="color:#cfd4dc;line-height:1.4;margin-top:2px">{esc(belief)}</div></div>'
+            for topic, belief in list(_beliefs.items())[:6]
+        )
+        belief_html = (
+            f'<div class="section-label" style="margin-top:12px">Beliefs · evolved</div>'
+            f'<div>{belief_rows}</div>'
+        )
+
+    # Weekly plan (LLM-generated, stored in state_extra)
+    plan_html = ""
+    _plan = agent.get_weekly_plan()
+    if _plan:
+        def _fmt_plan_list(key):
+            items = _plan.get(key) or []
+            if not isinstance(items, list) or not items:
+                return ""
+            lis = "".join(f"<li style='margin:2px 0'>{esc(str(x))}</li>" for x in items[:5])
+            return (
+                f"<div style='font-size:11px;color:#8a8f9c;margin-top:6px'>{esc(key)}</div>"
+                f"<ul style='font-size:12px;color:#cfd4dc;margin:2px 0 0 18px;padding:0'>{lis}</ul>"
+            )
+        plan_body = _fmt_plan_list("goals_this_week") + _fmt_plan_list("seek") + _fmt_plan_list("avoid")
+        if plan_body:
+            plan_html = (
+                f'<div class="section-label" style="margin-top:12px">Weekly Plan · LLM</div>'
+                f'<div>{plan_body}</div>'
+            )
 
     rel_html = ""
     if agent.relationships:
@@ -523,10 +651,69 @@ if selected_agent_obj:
         if agent.current_goal else ''
     )
 
+    # ── Inner state: needs / emotions / motivations (LLM-driven layer) ──
+
+    def _bar(label: str, value: float, color: str) -> str:
+        # Tiny inline bar widget. value clamped 0..100.
+        v = max(0.0, min(100.0, float(value)))
+        return (
+            f'<div style="display:flex;align-items:center;gap:8px;font-size:11px;'
+            f'margin:2px 0">'
+            f'<span style="width:62px;color:#8a8f9c">{esc(label)}</span>'
+            f'<div style="flex:1;height:6px;background:#15171f;border-radius:3px;'
+            f'overflow:hidden">'
+            f'<div style="height:100%;width:{v:.0f}%;background:{color}"></div>'
+            f'</div>'
+            f'<span class="mono" style="width:28px;text-align:right;color:#cfd4dc">{int(v):d}</span>'
+            f'</div>'
+        )
+
+    needs = agent.get_needs()
+    needs_html = ""
+    if needs:
+        rows = "".join(_bar(k, v, "#5a7fa3") for k, v in needs.items())
+        needs_html = (
+            f'<div class="section-label" style="margin-top:12px">'
+            f'Needs &middot; <span class="subtle">Maslow drives</span></div>'
+            f'<div>{rows}</div>'
+        )
+
+    emotions = agent.get_emotions()
+    emotions_html = ""
+    if emotions:
+        # Color per emotion
+        emo_color = {"fear": "#c85050", "joy": "#e8c56a", "anger": "#d4673a"}
+        rows = "".join(
+            _bar(k, v, emo_color.get(k, "#8a8f9c")) for k, v in emotions.items()
+        )
+        emotions_html = (
+            f'<div class="section-label" style="margin-top:12px">'
+            f'Emotions &middot; <span class="subtle">decay each tick</span></div>'
+            f'<div>{rows}</div>'
+        )
+
+    motivations = agent.get_motivations()
+    motivations_html = ""
+    if motivations:
+        items = "".join(
+            f'<li style="margin:2px 0;font-size:12px;color:#cfd4dc">{esc(m)}</li>'
+            for m in motivations[:3]
+        )
+        motivations_html = (
+            f'<div class="section-label" style="margin-top:12px">'
+            f'Motivations &middot; <span class="subtle">LLM-driven urges</span></div>'
+            f'<ul style="margin:4px 0 0 16px;padding:0">{items}</ul>'
+        )
+
+    # Position: now meaningful (set by movement._spot_in_tile)
+    pos_html = (
+        f'<div class="subtle" style="font-size:10.5px;margin-top:8px">'
+        f'pos · <span class="mono">({agent.x:.0f}, {agent.y:.0f})</span></div>'
+    )
+
     agent_block = (
-        f'<div class="glass-card" style="max-height:70vh;overflow-y:auto;'
+        f'<div class="glass-card" style="max-height:50vh;overflow-y:auto;'
         f'padding:18px 20px;border-color:{th["accent"]}4d">'
-        # Header
         f'<div style="display:flex;align-items:flex-start;gap:12px;'
         f'padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:12px">'
         f'<div style="font-size:36px;line-height:1">{emoji}</div>'
@@ -536,60 +723,78 @@ if selected_agent_obj:
         f'<div class="mono subtle" style="margin-top:2px;font-size:10.5px">'
         f'{esc(agent.agent_id)} &middot; <span style="color:{th["glow"]}">{hf_badge}</span>'
         f'</div></div></div>'
-        # Location + age
         f'<div class="subtle" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:11.5px">'
         f'<span>📍 {esc(agent.current_tile)}</span>'
         f'<span>age {agent.age} &middot; {agent.life_stage.value}</span>'
         f'</div>'
-        # Persona
         f'<div class="section-label">Persona</div>'
         f'<div style="font-size:13px;color:#cfd4dc;line-height:1.6">{esc(agent.persona_card)}</div>'
         f'{goal_html}'
         + (f'<div class="section-label" style="margin-top:12px">Tags</div><div>{tags_html}</div>'
             if tags_html else '')
-        + f'{attr_html}{rel_html}{story_html}'
+        + f'{pos_html}{needs_html}{emotions_html}{motivations_html}'
+        + f'{plan_html}{belief_html}{attr_html}{rel_html}{story_html}'
         + '</div>'
     )
 
-# Final dock-bottom wrapper
-dock_class = "with-agent" if agent_block else "chronicle-only"
+# Render panels in normal flow
+panel_class = "with-agent" if agent_block else "chronicle-only"
 st.markdown(
-    f'<div class="dock-bottom {dock_class}">{agent_block}{chronicle_block}</div>',
+    f'<div class="bottom-panels {panel_class}">{agent_block}{chronicle_block}</div>',
     unsafe_allow_html=True,
 )
 
-# ── Inspect selector — lives visually inside the Chronicle card header ──
-# Must be a Streamlit widget (not HTML) so clicks don't trigger navigation.
-# Positioned via CSS `.st-key-inspect-bar` to float over the Chronicle card top.
-_agents_for_picker = sorted(
-    world.all_agents(),
-    key=lambda a: (not a.is_historical_figure, a.pack_id, a.display_name),
-)
-_picker_ids = ["— none —"] + [a.agent_id for a in _agents_for_picker]
-_picker_labels = {"— none —": "— none —"}
-for a in _agents_for_picker:
-    th = PACK_THEMES.get(a.pack_id, PACK_THEMES["scp"])
-    star = "★" if a.is_historical_figure else " "
-    dead = "  ✝" if not a.is_alive() else ""
-    _picker_labels[a.agent_id] = f"{star} {th['emblem']}  {a.display_name}{dead}"
-try:
-    _cur_idx = _picker_ids.index(st.session_state.selected_agent or "— none —")
-except ValueError:
-    _cur_idx = 0
+# ========== 4.5 CHAPTERS (说书人) ==========
+# The Chronicler periodically observes emergent highlights and writes a
+# chapter. These are descriptive only — they never steer future events.
+_chapters = world.chapters
+if _chapters:
+    with st.expander(f"Chapters · {len(_chapters)} recorded by the 说书人",
+                     expanded=False):
+        # newest first
+        for ch in reversed(_chapters[-12:]):
+            th = PACK_THEMES.get(ch.get("pack_id", "scp"), PACK_THEMES["scp"])
+            st.markdown(
+                f'<div class="glass-card" style="margin-bottom:12px;padding:16px 20px;'
+                f'border-left:3px solid {th["accent"]}">'
+                f'<div class="mono subtle" style="font-size:10.5px;letter-spacing:0.14em;'
+                f'margin-bottom:6px">{th["emblem"]} {ch.get("pack_id","").upper()} '
+                f'&middot; DAY {ch.get("tick",0):03d}</div>'
+                f'<div style="font-family:\'Space Grotesk\';font-size:18px;'
+                f'font-weight:600;color:#f2f4f8;margin-bottom:8px">'
+                f'{esc(ch.get("title",""))}</div>'
+                f'<div style="font-size:13.5px;color:#cfd4dc;line-height:1.65">'
+                f'{esc(ch.get("body",""))}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
-with st.container(key="inspect_bar"):
-    picked = st.selectbox(
-        "Inspect agent",
-        _picker_ids,
-        index=_cur_idx,
-        format_func=lambda x: _picker_labels.get(x, x),
-        label_visibility="collapsed",
-        key="inspect_agent_picker",
-    )
-    new_sel = None if picked == "— none —" else picked
-    if new_sel != st.session_state.selected_agent:
-        st.session_state.selected_agent = new_sel
-        st.rerun()
-
-
-# Codex is accessible via the "Story Library" button in sidebar.
+# ========== 5. ENGINE LOG VIEWER ==========
+_tick_logger = st.session_state.get("tick_logger")
+if _tick_logger is not None:
+    with st.expander("Engine Log (debug)", expanded=False):
+        _log_filter = st.radio(
+            "Filter",
+            ["All", "LLM only", "Decisions", "Events", "Social", "Movement"],
+            horizontal=True, label_visibility="collapsed",
+        )
+        _raw_lines = _tick_logger.get_lines(last_n=300)
+        if _log_filter == "LLM only":
+            _raw_lines = [l for l in _raw_lines if "[LLM]" in l]
+        elif _log_filter == "Decisions":
+            markers = ("PLAN", "EMERGENT", "PERSONA_EVOLVED", "CHAPTER", "CONSCIOUS")
+            _raw_lines = [l for l in _raw_lines
+                          if any(m in l for m in markers) or "TICK" in l or "===" in l]
+        elif _log_filter == "Events":
+            _raw_lines = [l for l in _raw_lines
+                          if "EVENT" in l or "TIER" in l or "EMERGENT" in l
+                          or "SUMMARY" in l or "TICK" in l or "===" in l]
+        elif _log_filter == "Social":
+            markers = ("DIALOGUE_REACT", "BELIEF", "RUMOR", "INTERACTION")
+            _raw_lines = [l for l in _raw_lines
+                          if any(m in l for m in markers) or "TICK" in l or "===" in l]
+        elif _log_filter == "Movement":
+            _raw_lines = [l for l in _raw_lines
+                          if "MOVE" in l or "TICK" in l or "===" in l]
+        _log_text = "\n".join(_raw_lines[-150:])
+        st.code(_log_text or "(no log entries yet)", language="text")

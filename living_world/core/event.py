@@ -58,6 +58,9 @@ class LegendEvent(BaseModel):
 
     importance: float = 0.0  # computed by score_event_importance()
     tier_used: int = 1  # 1 | 2 | 3, for observability
+    # True when the LLM invented this event from scratch (EmergentEventProposer).
+    # Causes the router to skip re-enhancement — the narrative is already rich.
+    is_emergent: bool = False
 
     def best_rendering(self) -> str:
         """Return the highest-tier narrative available."""

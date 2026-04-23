@@ -1,17 +1,15 @@
-"""LLM clients — Ollama (local) or None (pure rules).
+"""LLM primitives — client protocol + Ollama implementation.
 
-`EnhancementRouter` drives tier routing. If a tier's client is None, events
-at that tier fall back to pure template rendering (subconscious rules).
+This package now holds only the LLM transport layer. Everything that uses
+an LLM "as an agent" (Narrator, Conscience, Planner, etc.) lives in
+`living_world/agents/`.
 """
 
 from living_world.llm.base import LLMClient, LLMResponse
 from living_world.llm.ollama import OllamaClient
-from living_world.llm.router import EnhancementRouter, TierBudget
 
 __all__ = [
     "LLMClient",
     "LLMResponse",
     "OllamaClient",
-    "EnhancementRouter",
-    "TierBudget",
 ]

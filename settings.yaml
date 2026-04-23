@@ -2,27 +2,34 @@ llm:
   tier2_provider: ollama
   tier3_provider: ollama
   ollama_base_url: http://localhost:11434
-  ollama_tier2_model: gemma3:4b
+  ollama_tier2_model: llama3.2:3b
   ollama_tier3_model: gemma3:4b
   ollama_timeout_seconds: 60.0
   openai_base_url: null
   openai_api_key: null
   dynamic_dialogue_enabled: true
-  debate_enabled: true
-  debate_threshold: 0.75
-  debate_min_stakeholders: 3
-  debate_max_stakeholders: 5
   llm_movement_enabled: true
   llm_movement_hf_only: true
-  llm_movement_chance: 0.3
+  llm_movement_chance: 0.6
   conscious_override_enabled: true
-  conscious_override_threshold: 0.5
-  conscious_override_chance: 0.5
+  conscious_override_threshold: 0.35
+  conscious_override_chance: 0.7
+  goal_driven_movement_bonus: 1.4
+  weekly_planning_enabled: true
+  weekly_planning_hf_only: true
+  goal_aligned_event_bonus: 1.5
+  conversation_loop_enabled: true
+  chronicler_enabled: true
+  chronicle_every_ticks: 14
+  emergent_events_enabled: true
+  emergent_max_per_tick: 3
+  subjective_perception_enabled: true
+  subjective_perception_threshold: 0.5
+  self_update_enabled: true
+  self_update_threshold: 0.5
 budget:
-  tier2_tokens_per_day: 1000000
   tier3_tokens_per_day: 200000
 importance:
-  tier2_threshold: 0.35
   tier3_threshold: 0.65
 historical_figures:
   spotlight_threshold: 0.6
@@ -48,21 +55,11 @@ memory:
   ollama_embed_model: nomic-embed-text
   reflect_every_ticks: 7
   recall_top_k: 5
-i18n:
-  enabled: false
-  target_locale: zh
-  provider: ollama
-  ollama_translate_model: gemma3:4b
-  cache_size: 4096
-
 display:
-  locale: en                # en | zh — controls which static content version is shown
-  translate_generated: false # if true + locale=zh, LLM-generated text gets translated too
-
+  locale: en
+  translate_generated: false
 persistence:
-  backend: memory
-  postgres_dsn: postgresql://lw:lw_dev_only@localhost:5433/living_world
-  snapshot_every_ticks: 10
+  snapshot_every_ticks: 7
 dashboard:
   host: localhost
   port: 8501

@@ -73,3 +73,79 @@ events:
         template: "[$tile] 实验中 SCP-682 短暂突破收容层, 两名 MTF 受伤。${a} 的提案被无限期暂停。"
       neutral:
         template: "[$tile] 实验被 O5 办公室临时叫停, ${a} 与 ${b} 对视无语。"
+
+  - event_kind: 173-snap-neck
+    description: SCP-173 在无人观察的瞬间出击。
+    trigger_conditions: {min_participants: 1, max_participants: 2, required_tags: [dclass]}
+    dice_roll: {stat: alertness, dc: 17}
+    cooldown_days: 14
+    base_importance: 0.85
+    outcomes:
+      success:
+        template: "[$tile] ${a} 始终未眨眼, SCP-173 一动未动, 收容流程顺利结束。"
+      failure:
+        stat_changes: [{target: any, attribute: morale, delta: -15}]
+        template: "[$tile] 灯光闪烁的 0.4 秒内 SCP-173 已抵达 ${a} 身后, 颈椎瞬断。清理小组进场。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 轮换凝视, SCP-173 仅在角落留下新鲜的排泄物。"
+
+  - event_kind: 106-pocket-dimension
+    description: SCP-106 拖拽受害者进入口袋维度。
+    trigger_conditions: {min_participants: 1, max_participants: 2}
+    dice_roll: {stat: alertness, dc: 16}
+    cooldown_days: 21
+    base_importance: 0.80
+    outcomes:
+      success:
+        template: "[$tile] ${a} 在墙面化为腐质前一刻撤离, SCP-106 缓缓沉回地板。"
+      failure:
+        stat_changes: [{target: any, attribute: morale, delta: -12}]
+        template: "[$tile] SCP-106 自天花板伸出腐烂之手, 将 ${a} 拖入口袋维度。九十六小时后 ${a} 被释回, 神志已损。"
+      neutral:
+        template: "[$tile] 走廊一侧出现锈蚀痕迹, SCP-106 未现身, 维护组登记备案。"
+
+  - event_kind: 087-stairwell-descent
+    description: 进入永无止境的 SCP-087 楼梯井。
+    trigger_conditions: {min_participants: 1, max_participants: 2, required_tags: [dclass]}
+    dice_roll: {stat: insight, dc: 14}
+    cooldown_days: 30
+    base_importance: 0.55
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: insight, delta: 1}]
+        template: "[$tile] ${a} 与 ${b} 下行至第七层平台, 录得新的孩童哭声样本, 安全撤回。"
+      failure:
+        stat_changes: [{target: any, attribute: morale, delta: -10}]
+        template: "[$tile] ${a} 拒绝再上行, 通讯中断九分钟。被找回时已无法说明所见。"
+      neutral:
+        template: "[$tile] ${a} 仅下行三层即返回, 设备读数与上次完全一致。"
+
+  - event_kind: 035-mask-possession
+    description: SCP-035 面具寻找新宿主。
+    trigger_conditions: {min_participants: 1, max_participants: 2, required_tags: [researcher]}
+    dice_roll: {stat: moral_resolve, dc: 15}
+    cooldown_days: 25
+    base_importance: 0.70
+    outcomes:
+      success:
+        template: "[$tile] ${a} 抗住 SCP-035 的低语, 将面具重新封入玻璃柜。"
+      failure:
+        stat_changes: [{target: any, attribute: morale, delta: -18}]
+        template: "[$tile] ${a} 鬼使神差戴上面具, 数小时后面具下的脸已开始溶解。MTF 介入。"
+      neutral:
+        template: "[$tile] SCP-035 今日沉默, 仅在玻璃内侧渗出少量黑色液体。"
+
+  - event_kind: 914-clockwork-refinement
+    description: 用 SCP-914 精炼或转化物品。
+    trigger_conditions: {min_participants: 1, max_participants: 2, required_tags: [researcher]}
+    dice_roll: {stat: insight, dc: 11}
+    cooldown_days: 5
+    base_importance: 0.30
+    outcomes:
+      success:
+        stat_changes: [{target: all, attribute: insight, delta: 2}]
+        template: "[$tile] ${a} 将一支铅笔置于'精'档, 出口处取得一支自我书写的金笔, 笔记本随即被填满。"
+      failure:
+        template: "[$tile] ${a} 选择'极粗'档输入一只苹果, 出口涌出半吨腐殖土, 维护组叫苦。"
+      neutral:
+        template: "[$tile] ${a} 与 ${b} 在'1:1'档输入纸团, 取出一只完全相同的纸团, 记录归档。"

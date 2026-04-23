@@ -8,3 +8,7 @@ current_tile: yamen
 current_goal: 'finally close the Xi Fangping case after three appeals'
 age: 52
 alignment: lawful_neutral
+inventory:
+  - name: 'official seal of the county'
+    tags: [authority, mundane, irreplaceable]
+    power: 0

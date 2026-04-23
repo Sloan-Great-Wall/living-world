@@ -9,3 +9,7 @@ tags: [cthulhu, great-old-one, deep-one, permanent_historical]
 age: 999999
 current_tile: innsmouth-harbor
 current_goal: protect the hybrid line of Innsmouth
+inventory:
+  - name: 'coral regalia of the Deep Ones'
+    tags: [anomaly, signature, ancient]
+    power: 0

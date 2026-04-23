@@ -14,3 +14,10 @@ life_stage: prime
 age: 44
 current_tile: lab-floor-3
 current_goal: 'arrange another SCP-682 experiment without explicit approval'
+inventory:
+  - name: 'experimental sidearm'
+    tags: [weapon, modified, prototype]
+    power: 8
+  - name: 'field journal'
+    tags: [notes, classified]
+    power: 0

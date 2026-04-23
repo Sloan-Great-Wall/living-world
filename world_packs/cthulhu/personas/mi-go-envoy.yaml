@@ -5,8 +5,12 @@ persona_card: >
   A Fungi from Yuggoth. Appears as a winged crab-thing; speaks through buzzing
   phonetic approximations. Currently negotiating (via intermediaries) for a human brain canister candidate.
 attributes: {sanity: 0, arcane_knowledge: 95, technology: 99, patience: 100}
-alignment: lawful_evil
+alignment: unaligned
 tags: [cthulhu, mi-go, envoy, non-human-ancestry]
 age: 1200
 current_tile: dunwich-hills
 current_goal: acquire one suitable human subject
+inventory:
+  - name: 'brain canister, empty'
+    tags: [anomaly, signature, container]
+    power: 0

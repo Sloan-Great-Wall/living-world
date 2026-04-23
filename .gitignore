@@ -17,3 +17,5 @@ data/
 
 # Logs
 *.log
+.claude/
+__marimo__/

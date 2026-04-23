@@ -8,4 +8,11 @@ tags: [liaozhai, monk, male]
 current_tile: lanruo-temple
 current_goal: 'keep vigil at the temple, waiting on an old promise'
 age: 72
-alignment: lawful_neutral
+alignment: lawful_good
+inventory:
+  - name: 'nine-ringed monk staff'
+    tags: [weapon, sacred, anti-anomaly]
+    power: 9
+  - name: 'Heart Sutra scroll'
+    tags: [sacred, ritual]
+    power: 0

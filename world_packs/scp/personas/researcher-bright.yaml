@@ -8,7 +8,7 @@ attributes:
   insight: 80
   social: 65
   survival: 95
-alignment: neutral
+alignment: chaotic_neutral
 tags: [scp, foundation, researcher, anomalous-human, resurrecting]
 life_stage: prime
 age: 42
@@ -18,3 +18,7 @@ relationships:
   - target_id: SCP-173
     affinity: -20
     kind: subject
+inventory:
+  - name: 'SCP-963 — Bright''s amulet'
+    tags: [anomaly, soul-bound, irreplaceable]
+    power: 0

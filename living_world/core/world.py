@@ -23,6 +23,8 @@ class World:
         self._tiles: dict[str, Tile] = {}
         self._events: list[LegendEvent] = []
         self._loaded_packs: list[str] = []
+        # Chapters recorded by the Chronicler (说书人). Descriptive, not causal.
+        self._chapters: list[dict] = []
 
     # ---- agents ----
     def add_agent(self, agent: Agent) -> None:
@@ -31,6 +33,17 @@ class World:
             tile = self._tiles[agent.current_tile]
             if agent.agent_id not in tile.resident_agents:
                 tile.resident_agents.append(agent.agent_id)
+            # Give freshly-spawned agents a real (x, y) inside their tile so
+            # downstream consumers (Canvas, future 2D logic) see meaningful
+            # positions from tick 0 rather than (0, 0).
+            if agent.x == 0.0 and agent.y == 0.0:
+                import math
+                h = hash((agent.agent_id, tile.tile_id)) & 0xFFFFFFFF
+                angle = ((h & 0xFFFF) / 0xFFFF) * math.tau
+                max_r = tile.radius * (0.35 if agent.is_historical_figure else 0.7)
+                dist = ((h >> 16) / 0xFFFF) * max_r
+                agent.x = tile.x + math.cos(angle) * dist
+                agent.y = tile.y + math.sin(angle) * dist
 
     def get_agent(self, agent_id: str) -> Agent | None:
         return self._agents.get(agent_id)
@@ -76,6 +89,14 @@ class World:
 
     def event_count(self) -> int:
         return len(self._events)
+
+    # ---- chapters (Chronicler output) ----
+    def add_chapter(self, chapter: dict) -> None:
+        self._chapters.append(chapter)
+
+    @property
+    def chapters(self) -> list[dict]:
+        return list(self._chapters)
 
     # ---- packs ----
     def mark_pack_loaded(self, pack_id: str) -> None:

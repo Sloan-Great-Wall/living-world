@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from living_world.core.world import World
-from living_world.llm import EnhancementRouter
+from living_world.agents.narrator import Narrator
 from living_world.persistence import MemoryRepository
 from living_world.tick_loop import TickEngine
 from living_world.world_pack import load_all_packs
@@ -25,9 +25,10 @@ def test_memory_repo_captures_events_and_snapshot():
 
     repo = MemoryRepository()
     repo.save_world(world)
-    # tier2/tier3=None → pure rules (subconscious only), no LLM calls
-    router = EnhancementRouter(tier2=None, tier3=None)
-    engine = TickEngine(world, packs, seed=11, router=router, repository=repo, snapshot_every_ticks=5)
+    # tier3=None → pure rules (subconscious only), no LLM calls
+    narrator = Narrator(tier3=None)
+    engine = TickEngine(world, packs, seed=11, narrator=narrator,
+                        repository=repo, snapshot_every_ticks=5)
     engine.run(20)
 
     # memory repo holds a reference to the same World, so world_events == repo list
