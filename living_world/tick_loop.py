@@ -163,22 +163,38 @@ class TickEngine:
                 self.perception is not None
                 and event.importance >= self.perception_threshold
             )
+            # ── PARALLEL POV reframe ──
+            # All participants' first-person rewrites are independent;
+            # asyncio.gather them so a 4-participant event takes ~1 LLM
+            # round-trip instead of 4. Big win at OLLAMA_NUM_PARALLEL≥2.
+            participant_agents = [
+                self.world.get_agent(aid) for aid in event.participants
+            ]
+            docs: dict[str, str] = {}
+            if use_subjective:
+                import asyncio
+                tasks = [
+                    self.perception.reframe_async(a, event)
+                    for a in participant_agents if a is not None
+                ]
+                if tasks:
+                    rewritten = asyncio.run(asyncio.gather(*tasks))
+                    alive_aids = [a.agent_id for a in participant_agents if a is not None]
+                    docs = dict(zip(alive_aids, rewritten))
             for aid in event.participants:
-                doc = event.best_rendering()
-                if use_subjective:
-                    agent = self.world.get_agent(aid)
-                    if agent is not None:
-                        doc = self.perception.reframe(agent, event)
+                doc = docs.get(aid, event.best_rendering())
                 self.memory.remember(
                     agent_id=aid, tick=t,
                     doc=doc,
-                    kind="subjective" if use_subjective else "raw",
+                    kind="subjective" if (use_subjective and aid in docs) else "raw",
                     importance=event.importance,
                     metadata={"event_id": event.event_id, "kind": event.event_kind},
                 )
                 if log:
-                    log.memory_store(aid, "subjective" if use_subjective else "raw",
-                                     event.importance)
+                    log.memory_store(
+                        aid, "subjective" if (use_subjective and aid in docs) else "raw",
+                        event.importance,
+                    )
 
         # ── CONSEQUENCES: stat changes + rare description mutations ──
         # No recursion — changes persist on agents, next tick reacts naturally.
@@ -203,23 +219,35 @@ class TickEngine:
             self.self_update is not None
             and event.importance >= self.self_update_threshold
         ):
+            import asyncio
+            # Collect alive participants to update concurrently
+            update_targets = []
             for aid in event.participants:
                 agent = self.world.get_agent(aid)
-                if agent is None or not agent.is_alive():
-                    continue
-                applied = self.self_update.apply(agent, event)
-                if not applied:
-                    continue
-                if log:
-                    log.self_update(aid, applied)
-                # If the LLM produced a reflection, store it as memory.
-                refl = applied.get("reflection")
-                if refl and self.memory is not None:
-                    self.memory.remember(
-                        agent_id=aid, tick=t, doc=refl,
-                        kind="reflection", importance=event.importance,
-                        metadata={"from_event": event.event_id},
-                    )
+                if agent is not None and agent.is_alive():
+                    update_targets.append(agent)
+            if update_targets:
+                # ── PARALLEL self-update ──
+                # Each participant's inner-state update is independent;
+                # gather them so 4-participant events still cost ~1
+                # round-trip. The mutations on agent objects are applied
+                # synchronously inside _apply_response, so no race.
+                results = asyncio.run(asyncio.gather(*[
+                    self.self_update.apply_async(agent, event)
+                    for agent in update_targets
+                ]))
+                for agent, applied in zip(update_targets, results):
+                    if not applied:
+                        continue
+                    if log:
+                        log.self_update(agent.agent_id, applied)
+                    refl = applied.get("reflection")
+                    if refl and self.memory is not None:
+                        self.memory.remember(
+                            agent_id=agent.agent_id, tick=t, doc=refl,
+                            kind="reflection", importance=event.importance,
+                            metadata={"from_event": event.event_id},
+                        )
 
         # ── Dialogue loop: A→B reaction mutates affinity + beliefs ──
         # For Tier-3 events with exactly two participants, ask the LLM to

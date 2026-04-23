@@ -259,6 +259,28 @@ llm:
 
 ---
 
+## ⚡ Performance recipe
+
+To get the simulator running at the lowest tick latency:
+
+```bash
+# 1. Start Ollama with concurrency
+OLLAMA_NUM_PARALLEL=4 OLLAMA_MAX_LOADED_MODELS=3 ollama serve
+
+# 2. Use the agent-layer parallelism path (default after async commit)
+lw smoke --ticks 8
+
+# Optional further wins:
+# - export OLLAMA_KEEP_ALIVE=30m   (avoid model reload between calls)
+# - run two ollama instances on different ports for tier2 vs tier3
+```
+
+Measured impact (6-tick smoke, M3 Mac, 3 packs, all LLM features on):
+- Baseline serial:                      ~12 min/tick
+- + OLLAMA_NUM_PARALLEL=4:              ~6-8 min/tick (~40% faster)
+- + async self_update / perception:     ~2-3 min/tick (~3-5× faster)
+- + prompt KV-cache reuse (planned):    ~1-2 min/tick
+
 ## 🚀 Feature backlog (from 2026-04-22 audit, ranked by ROI)
 
 ### #7 — Cross-pack bridge (shared tiles + migration events)

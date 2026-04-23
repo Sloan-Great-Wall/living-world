@@ -92,3 +92,14 @@ class SubjectivePerception:
         except Exception:
             return fallback
         return _clean(resp.text, fallback)
+
+    async def reframe_async(self, agent: Agent, event: LegendEvent) -> str:
+        """Async variant — pair with asyncio.gather() to reframe an event
+        from every participant's POV in parallel."""
+        fallback = event.best_rendering()
+        try:
+            resp = await self.client.acomplete(_build_prompt(agent, event),
+                                                max_tokens=120, temperature=0.7)
+        except Exception:
+            return fallback
+        return _clean(resp.text, fallback)

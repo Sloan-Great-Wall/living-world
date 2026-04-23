@@ -192,7 +192,26 @@ class AgentSelfUpdate:
         except Exception:
             self.stats["llm_error"] += 1
             return {}
-        data = _parse(resp.text or "")
+        return self._apply_response(agent, event, resp.text)
+
+    async def apply_async(self, agent: Agent, event: LegendEvent) -> dict:
+        """Async variant — pair with asyncio.gather() to update many
+        agents' inner state in parallel after a multi-participant event.
+        Big tick-time win for events with 2-4 participants."""
+        self.stats["calls"] += 1
+        try:
+            resp = await self.client.acomplete(_build_prompt(agent, event),
+                                                max_tokens=380, temperature=0.7,
+                                                json_mode=True)
+        except Exception:
+            self.stats["llm_error"] += 1
+            return {}
+        return self._apply_response(agent, event, resp.text)
+
+    def _apply_response(self, agent: Agent, event: LegendEvent, text: str) -> dict:
+        """Shared post-LLM logic — parse text, mutate agent, return delta dict.
+        Both sync `apply` and `apply_async` end here so behavior is identical."""
+        data = _parse(text or "")
         if data is None:
             self.stats["parse_fail"] += 1
             data = {}  # fall through to fallback path

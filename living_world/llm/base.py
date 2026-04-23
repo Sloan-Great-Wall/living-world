@@ -32,6 +32,24 @@ class LLMClient(ABC):
         if the backend doesn't support it."""
         ...
 
+    async def acomplete(
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 512,
+        temperature: float = 0.7,
+        json_mode: bool = False,
+    ) -> LLMResponse:
+        """Async variant. Default impl runs sync `complete` in a thread so
+        any LLMClient gains async without per-impl plumbing. Real concurrency
+        wins come when an impl overrides this with httpx.AsyncClient (see
+        OllamaClient)."""
+        import asyncio
+        return await asyncio.to_thread(
+            self.complete, prompt,
+            max_tokens=max_tokens, temperature=temperature, json_mode=json_mode,
+        )
+
     @property
     @abstractmethod
     def tier(self) -> int:
