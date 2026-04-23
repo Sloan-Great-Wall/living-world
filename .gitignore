@@ -17,3 +17,4 @@ data/
 
 # Logs
 *.log
+.claude/
