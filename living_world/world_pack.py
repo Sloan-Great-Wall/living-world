@@ -145,6 +145,7 @@ def load_pack(path: Path) -> WorldPack:
 
     # Auto-layout tiles if they don't have coordinates set
     import math
+
     cols = max(1, int(math.ceil(math.sqrt(len(tiles)))))
     spacing = 130.0
     for i, tile in enumerate(tiles):
@@ -155,7 +156,7 @@ def load_pack(path: Path) -> WorldPack:
     return WorldPack(manifest, personas, events, tiles, path)
 
 
-def _offset_pack_tiles(packs: list["WorldPack"]) -> None:
+def _offset_pack_tiles(packs: list[WorldPack]) -> None:
     """Give each pack's tiles a Y offset so they don't overlap on the map."""
     y_cursor = 0.0
     for pack in packs:

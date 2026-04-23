@@ -19,7 +19,6 @@ import re
 from living_world.core.agent import Agent
 from living_world.llm.base import LLMClient
 
-
 SYSTEM_PROMPT = """You are the reflective inner voice of a character.
 Read the recent memories below. Distill 1-3 higher-level *beliefs* this
 character would now hold about themselves, others, or the world.
@@ -108,8 +107,7 @@ class MemoryReflector:
 
     def __init__(self, client: LLMClient) -> None:
         self.client = client
-        self.stats = {"calls": 0, "llm_error": 0,
-                       "empty": 0, "ok": 0, "beliefs_emitted": 0}
+        self.stats = {"calls": 0, "llm_error": 0, "empty": 0, "ok": 0, "beliefs_emitted": 0}
 
     def reflect(
         self,
@@ -128,7 +126,9 @@ class MemoryReflector:
         try:
             resp = self.client.complete(
                 _build_prompt(agent, recent_memories),
-                max_tokens=240, temperature=0.55, json_mode=True,
+                max_tokens=240,
+                temperature=0.55,
+                json_mode=True,
                 system=SYSTEM_PROMPT,
             )
         except Exception:

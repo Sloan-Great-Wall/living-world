@@ -36,7 +36,7 @@ class MemoryEntry:
 def _cosine(a: list[float], b: list[float]) -> float:
     if not a or not b or len(a) != len(b):
         return 0.0
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
     na = math.sqrt(sum(x * x for x in a))
     nb = math.sqrt(sum(y * y for y in b))
     if na == 0 or nb == 0:
@@ -105,9 +105,13 @@ class AgentMemoryStore:
             return None
         entry = MemoryEntry(
             memory_id=str(uuid.uuid4()),
-            agent_id=agent_id, tick=tick, doc=doc.strip(),
-            importance=importance, kind=kind,
-            embedding=emb, metadata=metadata or {},
+            agent_id=agent_id,
+            tick=tick,
+            doc=doc.strip(),
+            importance=importance,
+            kind=kind,
+            embedding=emb,
+            metadata=metadata or {},
         )
         self.backend.add(entry)
         return entry
@@ -210,16 +214,14 @@ class AgentMemoryStore:
             beliefs = self.reflector.reflect(agent, docs)
             if beliefs:
                 belief_lines = [f"- {b['topic']}: {b['belief']}" for b in beliefs]
-                summary = (
-                    f"[reflection @ tick {tick}] I now believe:\n"
-                    + "\n".join(belief_lines)
-                )
+                summary = f"[reflection @ tick {tick}] I now believe:\n" + "\n".join(belief_lines)
                 return self.remember(
-                    agent_id=agent_id, tick=tick, doc=summary,
-                    kind="reflection", importance=0.5,
-                    metadata={"folded_count": len(recent),
-                               "beliefs": beliefs,
-                               "source": "llm"},
+                    agent_id=agent_id,
+                    tick=tick,
+                    doc=summary,
+                    kind="reflection",
+                    importance=0.5,
+                    metadata={"folded_count": len(recent), "beliefs": beliefs, "source": "llm"},
                 )
             # If reflector produced nothing, fall through to MVP
             # so the cadence still records *something*.
@@ -228,7 +230,10 @@ class AgentMemoryStore:
         joined = "\n".join(f"- {d}" for d in docs)
         summary = f"[reflection @ tick {tick}] Recent pattern:\n{joined[:1200]}"
         return self.remember(
-            agent_id=agent_id, tick=tick, doc=summary,
-            kind="reflection", importance=0.4,
+            agent_id=agent_id,
+            tick=tick,
+            doc=summary,
+            kind="reflection",
+            importance=0.4,
             metadata={"folded_count": len(recent), "source": "mvp"},
         )

@@ -24,12 +24,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from living_world.agents.event_curator import promote_emergent, prune_tail
 from living_world.rules.decay import auto_satisfy_routine_needs, decay_needs_and_emotions
 from living_world.rules.heat import hot_tiles as _rule_hot_tiles
-from living_world.agents.event_curator import promote_emergent, prune_tail
-
 
 # ── Base ───────────────────────────────────────────────────────────────────
+
 
 class Phase(ABC):
     """One stage of a tick. Single responsibility, fails in isolation."""
@@ -42,15 +42,19 @@ class Phase(ABC):
 
 # ── Concrete phases (declared in execution order) ──────────────────────────
 
+
 class DecayPhase(Phase):
     name = "decay"
+
     def run(self, engine, t, stats):
         decay_needs_and_emotions(engine.world)
 
 
 class NeedsSatisfyPhase(Phase):
     """Hungry agents eat, threatened ones rest. Pure rule layer."""
+
     name = "needs_satisfy"
+
     def run(self, engine, t, stats):
         auto_satisfy_routine_needs(engine.world, engine.rng)
 
@@ -61,7 +65,9 @@ class ColdStartPlanPhase(Phase):
     Eliminates the goal=None void on tick 1 instead of waiting for the
     weekly cadence (t % 7 == 0). See KNOWN_ISSUES #14 / planner notes.
     """
+
     name = "cold_start_plan"
+
     def run(self, engine, t, stats):
         if engine.agent_planner is None:
             return
@@ -72,12 +78,14 @@ class ColdStartPlanPhase(Phase):
 
 class ReplanStalePhase(Phase):
     name = "replan_stale"
+
     def run(self, engine, t, stats):
         engine._replan_stale_agents(t)
 
 
 class MovementPhase(Phase):
     name = "movement"
+
     def run(self, engine, t, stats):
         moves = engine.movement.tick()
         stats.movements = len(moves)
@@ -89,21 +97,27 @@ class MovementPhase(Phase):
 
 class InteractionsPhase(Phase):
     """Lethal encounters, companionship, flight — pure rule layer."""
+
     name = "interactions"
+
     def run(self, engine, t, stats):
         log = engine.tick_logger
         for emergent in engine.interactions.tick():
             if log:
                 log.interaction(
-                    emergent.event_kind, emergent.participants,
-                    emergent.outcome, emergent.tile_id,
+                    emergent.event_kind,
+                    emergent.participants,
+                    emergent.outcome,
+                    emergent.tile_id,
                 )
             engine._process_event(emergent, stats)
 
 
 class StorytellerPhase(Phase):
     """Per-tile storyteller proposes events; resolver realises them."""
+
     name = "storyteller"
+
     def run(self, engine, t, stats):
         log = engine.tick_logger
         for tile_id, st in engine.storytellers.items():
@@ -116,15 +130,22 @@ class StorytellerPhase(Phase):
                 if template is None:
                     continue
                 event = engine.resolver.realize(
-                    prop, template, t, consciousness=engine.consciousness,
+                    prop,
+                    template,
+                    t,
+                    consciousness=engine.consciousness,
                 )
                 if event is None:
                     continue
                 if log:
                     log.event_resolved(
-                        event.event_id, event.event_kind, event.tile_id,
-                        event.participants, event.outcome,
-                        roll=None, dc=None,
+                        event.event_id,
+                        event.event_kind,
+                        event.tile_id,
+                        event.participants,
+                        event.outcome,
+                        roll=None,
+                        dc=None,
                         importance=event.importance,
                         conscious_verdict=None,
                     )
@@ -139,7 +160,9 @@ class EmergentPhase(Phase):
     counter directly. Otherwise emergent could re-propose the same
     novel kind 2-3 times across hot tiles in one tick.
     """
+
     name = "emergent"
+
     def run(self, engine, t, stats):
         if engine.emergent_proposer is None:
             return
@@ -159,7 +182,9 @@ class EmergentPhase(Phase):
                 kind_count[key] = kind_count.get(key, 0) + 1
             if log:
                 log.emergent_event(
-                    event.event_kind, event.tile_id, event.participants,
+                    event.event_kind,
+                    event.tile_id,
+                    event.participants,
                 )
             engine._process_event(event, stats)
             pack = engine.packs.get(event.pack_id)
@@ -167,7 +192,9 @@ class EmergentPhase(Phase):
                 promoted = promote_emergent(event, pack.events)
                 if promoted is not None and log:
                     log.template_promoted(
-                        event.event_kind, event.pack_id, event.importance,
+                        event.event_kind,
+                        event.pack_id,
+                        event.importance,
                     )
 
 
@@ -184,7 +211,9 @@ class PerceptionPhase(Phase):
     participant. Ordering is unchanged from the user's perspective:
     memory is queried only by NEXT tick's planning / dialogue.
     """
+
     name = "perception"
+
     def run(self, engine, t, stats):
         if engine.memory is None:
             return
@@ -194,7 +223,7 @@ class PerceptionPhase(Phase):
             return
         use_subjective = engine.perception is not None
         # Build one big task list across all events.
-        tasks: list[tuple] = []   # (event, agent)
+        tasks: list[tuple] = []  # (event, agent)
         for e in events:
             if not (use_subjective and e.importance >= engine.perception_threshold):
                 continue
@@ -206,12 +235,14 @@ class PerceptionPhase(Phase):
         rewritten: dict[tuple[str, str], str] = {}
         if tasks:
             import asyncio
+
             async def _gather_all():
-                return await asyncio.gather(*[
-                    engine.perception.reframe_async(a, e) for (e, a) in tasks
-                ])
+                return await asyncio.gather(
+                    *[engine.perception.reframe_async(a, e) for (e, a) in tasks]
+                )
+
             results = asyncio.run(_gather_all())
-            for (e, a), text in zip(tasks, results):
+            for (e, a), text in zip(tasks, results, strict=True):
                 rewritten[(e.event_id, a.agent_id)] = text
         # Now write memory for every (event, participant) — subjective if
         # we have a rewrite, otherwise raw best_rendering.
@@ -221,7 +252,10 @@ class PerceptionPhase(Phase):
                 doc = rewritten.get(key, e.best_rendering())
                 kind = "subjective" if key in rewritten else "raw"
                 engine.memory.remember(
-                    agent_id=aid, tick=t, doc=doc, kind=kind,
+                    agent_id=aid,
+                    tick=t,
+                    doc=doc,
+                    kind=kind,
                     importance=e.importance,
                     metadata={"event_id": e.event_id, "kind": e.event_kind},
                 )
@@ -235,7 +269,9 @@ class SelfUpdatePhase(Phase):
     PerceptionPhase: one big gather() across all (event, participant)
     pairs. Mutations are applied synchronously inside _apply_response,
     so even with parallel LLM calls there's no agent-state race."""
+
     name = "self_update"
+
     def run(self, engine, t, stats):
         if engine.self_update is None:
             return
@@ -252,12 +288,12 @@ class SelfUpdatePhase(Phase):
         if not tasks:
             return
         import asyncio
+
         async def _gather_all():
-            return await asyncio.gather(*[
-                engine.self_update.apply_async(a, e) for (e, a) in tasks
-            ])
+            return await asyncio.gather(*[engine.self_update.apply_async(a, e) for (e, a) in tasks])
+
         results = asyncio.run(_gather_all())
-        for (e, a), applied in zip(tasks, results):
+        for (e, a), applied in zip(tasks, results, strict=True):
             if not applied:
                 continue
             if log:
@@ -265,8 +301,11 @@ class SelfUpdatePhase(Phase):
             refl = applied.get("reflection")
             if refl and engine.memory is not None:
                 engine.memory.remember(
-                    agent_id=a.agent_id, tick=t, doc=refl,
-                    kind="reflection", importance=e.importance,
+                    agent_id=a.agent_id,
+                    tick=t,
+                    doc=refl,
+                    kind="reflection",
+                    importance=e.importance,
                     metadata={"from_event": e.event_id},
                 )
 
@@ -276,7 +315,9 @@ class WeeklyMaintenancePhase(Phase):
 
     Fires every 7 ticks. Never touches YAML-authored templates.
     """
+
     name = "weekly_maintenance"
+
     def run(self, engine, t, stats):
         if t % 7 != 0:
             return
@@ -290,36 +331,76 @@ class WeeklyMaintenancePhase(Phase):
 
 
 class ChroniclerPhase(Phase):
-    """说书人 — descriptive chapter summaries every N ticks. Never steers."""
+    """说书人 — descriptive chapter summaries every N ticks. Never steers.
+
+    Boundary semantics: with `chronicle_every_ticks=N` and
+    `_last_chronicle_tick=0`, the first chapter is attempted at tick N
+    (gate `t - last < every` → `N < N` → False → run). Subsequent
+    chapters at 2N, 3N, ... — see `test_chronicler_phase_boundary`.
+
+    Per-pack window threshold lowered from 4 → 2: a quiet pack in a
+    short run (14 ticks) was producing 0 chapters even though the loud
+    packs had 50+ events. The Chronicler can write meaningfully from
+    just 2 events; raising the bar to 4 was over-conservative and
+    silently swallowed v7's chapters. Diagnostic `log.debug` now reports
+    per-pack window sizes so we can see WHY a chapter didn't get written.
+    """
+
     name = "chronicler"
+    # Per-pack minimums for the chapter-writing window. Tuned conservatively
+    # — the chronicler itself further filters by ranked importance.
+    MIN_EVENTS_PER_PACK = 2
+
     def run(self, engine, t, stats):
         if engine.chronicler is None:
             return
         if t - engine._last_chronicle_tick < engine.chronicle_every_ticks:
             return
         log = engine.tick_logger
+        since = max(1, engine._last_chronicle_tick + 1)
+        wrote_any = False
         for pack_id in engine.world.loaded_packs:
             chapter = engine.chronicler.write_chapter(
-                engine.world, pack_id,
-                since_tick=max(1, engine._last_chronicle_tick + 1),
+                engine.world,
+                pack_id,
+                since_tick=since,
+                min_events=self.MIN_EVENTS_PER_PACK,
             )
             if chapter is None:
+                if log:
+                    # Surface why nothing was written — was the window thin,
+                    # the LLM down, or the JSON malformed?
+                    s = engine.chronicler.stats
+                    log.debug(
+                        f"chronicler: pack={pack_id} since={since} "
+                        f"no chapter (window_small={s['window_too_small']} "
+                        f"llm_err={s['llm_error']} parse_fail={s['parse_fail']})"
+                    )
                 continue
-            engine.world.add_chapter({
-                "tick": chapter.tick,
-                "pack_id": chapter.pack_id,
-                "title": chapter.title,
-                "body": chapter.body,
-                "event_ids": chapter.event_ids,
-            })
+            engine.world.add_chapter(
+                {
+                    "tick": chapter.tick,
+                    "pack_id": chapter.pack_id,
+                    "title": chapter.title,
+                    "body": chapter.body,
+                    "event_ids": chapter.event_ids,
+                }
+            )
+            wrote_any = True
             if log:
                 log.chapter_written(chapter.tick, chapter.title)
-        engine._last_chronicle_tick = t
+        # Only advance the cursor if we actually published something. This
+        # prevents a transient LLM outage at tick N from silently skipping
+        # the entire window — the next tick will retry until something lands.
+        if wrote_any:
+            engine._last_chronicle_tick = t
 
 
 class WeeklyPlanPhase(Phase):
     """One LLM call per (HF) agent every plan_every_ticks days."""
+
     name = "weekly_plan"
+
     def run(self, engine, t, stats):
         if engine.agent_planner is None:
             return
@@ -347,7 +428,9 @@ class ReflectionPhase(Phase):
     memories), THEN decay (so we never prune a raw memory that the
     reflection step is about to fold into a belief).
     """
+
     name = "reflection"
+
     def run(self, engine, t, stats):
         if engine.memory is None:
             return
@@ -366,6 +449,7 @@ class ReflectionPhase(Phase):
 
 class SnapshotPhase(Phase):
     name = "snapshot"
+
     def run(self, engine, t, stats):
         if engine.repository is None:
             return

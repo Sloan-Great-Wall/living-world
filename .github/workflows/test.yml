@@ -1,0 +1,75 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  # Cancel in-progress runs for the same branch / PR; latest commit wins.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: unit + invariants (no Ollama)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package + dev extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[dev,llm]'
+
+      - name: Lint (ruff)
+        # Non-blocking for now — codebase predates CI; surface issues without
+        # gating merges. Promote to required check once warnings == 0.
+        run: ruff check living_world tests || true
+
+      - name: Run pytest
+        # Live Ollama tests auto-skip when localhost:11434 is unreachable
+        # (see tests/test_live_ollama.py top-of-file pytestmark).
+        # Smoke + invariants run rules-only and stay deterministic.
+        env:
+          PYTHONHASHSEED: "0"
+        run: pytest -x -q --tb=short
+
+  ts-sim-core:
+    name: TypeScript sim core (parity)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: packages/sim-core
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: packages/sim-core/package-lock.json
+
+      - name: Install
+        run: npm ci || npm install
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test

@@ -1,0 +1,121 @@
+[
+  {
+    "name": "no_priors_no_resonance",
+    "event": {
+      "eventKind": "containment-breach",
+      "outcome": "failure",
+      "tileId": "t1",
+      "relationshipChanges": []
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {},
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      },
+      {
+        "agentId": "bob",
+        "displayName": "Bob",
+        "attributes": {},
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      }
+    ],
+    "ctx": {
+      "currentTick": 10,
+      "priorsInWindow": []
+    },
+    "expected": 1.0
+  },
+  {
+    "name": "novelty_decay_2_priors",
+    "event": {
+      "eventKind": "containment-breach",
+      "outcome": "failure",
+      "tileId": "t1",
+      "relationshipChanges": []
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {},
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      },
+      {
+        "agentId": "bob",
+        "displayName": "Bob",
+        "attributes": {},
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      }
+    ],
+    "ctx": {
+      "currentTick": 10,
+      "priorsInWindow": [
+        {
+          "tileId": "t1",
+          "eventKind": "containment-breach"
+        },
+        {
+          "tileId": "t1",
+          "eventKind": "containment-breach"
+        }
+      ]
+    },
+    "expected": 0.7224999999999999
+  },
+  {
+    "name": "belief_resonance",
+    "event": {
+      "eventKind": "containment-breach",
+      "outcome": "failure",
+      "tileId": "t1",
+      "relationshipChanges": []
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {},
+        "isHistoricalFigure": false,
+        "beliefs": {
+          "bob": "rival of mine"
+        },
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      },
+      {
+        "agentId": "bob",
+        "displayName": "Bob",
+        "attributes": {},
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      }
+    ],
+    "ctx": {
+      "currentTick": 10,
+      "priorsInWindow": []
+    },
+    "expected": 1.15
+  }
+]

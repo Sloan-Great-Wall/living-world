@@ -13,12 +13,13 @@ import {
 } from "solid-js";
 import { api } from "../api";
 import { chapters } from "../stores/worldStore";
+import { SocialPanel } from "./SocialPanel";
 
 const PACK_DOT: Record<string, string> = {
   scp: "#d4a373", liaozhai: "#a87cd1", cthulhu: "#6ec4a0",
 };
 
-type Tab = "characters" | "stories" | "tiles" | "chronicle";
+type Tab = "characters" | "stories" | "tiles" | "social" | "chronicle";
 
 export const LibraryModal: Component<{ onClose: () => void }> = (props) => {
   const [tab, setTab] = createSignal<Tab>("characters");
@@ -65,6 +66,7 @@ export const LibraryModal: Component<{ onClose: () => void }> = (props) => {
           {tabBtn("characters", `Characters (${personas()?.length ?? "…"})`)}
           {tabBtn("stories",    `Stories (${templates()?.length ?? "…"})`)}
           {tabBtn("tiles",      `Tiles (${tiles()?.length ?? "…"})`)}
+          {tabBtn("social",     `Social`)}
           {tabBtn("chronicle",  `Chronicle (${chapters().length})`)}
         </div>
 
@@ -155,6 +157,11 @@ export const LibraryModal: Component<{ onClose: () => void }> = (props) => {
                 </For>
               </div>
             </Show>
+          </Show>
+
+          {/* Social — first real consumer of @living-world/sim-core */}
+          <Show when={tab() === "social"}>
+            <SocialPanel />
           </Show>
 
           {/* Chronicle */}

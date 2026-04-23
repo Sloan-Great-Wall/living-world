@@ -13,14 +13,13 @@ No external deps — pure stdlib so this runs anywhere the sim runs.
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 from living_world.core.agent import Agent
 
-
 # ── Public API ─────────────────────────────────────────────────────────────
+
 
 def affinity_graph(
     agents: Iterable[Agent],
@@ -33,10 +32,7 @@ def affinity_graph(
     An edge a↔b exists if either side has |affinity| ≥ threshold for
     the other. Returns {agent_id: {neighbour_ids}}.
     """
-    pool = [
-        a for a in agents
-        if a.is_alive() and (pack_id is None or a.pack_id == pack_id)
-    ]
+    pool = [a for a in agents if a.is_alive() and (pack_id is None or a.pack_id == pack_id)]
     pool_ids = {a.agent_id for a in pool}
     adj: dict[str, set[str]] = {a.agent_id: set() for a in pool}
     for a in pool:
@@ -72,8 +68,7 @@ class SocialMetrics:
     def summary(self) -> str:
         """One-screen text summary, suitable for CLI / dashboard."""
         lines = [
-            f"agents={self.n_agents}  edges={self.n_edges}  "
-            f"avg_degree={self.avg_degree:.2f}",
+            f"agents={self.n_agents}  edges={self.n_edges}  avg_degree={self.avg_degree:.2f}",
             f"components={self.n_components}  "
             f"biggest={self.biggest_component_size}  "
             f"isolated={len(self.isolated)}",
@@ -126,6 +121,7 @@ def compute_social_metrics(
 
 # ── Internals ──────────────────────────────────────────────────────────────
 
+
 def _connected_components(adj: dict[str, set[str]]) -> list[list[str]]:
     """Standard BFS over the undirected graph. Returns components sorted
     by size (largest first), ids within each component sorted."""
@@ -156,7 +152,7 @@ def _global_clustering(adj: dict[str, set[str]]) -> float:
     Returns 0.0 if no node has ≥2 neighbours (can't form a triangle).
     """
     coeffs: list[float] = []
-    for node, neigh in adj.items():
+    for _node, neigh in adj.items():
         k = len(neigh)
         if k < 2:
             continue

@@ -13,20 +13,19 @@ from __future__ import annotations
 
 from living_world.core.world import World
 
-
 # Per-tick increment for needs that grow when unmet.
 # Positive = grows over time; absolute number is the daily delta.
 NEED_GROWTH = {
-    "hunger":  +12.0,   # gets hungry every day
-    "safety":   -2.0,   # mild drift toward less-safe over time
+    "hunger": +12.0,  # gets hungry every day
+    "safety": -2.0,  # mild drift toward less-safe over time
 }
 
 # Emotions decay toward baseline. Per-tick fraction of distance from baseline
 # that is removed. 0.30 means "fade 30% per day".
 EMOTION_DECAY_RATE = 0.30
 EMOTION_BASELINE = {
-    "fear":  0.0,
-    "joy":  30.0,
+    "fear": 0.0,
+    "joy": 30.0,
     "anger": 0.0,
 }
 

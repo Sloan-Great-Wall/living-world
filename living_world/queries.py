@@ -20,8 +20,8 @@ from dataclasses import dataclass
 from living_world.core.event import LegendEvent
 from living_world.core.world import World
 
-
 # ── Event queries ──────────────────────────────────────────────────────────
+
 
 def recent_events(world: World, n: int = 50) -> list[LegendEvent]:
     """Last N events across all packs, oldest-first."""
@@ -46,7 +46,10 @@ def events_by_day(world: World, since_tick: int = 1) -> dict[int, list[LegendEve
 
 
 def event_kind_distribution(
-    world: World, since_tick: int = 1, *, top_k: int = 10,
+    world: World,
+    since_tick: int = 1,
+    *,
+    top_k: int = 10,
 ) -> list[tuple[str, int]]:
     """Top-K most frequent event kinds since `since_tick`."""
     c: Counter = Counter(e.event_kind for e in world.events_since(since_tick))
@@ -70,21 +73,21 @@ def diversity_summary(world: World, since_tick: int = 1) -> dict:
 
 # ── Agent queries ──────────────────────────────────────────────────────────
 
+
 def living_agents(world: World, pack_id: str | None = None) -> list:
-    return [
-        a for a in world.living_agents()
-        if pack_id is None or a.pack_id == pack_id
-    ]
+    return [a for a in world.living_agents() if pack_id is None or a.pack_id == pack_id]
 
 
 def death_count(world: World, pack_id: str | None = None) -> int:
     return sum(
-        1 for a in world.all_agents()
+        1
+        for a in world.all_agents()
         if not a.is_alive() and (pack_id is None or a.pack_id == pack_id)
     )
 
 
 # ── Engine status (for dashboard "what's wired" panel) ─────────────────────
+
 
 @dataclass
 class FeatureStatus:
@@ -99,35 +102,42 @@ def feature_status(engine) -> list[FeatureStatus]:
     Powers the dashboard's "what's actually live this run" sidebar.
     """
     out = [
-        FeatureStatus("memory",
-                       engine.memory is not None,
-                       f"reflect_every={engine.reflect_every_ticks}"),
-        FeatureStatus("planner",
-                       engine.agent_planner is not None,
-                       f"hf_only={engine.plan_hf_only}"),
-        FeatureStatus("chronicler",
-                       engine.chronicler is not None,
-                       f"every={engine.chronicle_every_ticks}t"),
-        FeatureStatus("emergent",
-                       engine.emergent_proposer is not None,
-                       f"max_per_tick={engine.emergent_max_per_tick}"),
+        FeatureStatus(
+            "memory", engine.memory is not None, f"reflect_every={engine.reflect_every_ticks}"
+        ),
+        FeatureStatus(
+            "planner", engine.agent_planner is not None, f"hf_only={engine.plan_hf_only}"
+        ),
+        FeatureStatus(
+            "chronicler", engine.chronicler is not None, f"every={engine.chronicle_every_ticks}t"
+        ),
+        FeatureStatus(
+            "emergent",
+            engine.emergent_proposer is not None,
+            f"max_per_tick={engine.emergent_max_per_tick}",
+        ),
         FeatureStatus("conscience", engine.consciousness is not None),
         FeatureStatus("dialogue_loop", engine.conversation_loop_enabled),
-        FeatureStatus("perception",
-                       engine.perception is not None,
-                       f"≥{engine.perception_threshold:.2f}"
-                       if engine.perception is not None else ""),
-        FeatureStatus("self_update",
-                       engine.self_update is not None,
-                       f"≥{engine.self_update_threshold:.2f}"
-                       if engine.self_update is not None else ""),
-        FeatureStatus("llm_movement",
-                       engine.movement.llm_advisor is not None,
-                       f"chance={engine.movement.llm_chance:.2f}"
-                       if engine.movement.llm_advisor is not None else ""),
-        FeatureStatus("memory_reflector",
-                       engine.memory is not None
-                       and engine.memory.reflector is not None),
+        FeatureStatus(
+            "perception",
+            engine.perception is not None,
+            f"≥{engine.perception_threshold:.2f}" if engine.perception is not None else "",
+        ),
+        FeatureStatus(
+            "self_update",
+            engine.self_update is not None,
+            f"≥{engine.self_update_threshold:.2f}" if engine.self_update is not None else "",
+        ),
+        FeatureStatus(
+            "llm_movement",
+            engine.movement.llm_advisor is not None,
+            f"chance={engine.movement.llm_chance:.2f}"
+            if engine.movement.llm_advisor is not None
+            else "",
+        ),
+        FeatureStatus(
+            "memory_reflector", engine.memory is not None and engine.memory.reflector is not None
+        ),
     ]
     return out
 
@@ -138,6 +148,7 @@ def narrator_stats(engine) -> dict:
 
 
 # ── Chronicle export ──────────────────────────────────────────────────────
+
 
 def export_chronicle_markdown(world: World) -> str:
     """Render world.chapters as a Markdown chronicle.
@@ -153,9 +164,11 @@ def export_chronicle_markdown(world: World) -> str:
         by_pack.setdefault(ch.get("pack_id", "?"), []).append(ch)
 
     lines: list[str] = ["# Chronicle", ""]
-    lines.append(f"_World ran {world.current_tick} tick(s). "
-                 f"{len(world.chapters)} chapters across "
-                 f"{len(by_pack)} pack(s)._\n")
+    lines.append(
+        f"_World ran {world.current_tick} tick(s). "
+        f"{len(world.chapters)} chapters across "
+        f"{len(by_pack)} pack(s)._\n"
+    )
 
     for pack_id in sorted(by_pack.keys()):
         lines.append(f"## {pack_id}\n")

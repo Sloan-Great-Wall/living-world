@@ -9,39 +9,31 @@ dependencies = [
     "typer>=0.12",
     "rich>=13.7",
     "httpx>=0.27",
-]
-
-[project.optional-dependencies]
-ui = [
-    "streamlit>=1.38",
-    "streamlit-autorefresh>=1.0",
-]
-serve = [
-    # Thin sim REST API consumed by the Tauri+Solid+TS dashboard
-    # (dashboard-tauri/). The legacy Streamlit `ui` extra above is
-    # kept alive in parallel until the Tauri app reaches feature parity.
+    # FastAPI moved to base — it's the canonical IPC layer for the
+    # Tauri dashboard, not optional. `lw serve` relies on it.
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
 ]
-db = [
-    "psycopg[binary]>=3.2",
-    "redis>=5.0",
-    "pgvector>=0.3",
-]
-llm = [
-    "openai>=1.40",  # OpenAI-compatible endpoint for Qwen3 / Gemma / DeepSeek
-]
+
+[project.optional-dependencies]
+# `[dev]` is the only extra — kept deliberately minimal. Removed extras
+# that represented aspiration (not running code):
+#   - `[ui]` / Streamlit dashboard: replaced by dashboard-tauri/
+#   - `[db]` / psycopg+pgvector+redis: no repository implementation binds
+#   - `[llm]` / openai SDK: Ollama is the only runtime we call
+# If/when we need them, add back with a concrete consumer in the same PR.
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "ruff>=0.5",
-    "mypy>=1.10",
-    "streamlit>=1.38",
-    "streamlit-autorefresh>=1.0",
+    # basedpyright — stricter than mypy, faster, better diagnostics.
+    # Replaces mypy in the `just check` pipeline.
+    "basedpyright>=1.13",
 ]
 
 [project.scripts]
 world-sim = "living_world.cli:app"
+lw = "living_world.cli:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -50,3 +42,34 @@ build-backend = "hatchling.build"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+# Start with sensible defaults; tighten in follow-ups.
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # bugbear
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",  # line length (ruff formatter handles wrapping)
+    "B008",  # function calls in defaults (typer uses this)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests use compact `w.add_x(a); w.add_x(b)` setup patterns deliberately.
+"tests/**/*.py" = ["E702", "E741", "F841", "B007"]
+
+[tool.basedpyright]
+# Start lenient; tighten as we fix existing issues.
+include = ["living_world"]
+exclude = ["**/__pycache__", "tests", "packages"]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+reportMissingImports = "error"
+reportUnusedImport = "warning"
+reportUnusedVariable = "warning"
+# These are blockers we want to see right away:
+reportUndefinedVariable = "error"
+reportAttributeAccessIssue = "warning"

@@ -26,7 +26,6 @@ from living_world.core.agent import Agent
 from living_world.core.world import World
 from living_world.llm.base import LLMClient
 
-
 SYSTEM_PROMPT = """You are the planning layer for a character in a world simulation.
 You look at one character's situation and write a short plan for the next week.
 
@@ -71,7 +70,8 @@ def _build_prompt(
 
     # Recent events this agent participated in
     recent = [
-        e for e in world.events_since(max(1, world.current_tick - 7))
+        e
+        for e in world.events_since(max(1, world.current_tick - 7))
         if agent.agent_id in e.participants
     ][-4:]
     if recent:
@@ -109,7 +109,9 @@ def _parse_plan(text: str) -> dict:
     for key in ("goals_this_week", "seek", "avoid"):
         val = data.get(key)
         if isinstance(val, list):
-            cleaned = [str(x)[:80] for x in val if isinstance(x, (str, int, float)) and str(x).strip()]
+            cleaned = [
+                str(x)[:80] for x in val if isinstance(x, (str, int, float)) and str(x).strip()
+            ]
             if cleaned:
                 out[key] = cleaned[:3]
     return out
@@ -121,8 +123,7 @@ class AgentPlanner:
     def __init__(self, client: LLMClient) -> None:
         self.client = client
         # Diagnostic counters — track *why* plans don't appear.
-        self.stats = {"calls": 0, "llm_error": 0, "parse_empty": 0,
-                       "ok": 0, "last_raw_sample": ""}
+        self.stats = {"calls": 0, "llm_error": 0, "parse_empty": 0, "ok": 0, "last_raw_sample": ""}
 
     def plan_for_agent(
         self,
@@ -136,18 +137,26 @@ class AgentPlanner:
         if memory_store is not None:
             try:
                 query = agent.current_goal or agent.persona_card[:60] or agent.display_name
-                entries = memory_store.recall(
-                    agent.agent_id, query, top_k=5,
-                    current_tick=world.current_tick,
-                ) or []
-                memory_snippets = [getattr(e, "doc", "") for e in entries if getattr(e, "doc", None)]
+                entries = (
+                    memory_store.recall(
+                        agent.agent_id,
+                        query,
+                        top_k=5,
+                        current_tick=world.current_tick,
+                    )
+                    or []
+                )
+                memory_snippets = [
+                    getattr(e, "doc", "") for e in entries if getattr(e, "doc", None)
+                ]
             except Exception:
                 memory_snippets = None
 
         prompt = _build_prompt(agent, world, memory_snippets)
         try:
-            resp = self.client.complete(prompt, max_tokens=220, temperature=0.6,
-                                         json_mode=True, system=SYSTEM_PROMPT)
+            resp = self.client.complete(
+                prompt, max_tokens=220, temperature=0.6, json_mode=True, system=SYSTEM_PROMPT
+            )
         except Exception:
             self.stats["llm_error"] += 1
             return {}

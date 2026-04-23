@@ -36,7 +36,6 @@ from living_world.core.agent import Agent, LifeStage
 from living_world.core.event import LegendEvent
 from living_world.core.world import World
 
-
 # ══════════════════════════════════════════════════════════════
 # WITNESS RIPPLE — categorical emotion writes for non-participants
 # ══════════════════════════════════════════════════════════════
@@ -62,38 +61,52 @@ from living_world.core.world import World
 # Categories instead of per-event tables: drama / horror / shame / wonder.
 # Each event_kind maps to a category; categories define emotion deltas.
 
-_HUMAN_TAGS = {"d-class", "staff", "researcher", "field-agent", "elite",
-                "psychologist", "antiquarian", "o5",
-                "investigator", "academic", "scholar", "local",
-                "reporter", "law-enforcement",
-                "mortal", "official", "merchant"}
+_HUMAN_TAGS = {
+    "d-class",
+    "staff",
+    "researcher",
+    "field-agent",
+    "elite",
+    "psychologist",
+    "antiquarian",
+    "o5",
+    "investigator",
+    "academic",
+    "scholar",
+    "local",
+    "reporter",
+    "law-enforcement",
+    "mortal",
+    "official",
+    "merchant",
+}
 
 # (witness_emotion_deltas, narrative_template_for_chronicle)
 _WITNESS_REACTIONS: dict[str, dict[str, float]] = {
     "horror": {"fear": 25, "joy": -10},
-    "dread":  {"fear": 15},
+    "dread": {"fear": 15},
     "wonder": {"joy": 10},
-    "joy":    {"joy": 15, "fear": -5},
-    "anger":  {"anger": 20, "joy": -5},
+    "joy": {"joy": 15, "fear": -5},
+    "anger": {"anger": 20, "joy": -5},
 }
 
 # event_kind → category. Anything not listed → no witness ripple.
 _EVENT_CATEGORY: dict[str, str] = {
     # SCP lethal/dangerous
-    "173-snap-neck":         "horror",
-    "682-breach":            "horror",
-    "049-treatment":         "horror",
-    "106-pocket-dimension":  "horror",
-    "096-rampage":           "horror",
+    "173-snap-neck": "horror",
+    "682-breach": "horror",
+    "049-treatment": "horror",
+    "106-pocket-dimension": "horror",
+    "096-rampage": "horror",
     # SCP positive
-    "999-uplift":            "joy",
+    "999-uplift": "joy",
     # Cthulhu mind-shake
-    "descent":               "dread",
-    "cult-ritual":           "dread",
-    "possession":            "horror",
+    "descent": "dread",
+    "cult-ritual": "dread",
+    "possession": "horror",
     # Liaozhai
-    "yaksha-takes-soul":     "horror",
-    "renlao-tryst":          "wonder",
+    "yaksha-takes-soul": "horror",
+    "renlao-tryst": "wonder",
 }
 
 
@@ -101,11 +114,13 @@ _EVENT_CATEGORY: dict[str, str] = {
 # DESCRIPTION LAYER — rare mutations to agent identity
 # ══════════════════════════════════════════════════════════════
 
+
 @dataclass
 class DescriptionMutation:
     """A rare, guarded change to an agent's core identity.
     Only fires when ALL conditions are met.
     """
+
     name: str
     # conditions — ALL must be true
     required_tags: set[str] = field(default_factory=set)
@@ -184,6 +199,7 @@ DESCRIPTION_MUTATIONS: list[DescriptionMutation] = [
 # Engine
 # ══════════════════════════════════════════════════════════════
 
+
 class ConsequenceEngine:
     """Applies stat + description changes from a resolved event.
 
@@ -230,9 +246,9 @@ class ConsequenceEngine:
             if tile is not None:
                 participant_ids = set(event.participants)
                 witnesses = [
-                    a for a in self.world.agents_in_tile(tile.tile_id)
-                    if a.is_alive() and a.agent_id not in participant_ids
-                    and (a.tags & _HUMAN_TAGS)
+                    a
+                    for a in self.world.agents_in_tile(tile.tile_id)
+                    if a.is_alive() and a.agent_id not in participant_ids and (a.tags & _HUMAN_TAGS)
                 ][:4]
                 for w in witnesses:
                     for emotion, delta in deltas.items():
@@ -242,15 +258,19 @@ class ConsequenceEngine:
                 # high-impact categories to keep the log readable.
                 if witnesses and category in ("horror", "anger", "wonder"):
                     names = ", ".join(w.display_name for w in witnesses[:3])
-                    reactions.append(LegendEvent(
-                        event_id=str(uuid.uuid4()), tick=tick,
-                        pack_id=witnesses[0].pack_id, tile_id=event.tile_id,
-                        event_kind=f"witness-{event.event_kind}",
-                        participants=[w.agent_id for w in witnesses],
-                        outcome="neutral",
-                        template_rendering=f"[{event.tile_id}] {names} were present and saw it.",
-                        importance=0.2,
-                    ))
+                    reactions.append(
+                        LegendEvent(
+                            event_id=str(uuid.uuid4()),
+                            tick=tick,
+                            pack_id=witnesses[0].pack_id,
+                            tile_id=event.tile_id,
+                            event_kind=f"witness-{event.event_kind}",
+                            participants=[w.agent_id for w in witnesses],
+                            outcome="neutral",
+                            template_rendering=f"[{event.tile_id}] {names} were present and saw it.",
+                            importance=0.2,
+                        )
+                    )
 
         # ── Description layer: check ALL agents in tile for rare mutations ──
         tile = self.world.get_tile(event.tile_id)
@@ -261,7 +281,10 @@ class ConsequenceEngine:
                 for mutation in DESCRIPTION_MUTATIONS:
                     if mutation.required_tags and not (mutation.required_tags & agent.tags):
                         continue
-                    if mutation.required_event_kinds and event.event_kind not in mutation.required_event_kinds:
+                    if (
+                        mutation.required_event_kinds
+                        and event.event_kind not in mutation.required_event_kinds
+                    ):
                         continue
                     if not self._check_condition(agent, mutation.attribute_condition):
                         continue
@@ -284,16 +307,21 @@ class ConsequenceEngine:
 
                     if mutation.narrative:
                         text = mutation.narrative.format(
-                            tile=event.tile_id, agent=agent.display_name,
+                            tile=event.tile_id,
+                            agent=agent.display_name,
                         )
-                        reactions.append(LegendEvent(
-                            event_id=str(uuid.uuid4()), tick=tick,
-                            pack_id=agent.pack_id, tile_id=event.tile_id,
-                            event_kind=f"mutation-{mutation.name}",
-                            participants=[agent.agent_id],
-                            outcome="neutral",
-                            template_rendering=text,
-                            importance=0.65,
-                        ))
+                        reactions.append(
+                            LegendEvent(
+                                event_id=str(uuid.uuid4()),
+                                tick=tick,
+                                pack_id=agent.pack_id,
+                                tile_id=event.tile_id,
+                                event_kind=f"mutation-{mutation.name}",
+                                participants=[agent.agent_id],
+                                outcome="neutral",
+                                template_rendering=text,
+                                importance=0.65,
+                            )
+                        )
 
         return reactions

@@ -24,12 +24,11 @@ import json
 import re
 import uuid
 
-from living_world.core.agent import Agent, LifeStage
+from living_world.core.agent import LifeStage
 from living_world.core.event import LegendEvent
 from living_world.core.tile import Tile
 from living_world.core.world import World
 from living_world.llm.base import LLMClient
-
 
 SYSTEM_PROMPT = """You propose ONE novel event emerging from the characters below.
 You are NOT a director. You observe their persona, goals, beliefs, and mood,
@@ -98,8 +97,7 @@ def _tile_context(tile: Tile, world: World) -> str:
             lines.append(f"    Feels toward: {', '.join(affs[:4])}")
     # Recent events on this tile
     recent = [
-        e for e in world.events_since(max(1, world.current_tick - 3))
-        if e.tile_id == tile.tile_id
+        e for e in world.events_since(max(1, world.current_tick - 3)) if e.tile_id == tile.tile_id
     ][-3:]
     if recent:
         lines.append("")
@@ -268,9 +266,16 @@ class EmergentEventProposer:
     def __init__(self, client: LLMClient) -> None:
         self.client = client
         # Diagnostic counters — track WHERE proposals die.
-        self.stats = {"calls": 0, "tile_too_small": 0, "llm_error": 0,
-                       "parse_fail": 0, "validate_fail": 0,
-                       "pair_cooldown": 0, "ok": 0, "last_raw_sample": ""}
+        self.stats = {
+            "calls": 0,
+            "tile_too_small": 0,
+            "llm_error": 0,
+            "parse_fail": 0,
+            "validate_fail": 0,
+            "pair_cooldown": 0,
+            "ok": 0,
+            "last_raw_sample": "",
+        }
         # tick at which each participant-set was last used as emergent cast
         self._pair_last_tick: dict[tuple[str, ...], int] = {}
 
@@ -283,21 +288,22 @@ class EmergentEventProposer:
         # Inject anti-fixation hints into the prompt: list which agent
         # sets were recently used so the LLM picks fresh casts.
         recent_pairs = [
-            ", ".join(p) for p, t in self._pair_last_tick.items()
+            ", ".join(p)
+            for p, t in self._pair_last_tick.items()
             if world.current_tick - t < self.PAIR_COOLDOWN_TICKS
         ][:5]
         avoid_block = ""
         if recent_pairs:
             avoid_block = (
                 "\n\nAVOID re-using these recent emergent casts "
-                "(they just had an event together):\n  - "
-                + "\n  - ".join(recent_pairs)
+                "(they just had an event together):\n  - " + "\n  - ".join(recent_pairs)
             )
         # Dynamic part only — SYSTEM_PROMPT goes via system= for KV-cache (P1)
         prompt = _tile_context(tile, world) + avoid_block + "\n\nYour JSON:"
         try:
-            resp = self.client.complete(prompt, max_tokens=320, temperature=0.75,
-                                         json_mode=True, system=SYSTEM_PROMPT)
+            resp = self.client.complete(
+                prompt, max_tokens=320, temperature=0.75, json_mode=True, system=SYSTEM_PROMPT
+            )
         except Exception:
             self.stats["llm_error"] += 1
             return None
@@ -314,7 +320,7 @@ class EmergentEventProposer:
         # Hard reject if this exact participant set is still in cooldown.
         # The prompt-level hint isn't always honored by smaller models.
         pair_key = tuple(sorted(cleaned["participants"]))
-        last_used = self._pair_last_tick.get(pair_key, -10**9)
+        last_used = self._pair_last_tick.get(pair_key, -(10**9))
         if world.current_tick - last_used < self.PAIR_COOLDOWN_TICKS:
             self.stats["pair_cooldown"] += 1
             return None
@@ -332,9 +338,13 @@ class EmergentEventProposer:
             if a is None or b is None:
                 continue
             a.adjust_affinity(b.agent_id, change["delta"], world.current_tick)
-            rel_changes.append({
-                "a": change["a"], "b": change["b"], "delta": change["delta"],
-            })
+            rel_changes.append(
+                {
+                    "a": change["a"],
+                    "b": change["b"],
+                    "delta": change["delta"],
+                }
+            )
         for bu in cleaned["belief_updates"]:
             a = world.get_agent(bu["agent_id"])
             if a is None:

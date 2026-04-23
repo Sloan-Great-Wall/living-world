@@ -5,6 +5,7 @@
  * module for in-process calls (Tauri invoke or direct function calls)
  * without touching any component.
  */
+import type { AgentForMetrics } from "@living-world/sim-core";
 import type {
   Agent, Chapter, FeatureStatus, Tile, WorldEvent, WorldSnapshot,
 } from "./types/api";
@@ -31,6 +32,7 @@ export const api = {
   agents:       () => j<Agent[]>("/api/agents"),
   agent:        (id: string) => j<Agent>(`/api/agent/${encodeURIComponent(id)}`),
   tiles:        () => j<Tile[]>("/api/tiles"),
+  socialGraph:  () => j<{ agents: AgentForMetrics[] }>("/api/social_graph"),
   events:       (since = 1, limit = 80) =>
                  j<WorldEvent[]>(`/api/events?since=${since}&limit=${limit}`),
   chronicle:    () => j<Chapter[]>("/api/chronicle"),

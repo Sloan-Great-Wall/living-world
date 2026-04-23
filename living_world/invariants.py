@@ -27,7 +27,7 @@ class InvariantResult:
     name: str
     passed: bool
     detail: str
-    severity: str = "error"   # error | warn | info
+    severity: str = "error"  # error | warn | info
 
     @property
     def emoji(self) -> str:
@@ -49,9 +49,13 @@ def no_unfilled_placeholders(world, engine) -> InvariantResult:
     return InvariantResult(
         name="no_unfilled_placeholders",
         passed=not bad,
-        detail=(f"{len(bad)} event(s) leak placeholders: " + ", ".join(bad[:5])
-                + ("…" if len(bad) > 5 else "")) if bad
-               else "all event narratives substitute cleanly",
+        detail=(
+            f"{len(bad)} event(s) leak placeholders: "
+            + ", ".join(bad[:5])
+            + ("…" if len(bad) > 5 else "")
+        )
+        if bad
+        else "all event narratives substitute cleanly",
     )
 
 
@@ -61,6 +65,10 @@ _PROMPT_LEAK_SENTINELS = (
     "Rewrite the following",
     "Output ONLY the narrative",
     "No analysis, no headers",
+    # Old "[ollama-error:" sentinel was retired when LLMError became
+    # typed (see llm/base.py). Kept here for legacy-snapshot detection
+    # only — new failures arrive as resp.error and never reach
+    # narrative text.
     "[ollama-error:",
     "JSON object",
     "Your reflection JSON",
@@ -87,14 +95,14 @@ def no_prompt_leakage(world, engine) -> InvariantResult:
         body = ch.get("body", "")
         for s in _PROMPT_LEAK_SENTINELS:
             if s in body:
-                bad.append(f"chapter d{ch.get('tick','?')}::{s[:30]}")
+                bad.append(f"chapter d{ch.get('tick', '?')}::{s[:30]}")
                 break
     return InvariantResult(
         name="no_prompt_leakage",
         passed=not bad,
-        detail=(f"{len(bad)} prompt leaks: " + " · ".join(bad[:3])
-                + ("…" if len(bad) > 3 else "")) if bad
-               else "no prompt sentinels found in any narrative or chapter",
+        detail=(f"{len(bad)} prompt leaks: " + " · ".join(bad[:3]) + ("…" if len(bad) > 3 else ""))
+        if bad
+        else "no prompt sentinels found in any narrative or chapter",
     )
 
 
@@ -108,14 +116,21 @@ def same_kind_per_tick_capped(world, engine, *, cap: int = 1) -> InvariantResult
     return InvariantResult(
         name="same_kind_per_tick_capped",
         passed=not over,
-        detail=(f"{len(over)} (tick,kind) pairs exceed cap {cap}: "
-                + ", ".join(f"d{t}/{k}×{n}" for (t, k), n in over[:5])) if over
-               else f"no event_kind fires more than {cap}× per tick across world",
+        detail=(
+            f"{len(over)} (tick,kind) pairs exceed cap {cap}: "
+            + ", ".join(f"d{t}/{k}×{n}" for (t, k), n in over[:5])
+        )
+        if over
+        else f"no event_kind fires more than {cap}× per tick across world",
     )
 
 
 def emergent_pair_diversity(
-    world, engine, *, min_unique_pairs: int = 3, window_ticks: int = 10,
+    world,
+    engine,
+    *,
+    min_unique_pairs: int = 3,
+    window_ticks: int = 10,
 ) -> InvariantResult:
     """Bug B regression: emergent should not loop the same agent set.
 
@@ -158,8 +173,9 @@ def all_event_participants_real(world, engine) -> InvariantResult:
     return InvariantResult(
         name="all_event_participants_real",
         passed=not bad,
-        detail=(f"{len(bad)} ghost participants: " + ", ".join(bad[:5])) if bad
-               else "every event participant exists in the world",
+        detail=(f"{len(bad)} ghost participants: " + ", ".join(bad[:5]))
+        if bad
+        else "every event participant exists in the world",
     )
 
 
@@ -168,8 +184,10 @@ def diversity_floor(world, engine, *, max_top_kind_pct: float = 25.0) -> Invaria
     evts = world.events_since(1)
     if not evts:
         return InvariantResult(
-            name="diversity_floor", passed=True,
-            detail="no events yet", severity="info",
+            name="diversity_floor",
+            passed=True,
+            detail="no events yet",
+            severity="info",
         )
     kinds = Counter(e.event_kind for e in evts)
     top_kind, top_n = kinds.most_common(1)[0]
@@ -189,18 +207,23 @@ def alive_count_monotone(world, engine) -> InvariantResult:
     bad: list[str] = []
     for a in world.all_agents():
         from living_world.core.agent import LifeStage
+
         if (a.life_stage == LifeStage.DECEASED) != (not a.is_alive()):
             bad.append(a.agent_id)
     return InvariantResult(
         name="alive_count_monotone",
         passed=not bad,
         detail=(f"{len(bad)} agents with inconsistent alive/life_stage: " + ", ".join(bad[:5]))
-               if bad else "alive flag matches life_stage for every agent",
+        if bad
+        else "alive flag matches life_stage for every agent",
     )
 
 
 def high_importance_events_leave_marks(
-    world, engine, *, importance_threshold: float = 0.7,
+    world,
+    engine,
+    *,
+    importance_threshold: float = 0.7,
     min_marked_pct: float = 60.0,
 ) -> InvariantResult:
     """A high-importance event SHOULD shift its participants' inner state
@@ -223,7 +246,8 @@ def high_importance_events_leave_marks(
             severity="info",
         )
     high_imp = [
-        e for e in world.events_since(1)
+        e
+        for e in world.events_since(1)
         if e.importance >= importance_threshold and not e.is_emergent
     ]
     if not high_imp:
@@ -258,13 +282,14 @@ def no_orphan_chapters(world, engine) -> InvariantResult:
     for ch in world.chapters:
         for eid in ch.get("event_ids", []):
             if eid not in known:
-                bad.append(f"ch{ch.get('tick','?')}/{eid}")
+                bad.append(f"ch{ch.get('tick', '?')}/{eid}")
                 break
     return InvariantResult(
         name="no_orphan_chapters",
         passed=not bad,
         detail=(f"{len(bad)} chapters reference unknown events: " + ", ".join(bad[:3]))
-               if bad else f"all {len(world.chapters)} chapter event_ids resolve",
+        if bad
+        else f"all {len(world.chapters)} chapter event_ids resolve",
     )
 
 
@@ -290,10 +315,13 @@ def check_all(world, engine) -> list[InvariantResult]:
         try:
             out.append(fn(world, engine))
         except Exception as e:
-            out.append(InvariantResult(
-                name=fn.__name__, passed=False,
-                detail=f"invariant raised: {e!r}",
-            ))
+            out.append(
+                InvariantResult(
+                    name=fn.__name__,
+                    passed=False,
+                    detail=f"invariant raised: {e!r}",
+                )
+            )
     return out
 
 

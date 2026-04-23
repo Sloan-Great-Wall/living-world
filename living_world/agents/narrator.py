@@ -47,12 +47,23 @@ class NarratorStats:
 
 
 _BAD_PREFIXES = (
-    "Okay,", "Sure,", "Here is", "Here's", "Let me", "Narrative:",
-    "Let's break", "Breaking down", "Analysis:", "Explanation:",
-    "[ollama-error",          # OllamaClient graceful-failure marker
+    "Okay,",
+    "Sure,",
+    "Here is",
+    "Here's",
+    "Let me",
+    "Narrative:",
+    "Let's break",
+    "Breaking down",
+    "Analysis:",
+    "Explanation:",
+    # Note: the old "[ollama-error" sentinel substring is gone — failures
+    # now arrive as resp.error (typed) with text="". The prefix check is
+    # kept as belt-and-suspenders against any future client that still
+    # writes error markers into the body. See llm/base.py LLMError.
 )
 _BAD_SUBSTRINGS = (
-    "Rewrite the following",   # narrator's own prompt template echo
+    "Rewrite the following",  # narrator's own prompt template echo
     "Output ONLY the narrative",
     "No analysis, no headers",
     "Original:",
@@ -120,13 +131,21 @@ class Narrator:
         ):
             try:
                 resp = self.tier3.complete(_build_prompt(event), max_tokens=320)
-                event.spotlight_rendering = _clean(resp.text, event.template_rendering)
-                self.budget.record(resp.tokens_out)
-                self.stats.tier3 += 1
-                event.tier_used = 3
-                return event
+                # Typed-error path (AI-Native criterion B): LLM failure
+                # arrives as resp.error, not a sentinel string. Skip the
+                # tier-3 attribution and fall through to template tier.
+                if not resp.ok:
+                    print(f"[narrator] LLM unavailable: kind={resp.error_kind} msg={resp.error}")
+                else:
+                    event.spotlight_rendering = _clean(resp.text, event.template_rendering)
+                    self.budget.record(resp.tokens_out)
+                    self.stats.tier3 += 1
+                    event.tier_used = 3
+                    return event
             except Exception as exc:
-                print(f"[narrator] LLM call failed: {exc}")
+                # Defensive: should not happen since OllamaClient catches
+                # internally, but keep the safety net for unknown impls.
+                print(f"[narrator] LLM call raised: {exc}")
 
         self.stats.tier1 += 1
         event.tier_used = 1

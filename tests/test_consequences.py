@@ -17,6 +17,7 @@ def test_lethal_event_emotion_ripples_to_witnesses():
     emotion deltas — verify witness fear actually rises.
     """
     import uuid
+
     from living_world.core.event import LegendEvent
     from living_world.tick_loop import TickStats
 
@@ -30,8 +31,9 @@ def test_lethal_event_emotion_ripples_to_witnesses():
             world.add_agent(a)
 
     engine = TickEngine(world, packs, seed=42)
-    tile_id = next(iter(t.tile_id for t in world.all_tiles()
-                        if len(world.agents_in_tile(t.tile_id)) >= 2))
+    tile_id = next(
+        iter(t.tile_id for t in world.all_tiles() if len(world.agents_in_tile(t.tile_id)) >= 2)
+    )
     residents = world.agents_in_tile(tile_id)
     victim = residents[0]
     witnesses = residents[1:]
@@ -41,17 +43,20 @@ def test_lethal_event_emotion_ripples_to_witnesses():
 
     world.current_tick = 1
     event = LegendEvent(
-        event_id=str(uuid.uuid4()), tick=1, pack_id="scp",
-        tile_id=tile_id, event_kind="173-snap-neck",
-        participants=[victim.agent_id], outcome="failure",
+        event_id=str(uuid.uuid4()),
+        tick=1,
+        pack_id="scp",
+        tile_id=tile_id,
+        event_kind="173-snap-neck",
+        participants=[victim.agent_id],
+        outcome="failure",
         template_rendering=f"[{tile_id}] {victim.display_name} died.",
         importance=0.7,
     )
     engine._process_event(event, TickStats(tick=1))
 
     # At least one witness's fear must have risen.
-    rose = [w for w in witnesses
-            if w.get_emotions().get("fear", 0.0) > baseline[w.agent_id]]
+    rose = [w for w in witnesses if w.get_emotions().get("fear", 0.0) > baseline[w.agent_id]]
     assert rose, "Witness emotion ripple did not fire — fear should rise after lethal event."
 
 

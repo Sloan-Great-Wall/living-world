@@ -1,0 +1,208 @@
+[
+  {
+    "name": "empty",
+    "agents": [],
+    "opts": {},
+    "expected": {
+      "nAgents": 0,
+      "nEdges": 0,
+      "avgDegree": 0.0,
+      "isolated": [],
+      "components": [],
+      "topCentral": [],
+      "clusteringGlobal": 0.0,
+      "nComponents": 0,
+      "biggestComponentSize": 0
+    }
+  },
+  {
+    "name": "triangle_plus_isolate",
+    "agents": [
+      {
+        "agentId": "alice",
+        "alive": true,
+        "packId": "scp",
+        "relationships": [
+          {
+            "targetId": "bob",
+            "affinity": 80
+          },
+          {
+            "targetId": "carol",
+            "affinity": 50
+          }
+        ]
+      },
+      {
+        "agentId": "bob",
+        "alive": true,
+        "packId": "scp",
+        "relationships": [
+          {
+            "targetId": "alice",
+            "affinity": 80
+          },
+          {
+            "targetId": "carol",
+            "affinity": 40
+          }
+        ]
+      },
+      {
+        "agentId": "carol",
+        "alive": true,
+        "packId": "scp",
+        "relationships": [
+          {
+            "targetId": "alice",
+            "affinity": 50
+          },
+          {
+            "targetId": "bob",
+            "affinity": 40
+          }
+        ]
+      },
+      {
+        "agentId": "dave",
+        "alive": true,
+        "packId": "scp",
+        "relationships": []
+      }
+    ],
+    "opts": {},
+    "expected": {
+      "nAgents": 4,
+      "nEdges": 3,
+      "avgDegree": 1.5,
+      "isolated": [
+        "dave"
+      ],
+      "components": [
+        [
+          "alice",
+          "bob",
+          "carol"
+        ],
+        [
+          "dave"
+        ]
+      ],
+      "topCentral": [
+        [
+          "alice",
+          2
+        ],
+        [
+          "bob",
+          2
+        ],
+        [
+          "carol",
+          2
+        ],
+        [
+          "dave",
+          0
+        ]
+      ],
+      "clusteringGlobal": 1.0,
+      "nComponents": 2,
+      "biggestComponentSize": 3
+    }
+  },
+  {
+    "name": "threshold_filters_weak_pair",
+    "agents": [
+      {
+        "agentId": "e",
+        "alive": true,
+        "packId": "scp",
+        "relationships": [
+          {
+            "targetId": "f",
+            "affinity": 60
+          }
+        ]
+      },
+      {
+        "agentId": "f",
+        "alive": true,
+        "packId": "scp",
+        "relationships": [
+          {
+            "targetId": "e",
+            "affinity": 60
+          }
+        ]
+      },
+      {
+        "agentId": "g",
+        "alive": true,
+        "packId": "scp",
+        "relationships": [
+          {
+            "targetId": "h",
+            "affinity": 20
+          }
+        ]
+      },
+      {
+        "agentId": "h",
+        "alive": true,
+        "packId": "scp",
+        "relationships": [
+          {
+            "targetId": "g",
+            "affinity": 20
+          }
+        ]
+      }
+    ],
+    "opts": {
+      "minAbsAffinity": 30
+    },
+    "expected": {
+      "nAgents": 4,
+      "nEdges": 1,
+      "avgDegree": 0.5,
+      "isolated": [
+        "g",
+        "h"
+      ],
+      "components": [
+        [
+          "e",
+          "f"
+        ],
+        [
+          "g"
+        ],
+        [
+          "h"
+        ]
+      ],
+      "topCentral": [
+        [
+          "e",
+          1
+        ],
+        [
+          "f",
+          1
+        ],
+        [
+          "g",
+          0
+        ],
+        [
+          "h",
+          0
+        ]
+      ],
+      "clusteringGlobal": 0.0,
+      "nComponents": 3,
+      "biggestComponentSize": 2
+    }
+  }
+]

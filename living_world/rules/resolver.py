@@ -15,7 +15,6 @@ from living_world.core.event import EventProposal, LegendEvent
 from living_world.core.world import World
 from living_world.world_pack import EventTemplate
 
-
 # ──────────────────────────────────────────────────────────────
 # Importance scoring — decides Tier routing
 # ──────────────────────────────────────────────────────────────
@@ -24,9 +23,18 @@ from living_world.world_pack import EventTemplate
 # Modifiers: spotlight kinds, historical figures, player proximity.
 
 SPOTLIGHT_EVENT_KINDS: set[str] = {
-    "containment-breach", "descent", "possession", "cult-ritual",
-    "renlao-tryst", "karmic-return", "heart-swap", "yaksha-attack",
-    "682-tests", "silver-key", "096-sighting-risk", "o5-memo",
+    "containment-breach",
+    "descent",
+    "possession",
+    "cult-ritual",
+    "renlao-tryst",
+    "karmic-return",
+    "heart-swap",
+    "yaksha-attack",
+    "682-tests",
+    "silver-key",
+    "096-sighting-risk",
+    "o5-memo",
 }
 
 
@@ -82,12 +90,13 @@ def _environmental_modifiers(
     # ── Novelty decay ──
     since = max(1, world.current_tick - novelty_window)
     same_in_window = sum(
-        1 for e in world.events_since(since)
+        1
+        for e in world.events_since(since)
         if e.tile_id == event.tile_id and e.event_kind == event.event_kind
     )
     if same_in_window >= 1:
         # 1 prior = 0.85, 2 priors = 0.72, 3 priors = 0.61 (geometric)
-        multiplier *= 0.85 ** same_in_window
+        multiplier *= 0.85**same_in_window
 
     # ── Resonance with participant inner state ──
     if len(participants) >= 2:
@@ -103,11 +112,15 @@ def _environmental_modifiers(
             # Weekly plan / motivations mention another participant by name
             plan = p.get_weekly_plan() if hasattr(p, "get_weekly_plan") else {}
             mots = p.get_motivations() if hasattr(p, "get_motivations") else []
-            blob = " ".join(
-                str(x).lower()
-                for key in ("seek", "goals_this_week", "avoid")
-                for x in (plan.get(key) or [])
-            ) + " " + " ".join(str(m).lower() for m in mots)
+            blob = (
+                " ".join(
+                    str(x).lower()
+                    for key in ("seek", "goals_this_week", "avoid")
+                    for x in (plan.get(key) or [])
+                )
+                + " "
+                + " ".join(str(m).lower() for m in mots)
+            )
             if any(n in blob for n in names_lower if n != p.display_name.lower()):
                 multiplier *= 1.15
                 break
@@ -231,8 +244,12 @@ class EventResolver:
         """Highest participant slot referenced (a=1, b=2, c=3)."""
         needs = 0
         for slot, n in (
-            ("$a", 1), ("$b", 2), ("$c", 3),
-            ("${a}", 1), ("${b}", 2), ("${c}", 3),
+            ("$a", 1),
+            ("$b", 2),
+            ("$c", 3),
+            ("${a}", 1),
+            ("${b}", 2),
+            ("${c}", 3),
         ):
             if slot in template_str:
                 needs = max(needs, n)
@@ -297,7 +314,7 @@ class EventResolver:
             verdict = consciousness.consider(proposal, template, participants, self.world)
             if verdict is not None:
                 if verdict.vetoes:
-                    return None   # character wouldn't do this
+                    return None  # character wouldn't do this
                 if verdict.adjusts:
                     outcome = verdict.outcome  # override subconscious roll
 
@@ -325,7 +342,8 @@ class EventResolver:
         event.template_rendering = rendering
 
         base_score = score_event_importance(
-            event, participants,
+            event,
+            participants,
             base_importance=float(template.base_importance),
         )
         # Environmental modifiers: novelty decay + resonance with inner state.
@@ -347,8 +365,5 @@ class EventResolver:
             event.stat_changes.setdefault("_consciousness", {})
             event.stat_changes["_consciousness"]["override"] = 1.0
             if verdict.reason:
-                event.template_rendering = (
-                    event.template_rendering
-                    + f"  ⟡ {verdict.reason}"
-                )
+                event.template_rendering = event.template_rendering + f"  ⟡ {verdict.reason}"
         return event

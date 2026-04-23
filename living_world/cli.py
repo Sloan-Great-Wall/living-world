@@ -24,7 +24,11 @@ console = Console()
 
 
 def _build_and_run(
-    pack_ids: list[str], days: int, seed: int, *, persist: bool = False,
+    pack_ids: list[str],
+    days: int,
+    seed: int,
+    *,
+    persist: bool = False,
 ) -> tuple:
     """Shared engine construction + N-day run. Returns (world, engine)."""
     settings = load_settings()
@@ -63,21 +67,35 @@ def run(
 
     total_events = world.event_count()
     n = engine.narrator.stats
-    console.log(
-        f"Done. {total_events} events | T1={n.tier1} T3={n.tier3}"
-    )
+    console.log(f"Done. {total_events} events | T1={n.tier1} T3={n.tier3}")
     console.log(f"Historical figures: {engine.hf_registry.summary()}")
 
     recent = world.events_since(max(1, world.current_tick - days + 1))
     table = Table(title=f"Last {min(20, len(recent))} events")
-    for col, style in [("tick", "cyan"), ("pack", "magenta"), ("kind", "yellow"),
-                       ("tier", "red"), ("imp", None), ("narrative", None)]:
-        table.add_column(col, style=style or "", no_wrap=(col == "tick"),
-                          justify="right" if col == "imp" else "left",
-                          overflow="fold" if col == "narrative" else None)
+    for col, style in [
+        ("tick", "cyan"),
+        ("pack", "magenta"),
+        ("kind", "yellow"),
+        ("tier", "red"),
+        ("imp", None),
+        ("narrative", None),
+    ]:
+        table.add_column(
+            col,
+            style=style or "",
+            no_wrap=(col == "tick"),
+            justify="right" if col == "imp" else "left",
+            overflow="fold" if col == "narrative" else "ellipsis",
+        )
     for e in recent[-20:]:
-        table.add_row(str(e.tick), e.pack_id, e.event_kind,
-                       str(e.tier_used), f"{e.importance:.2f}", e.best_rendering())
+        table.add_row(
+            str(e.tick),
+            e.pack_id,
+            e.event_kind,
+            str(e.tier_used),
+            f"{e.importance:.2f}",
+            e.best_rendering(),
+        )
     console.print(table)
 
 
@@ -114,8 +132,7 @@ def export_chronicle(
     packs: str = typer.Option("scp,liaozhai,cthulhu", help="Packs to load."),
     days: int = typer.Option(15, help="Days to simulate before exporting."),
     seed: int = typer.Option(42),
-    out: Path = typer.Option(Path("chronicle.md"),
-                              help="Output Markdown file path."),
+    out: Path = typer.Option(Path("chronicle.md"), help="Output Markdown file path."),
 ) -> None:
     """Run N days, then write the chronicle as Markdown to `out`.
 
@@ -125,14 +142,12 @@ def export_chronicle(
     consumer (web dashboard, Marimo notebook) can reuse it.
     """
     from living_world.queries import export_chronicle_markdown
+
     pack_ids = [p.strip() for p in packs.split(",") if p.strip()]
     world, _engine = _build_and_run(pack_ids, days, seed)
     text = export_chronicle_markdown(world)
     out.write_text(text, encoding="utf-8")
-    console.log(
-        f"Wrote {len(world.chapters)} chapters → [bold]{out}[/] "
-        f"({len(text):,} chars)"
-    )
+    console.log(f"Wrote {len(world.chapters)} chapters → [bold]{out}[/] ({len(text):,} chars)")
 
 
 @app.command()
@@ -162,8 +177,7 @@ def test(
     if not skip_unit:
         console.rule("Phase 1 · pytest (unit + property + invariant)")
         proc = subprocess.run(
-            [sys.executable, "-m", "pytest", "tests/", "-q",
-             "--ignore=tests/test_live_ollama.py"],
+            [sys.executable, "-m", "pytest", "tests/", "-q", "--ignore=tests/test_live_ollama.py"],
             cwd=Path(__file__).resolve().parent.parent,
         )
         if proc.returncode != 0:
@@ -177,8 +191,7 @@ def test(
         # Run as subprocess so typer Option defaults resolve normally and
         # rich live output streams cleanly to the inherited stdout.
         proc = subprocess.run(
-            [sys.executable, "-m", "living_world.cli", "smoke",
-             "--ticks", str(ticks)],
+            [sys.executable, "-m", "living_world.cli", "smoke", "--ticks", str(ticks)],
             cwd=Path(__file__).resolve().parent.parent,
         )
         if proc.returncode != 0:
@@ -191,14 +204,11 @@ def test(
 
 @app.command()
 def smoke(
-    packs: str = typer.Option("scp,liaozhai,cthulhu",
-                                help="Comma-separated pack ids."),
+    packs: str = typer.Option("scp,liaozhai,cthulhu", help="Comma-separated pack ids."),
     ticks: int = typer.Option(8, help="Days to simulate."),
     seed: int = typer.Option(42),
-    show_events: bool = typer.Option(True,
-                                      help="Stream events to terminal as they happen."),
-    fail_on_warn: bool = typer.Option(False,
-                                       help="Treat warning-severity invariants as failure."),
+    show_events: bool = typer.Option(True, help="Stream events to terminal as they happen."),
+    fail_on_warn: bool = typer.Option(False, help="Treat warning-severity invariants as failure."),
 ) -> None:
     """End-to-end smoke test: bootstrap, run N ticks, check invariants.
 
@@ -234,20 +244,22 @@ def smoke(
 
     # Probe Ollama; warn if down (sim still runs on rules)
     if settings.llm.tier2_provider == "ollama":
-        probe = OllamaClient(model=settings.llm.ollama_tier2_model,
-                              base_url=settings.llm.ollama_base_url)
+        probe = OllamaClient(
+            model=settings.llm.ollama_tier2_model, base_url=settings.llm.ollama_base_url
+        )
         if not probe.available():
             console.log("[yellow]Ollama unreachable — running rules-only.[/]")
 
     # Stream events as they appear
-    last_event_count = 0
-    for i in range(ticks):
+    for _ in range(ticks):
         engine.run(1)
         if show_events:
             new_events = world.events_since(world.current_tick)
             for e in new_events:
                 tier_glyph = "●●●" if e.tier_used >= 3 else ("●●" if e.tier_used == 2 else "●")
-                tier_color = "magenta" if e.tier_used >= 3 else ("yellow" if e.tier_used == 2 else "dim")
+                tier_color = (
+                    "magenta" if e.tier_used >= 3 else ("yellow" if e.tier_used == 2 else "dim")
+                )
                 em = " emergent" if e.is_emergent else ""
                 console.print(
                     f"  [{tier_color}]{tier_glyph}[/] [dim]d{e.tick:03d}[/] "
@@ -255,7 +267,6 @@ def smoke(
                     f"[dim]{em}[/] [{e.outcome}]"
                 )
                 console.print(f"      [dim]{e.best_rendering()[:200]}[/]")
-            last_event_count = world.event_count()
 
     # ── Invariants ──
     console.rule("Invariants")
@@ -270,21 +281,24 @@ def smoke(
 
     passed, warned, failed = summary(results)
     color = "green" if failed == 0 else "red"
-    console.print(
-        f"\n[{color}]{passed} passed · {warned} warned · {failed} failed[/]"
-    )
+    console.print(f"\n[{color}]{passed} passed · {warned} warned · {failed} failed[/]")
 
     # ── Run summary ──
     from living_world.queries import diversity_summary, event_kind_distribution
+
     ds = diversity_summary(world)
     deaths = sum(1 for a in world.all_agents() if not a.is_alive())
     console.rule("Run summary")
-    console.print(f"  events       [bold]{ds['total']}[/]   "
-                   f"unique kinds [bold]{ds['unique']}[/]   "
-                   f"top {ds['top_kind']} ({ds['top_pct']:.1f}%)")
-    console.print(f"  chapters     [bold]{len(world.chapters)}[/]   "
-                   f"deaths       [bold]{deaths}[/]   "
-                   f"alive [bold]{ds['total'] and sum(1 for _ in world.living_agents())}[/]")
+    console.print(
+        f"  events       [bold]{ds['total']}[/]   "
+        f"unique kinds [bold]{ds['unique']}[/]   "
+        f"top {ds['top_kind']} ({ds['top_pct']:.1f}%)"
+    )
+    console.print(
+        f"  chapters     [bold]{len(world.chapters)}[/]   "
+        f"deaths       [bold]{deaths}[/]   "
+        f"alive [bold]{ds['total'] and sum(1 for _ in world.living_agents())}[/]"
+    )
     top = event_kind_distribution(world, top_k=5)
     console.print("  top kinds:   " + ", ".join(f"{k}×{n}" for k, n in top))
 
@@ -311,8 +325,10 @@ def smoke(
         before = initial_hf_state.get(a.agent_id)
         if not before:
             continue
-        n_now = a.get_needs(); e_now = a.get_emotions()
-        n_b = before["needs"]; e_b = before["emotions"]
+        n_now = a.get_needs()
+        e_now = a.get_emotions()
+        n_b = before["needs"]
+        e_b = before["emotions"]
         deltas: list[str] = []
         total_abs = 0.0
         for k in ("hunger", "safety"):
@@ -340,8 +356,10 @@ def smoke(
         for score, name, delta in drifts[:8]:
             console.print(f"  [dim]{score}[/]  [bold]{name:35s}[/]  {delta}")
     else:
-        console.print("  [yellow]⚠ no HF inner-state drift detected — "
-                       "self_update / reflector may not be firing[/]")
+        console.print(
+            "  [yellow]⚠ no HF inner-state drift detected — "
+            "self_update / reflector may not be firing[/]"
+        )
 
     # Exit code for CI
     if failed > 0 or (fail_on_warn and warned > 0):
@@ -361,9 +379,11 @@ def serve(
         pip install -e '.[serve]'
     """
     import uvicorn
+
     console.log(f"Living World API → http://{host}:{port}")
-    uvicorn.run("living_world.web.server:app",
-                host=host, port=port, reload=reload, log_level="info")
+    uvicorn.run(
+        "living_world.web.server:app", host=host, port=port, reload=reload, log_level="info"
+    )
 
 
 @app.command()
@@ -380,6 +400,7 @@ def social(
     Useful for spotting hub characters, factions, and social isolation.
     """
     from living_world.metrics import compute_social_metrics
+
     pack_ids = [p.strip() for p in packs.split(",") if p.strip()]
     world, _engine = _build_and_run(pack_ids, days, seed)
 
@@ -390,9 +411,13 @@ def social(
     if per_pack:
         for pid in pack_ids:
             console.rule(pid)
-            console.print(compute_social_metrics(
-                agents, min_abs_affinity=threshold, pack_id=pid,
-            ).summary())
+            console.print(
+                compute_social_metrics(
+                    agents,
+                    min_abs_affinity=threshold,
+                    pack_id=pid,
+                ).summary()
+            )
 
 
 @app.command("list-packs")
@@ -401,22 +426,6 @@ def list_packs() -> None:
     for entry in sorted(PACKS_DIR.iterdir()):
         if entry.is_dir() and (entry / "pack.yaml").exists():
             console.print(f"  - {entry.name}")
-
-
-@app.command()
-def dashboard(
-    port: int = typer.Option(8501),
-    host: str = typer.Option("localhost"),
-) -> None:
-    """Launch the Streamlit dashboard in the default browser."""
-    import subprocess
-    import sys
-
-    app_file = Path(__file__).resolve().parent / "dashboard" / "app.py"
-    cmd = [sys.executable, "-m", "streamlit", "run", str(app_file),
-           "--server.port", str(port), "--server.address", host]
-    console.log(f"Launching dashboard at http://{host}:{port}")
-    subprocess.run(cmd)
 
 
 if __name__ == "__main__":

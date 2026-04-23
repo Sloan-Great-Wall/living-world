@@ -15,7 +15,35 @@ from typing import Any
 
 import httpx
 
-from living_world.llm.base import LLMClient, LLMResponse
+from living_world.llm.base import (
+    LLMBadResponse,
+    LLMClient,
+    LLMError,
+    LLMResponse,
+    LLMTimeout,
+    LLMUnknownError,
+    LLMUnreachable,
+)
+
+
+def _classify(exc: Exception) -> LLMError:
+    """Map httpx/other exceptions to our typed-error taxonomy.
+
+    AI-Native criterion B: every failure lands in a known class that
+    callers can match on, instead of a string that has to be regex'd.
+    """
+    if isinstance(exc, httpx.TimeoutException):
+        return LLMTimeout(str(exc) or "ollama timeout", cause=exc)
+    if isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout)):
+        return LLMUnreachable(str(exc) or "ollama connection refused", cause=exc)
+    if isinstance(exc, httpx.HTTPStatusError):
+        return LLMBadResponse(
+            f"HTTP {exc.response.status_code}: {exc.response.text[:200]}",
+            cause=exc,
+        )
+    if isinstance(exc, (httpx.DecodingError, ValueError, KeyError)):
+        return LLMBadResponse(f"malformed response: {exc}", cause=exc)
+    return LLMUnknownError(str(exc) or exc.__class__.__name__, cause=exc)
 
 
 class OllamaClient(LLMClient):
@@ -43,8 +71,12 @@ class OllamaClient(LLMClient):
         return self._declared_tier
 
     def _build_body(
-        self, prompt: str, *,
-        max_tokens: int, temperature: float, json_mode: bool,
+        self,
+        prompt: str,
+        *,
+        max_tokens: int,
+        temperature: float,
+        json_mode: bool,
         system: str = "",
     ) -> dict[str, Any]:
         body: dict[str, Any] = {
@@ -76,12 +108,18 @@ class OllamaClient(LLMClient):
         )
 
     def _err(self, exc: Exception, t0: float) -> LLMResponse:
-        # Graceful fallback: do NOT echo prompt back (would leak into
-        # event narratives, see narrator._BAD_SUBSTRINGS).
+        """Graceful fallback on backend failure.
+
+        Structured error (text="", error=<typed>) replaces the old
+        `[ollama-error: X]` sentinel string. Downstream consumers check
+        `resp.ok` or `isinstance(resp.error, LLMTimeout)` — no string
+        parsing, no narrator leakage risk (empty text can't leak).
+        """
         return LLMResponse(
-            text=f"[ollama-error: {exc.__class__.__name__}]",
+            text="",
             model=self.model,
             latency_ms=(time.time() - t0) * 1000,
+            error=_classify(exc),
         )
 
     def available(self) -> bool:
@@ -92,25 +130,36 @@ class OllamaClient(LLMClient):
             return False
 
     def complete(
-        self, prompt: str, *,
-        max_tokens: int = 256, temperature: float = 0.7, json_mode: bool = False,
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 256,
+        temperature: float = 0.7,
+        json_mode: bool = False,
         system: str = "",
     ) -> LLMResponse:
         t0 = time.time()
-        body = self._build_body(prompt, max_tokens=max_tokens,
-                                  temperature=temperature, json_mode=json_mode,
-                                  system=system)
+        body = self._build_body(
+            prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            json_mode=json_mode,
+            system=system,
+        )
         try:
-            r = httpx.post(f"{self.base_url}/api/generate",
-                           json=body, timeout=self.timeout)
+            r = httpx.post(f"{self.base_url}/api/generate", json=body, timeout=self.timeout)
             r.raise_for_status()
             return self._decode(r.json(), t0)
         except Exception as exc:
             return self._err(exc, t0)
 
     async def acomplete(
-        self, prompt: str, *,
-        max_tokens: int = 256, temperature: float = 0.7, json_mode: bool = False,
+        self,
+        prompt: str,
+        *,
+        max_tokens: int = 256,
+        temperature: float = 0.7,
+        json_mode: bool = False,
         system: str = "",
     ) -> LLMResponse:
         """Async variant — drop into asyncio.gather() to run many calls
@@ -124,10 +173,15 @@ class OllamaClient(LLMClient):
         within a single asyncio.run() boundary (still useful for
         gather()'d concurrent calls inside one event)."""
         import asyncio
+
         t0 = time.time()
-        body = self._build_body(prompt, max_tokens=max_tokens,
-                                  temperature=temperature, json_mode=json_mode,
-                                  system=system)
+        body = self._build_body(
+            prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            json_mode=json_mode,
+            system=system,
+        )
         try:
             current_loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -144,7 +198,8 @@ class OllamaClient(LLMClient):
             self._async_client._lw_loop = current_loop  # type: ignore[attr-defined]
         try:
             r = await self._async_client.post(
-                f"{self.base_url}/api/generate", json=body,
+                f"{self.base_url}/api/generate",
+                json=body,
             )
             r.raise_for_status()
             return self._decode(r.json(), t0)

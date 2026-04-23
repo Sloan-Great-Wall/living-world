@@ -7,7 +7,7 @@ to PostgreSQL + Redis without changing the public API.
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Iterable
+from collections.abc import Iterable
 
 from living_world.core.agent import Agent
 from living_world.core.event import LegendEvent
@@ -38,6 +38,7 @@ class World:
             # positions from tick 0 rather than (0, 0).
             if agent.x == 0.0 and agent.y == 0.0:
                 import math
+
                 h = hash((agent.agent_id, tile.tile_id)) & 0xFFFFFFFF
                 angle = ((h & 0xFFFF) / 0xFFFF) * math.tau
                 max_r = tile.radius * (0.35 if agent.is_historical_figure else 0.7)
@@ -58,8 +59,11 @@ class World:
         return (a for a in self._agents.values() if a.is_historical_figure and a.is_alive())
 
     def agents_in_tile(self, tile_id: str) -> list[Agent]:
-        return [self._agents[aid] for aid in self._tiles[tile_id].resident_agents
-                if aid in self._agents and self._agents[aid].is_alive()]
+        return [
+            self._agents[aid]
+            for aid in self._tiles[tile_id].resident_agents
+            if aid in self._agents and self._agents[aid].is_alive()
+        ]
 
     def agents_by_pack(self) -> dict[str, list[Agent]]:
         out: dict[str, list[Agent]] = defaultdict(list)

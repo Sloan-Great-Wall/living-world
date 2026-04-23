@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from living_world.core.agent import Agent
 from living_world.core.event import LegendEvent
 from living_world.core.world import World
 
@@ -93,7 +92,5 @@ class HistoricalFigureRegistry:
 
     def summary(self) -> dict[str, int]:
         total = sum(1 for a in self.world.all_agents() if a.is_alive())
-        hf = sum(
-            1 for a in self.world.all_agents() if a.is_alive() and a.is_historical_figure
-        )
+        hf = sum(1 for a in self.world.all_agents() if a.is_alive() and a.is_historical_figure)
         return {"total_alive": total, "historical_figures": hf, "ordinary": total - hf}

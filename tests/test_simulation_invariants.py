@@ -6,6 +6,7 @@ the unit tests can't see. Runs rules-only (no Ollama) so it's fast
 
 For the full LLM-stack version, run `lw smoke --ticks 12` from CLI.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -48,6 +49,7 @@ def test_smoke_run_produces_events(short_run):
 def test_invariant_no_unfilled_placeholders(short_run):
     world, engine = short_run
     from living_world.invariants import no_unfilled_placeholders
+
     r = no_unfilled_placeholders(world, engine)
     assert r.passed, r.detail
 
@@ -55,6 +57,7 @@ def test_invariant_no_unfilled_placeholders(short_run):
 def test_invariant_same_kind_per_tick_capped(short_run):
     world, engine = short_run
     from living_world.invariants import same_kind_per_tick_capped
+
     r = same_kind_per_tick_capped(world, engine)
     assert r.passed, r.detail
 
@@ -62,6 +65,7 @@ def test_invariant_same_kind_per_tick_capped(short_run):
 def test_invariant_all_event_participants_real(short_run):
     world, engine = short_run
     from living_world.invariants import all_event_participants_real
+
     r = all_event_participants_real(world, engine)
     assert r.passed, r.detail
 
@@ -69,6 +73,7 @@ def test_invariant_all_event_participants_real(short_run):
 def test_invariant_alive_count_monotone(short_run):
     world, engine = short_run
     from living_world.invariants import alive_count_monotone
+
     r = alive_count_monotone(world, engine)
     assert r.passed, r.detail
 
@@ -76,6 +81,7 @@ def test_invariant_alive_count_monotone(short_run):
 def test_invariant_no_orphan_chapters(short_run):
     world, engine = short_run
     from living_world.invariants import no_orphan_chapters
+
     r = no_orphan_chapters(world, engine)
     assert r.passed, r.detail
 
@@ -85,6 +91,4 @@ def test_check_all_passes_on_clean_run(short_run):
     world, engine = short_run
     results = check_all(world, engine)
     passed, warned, failed = summary(results)
-    assert failed == 0, "\n".join(
-        f"❌ {r.name}: {r.detail}" for r in results if not r.passed
-    )
+    assert failed == 0, "\n".join(f"❌ {r.name}: {r.detail}" for r in results if not r.passed)

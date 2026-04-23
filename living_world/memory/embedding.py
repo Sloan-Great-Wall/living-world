@@ -15,8 +15,7 @@ class EmbeddingClient(ABC):
     dim: int = 0
 
     @abstractmethod
-    def embed(self, text: str) -> list[float]:
-        ...
+    def embed(self, text: str) -> list[float]: ...
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         return [self.embed(t) for t in texts]
@@ -31,7 +30,7 @@ class OllamaEmbedder(EmbeddingClient):
     10-20% of embedding calls without any quality cost.
     """
 
-    _CACHE_MAX = 4096   # ~6 MB of float lists at 768d; cheap
+    _CACHE_MAX = 4096  # ~6 MB of float lists at 768d; cheap
 
     def __init__(
         self,

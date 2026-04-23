@@ -25,7 +25,6 @@ from living_world.core.event import LegendEvent
 from living_world.core.world import World
 from living_world.llm.base import LLMClient
 
-
 REACTION_SYSTEM_PROMPT = """You ARE the LISTENER character. The SPEAKER just did
 something involving you. React in-character.
 
@@ -169,27 +168,35 @@ class DialogueGenerator:
         if memory_store is not None:
             try:
                 query = f"{speaker.display_name} {event.event_kind}"
-                entries = memory_store.recall(
-                    listener.agent_id, query, top_k=3,
-                    current_tick=world.current_tick,
-                ) or []
+                entries = (
+                    memory_store.recall(
+                        listener.agent_id,
+                        query,
+                        top_k=3,
+                        current_tick=world.current_tick,
+                    )
+                    or []
+                )
                 listener_memories = [
                     getattr(e, "doc", "")[:140].replace("\n", " ")
-                    for e in entries if getattr(e, "doc", None)
+                    for e in entries
+                    if getattr(e, "doc", None)
                 ]
             except Exception:
                 listener_memories = []
 
         prompt = _build_reaction_prompt(
-            speaker, listener, event, world,
+            speaker,
+            listener,
+            event,
+            world,
             listener_memories=listener_memories,
             listener_beliefs=listener.get_beliefs(),
             current_affinity=listener.get_affinity(speaker.agent_id),
         )
 
         try:
-            resp = self.client.complete(prompt, max_tokens=260, temperature=0.75,
-                                         json_mode=True)
+            resp = self.client.complete(prompt, max_tokens=260, temperature=0.75, json_mode=True)
         except Exception:
             return neutral
         raw = (resp.text or "").strip()

@@ -4,22 +4,23 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
+from typing import overload
 
+from living_world.agents.chronicler import Chronicler
+from living_world.agents.dialogue import DialogueGenerator
+from living_world.agents.emergent import EmergentEventProposer
+from living_world.agents.move_advisor import LLMMoveAdvisor
+from living_world.agents.narrator import Narrator, NarratorBudget
+from living_world.agents.perception import SubjectivePerception
+from living_world.agents.planner import AgentPlanner
+from living_world.agents.self_update import AgentSelfUpdate
 from living_world.config import Settings
 from living_world.core.world import World
 from living_world.llm import OllamaClient
 from living_world.llm.base import LLMClient
-from living_world.agents.narrator import Narrator, NarratorBudget
-from living_world.agents.perception import SubjectivePerception
-from living_world.agents.self_update import AgentSelfUpdate
-from living_world.agents.dialogue import DialogueGenerator
-from living_world.agents.move_advisor import LLMMoveAdvisor
 from living_world.memory import AgentMemoryStore, OllamaEmbedder
 from living_world.persistence import MemoryRepository, Repository
 from living_world.rules.historical_figures import PromotionConfig
-from living_world.agents.planner import AgentPlanner
-from living_world.agents.chronicler import Chronicler
-from living_world.agents.emergent import EmergentEventProposer
 from living_world.tick_logger import TickLogger
 from living_world.tick_loop import TickEngine
 from living_world.world_pack import load_all_packs
@@ -43,6 +44,24 @@ def build_tier_client(
     return None
 
 
+@overload
+def module_client(
+    settings: Settings,
+    module_name: str,
+    *,
+    default_tier: int,
+    default_model: str,
+    base_client: LLMClient,
+) -> LLMClient: ...
+@overload
+def module_client(
+    settings: Settings,
+    module_name: str,
+    *,
+    default_tier: int,
+    default_model: str,
+    base_client: None,
+) -> LLMClient | None: ...
 def module_client(
     settings: Settings,
     module_name: str,
@@ -60,6 +79,11 @@ def module_client(
     This lets users tune ONE module independently — e.g. give the
     chronicler `qwen3:14b` while keeping the planner on `llama3.2:3b` —
     without forking the engine wiring.
+
+    Type-narrowing overloads (AI-Native criterion A — compile-time
+    strict): when callers pass a non-None `base_client`, the return is
+    guaranteed non-None, so they don't need redundant `is not None`
+    asserts after the existing `if agent_client is not None:` guard.
     """
     override = settings.llm.ollama_module_models.get(module_name)
     if not override:
@@ -117,17 +141,22 @@ def bootstrap_world(packs_dir: Path, pack_ids: list[str]) -> tuple[World, list]:
     # per pack will populate this in the next iteration of #7.
     if len(loaded) >= 2:
         from living_world.core.tile import Tile
+
         liminal = Tile(
             tile_id="_liminal_void",
             display_name="The Liminal Void",
             primary_pack=loaded[0].pack_id,  # nominal owner; really shared
             tile_type="liminal",
-            description=("A grey expanse where worlds touch. Foundation "
-                          "researchers, fox-spirits, and cultists alike "
-                          "find themselves here when reality slips."),
+            description=(
+                "A grey expanse where worlds touch. Foundation "
+                "researchers, fox-spirits, and cultists alike "
+                "find themselves here when reality slips."
+            ),
             allowed_packs=[p.pack_id for p in loaded],
             is_liminal=True,
-            x=0.0, y=0.0, radius=80.0,
+            x=0.0,
+            y=0.0,
+            radius=80.0,
         )
         world.add_tile(liminal)
 
@@ -148,11 +177,21 @@ def build_memory_store(settings: Settings) -> AgentMemoryStore | None:
     return AgentMemoryStore(embedder=embedder)
 
 
-def make_engine(world: World, loaded: list, settings: Settings, seed: int, repository: Repository | None = None, tick_logger: TickLogger | None = None) -> TickEngine:
+def make_engine(
+    world: World,
+    loaded: list,
+    settings: Settings,
+    seed: int,
+    repository: Repository | None = None,
+    tick_logger: TickLogger | None = None,
+) -> TickEngine:
     narrator = build_narrator(settings)
     memory = build_memory_store(settings)
     engine = TickEngine(
-        world, loaded, seed=seed, narrator=narrator,
+        world,
+        loaded,
+        seed=seed,
+        narrator=narrator,
         repository=repository,
         memory=memory,
         snapshot_every_ticks=settings.persistence.snapshot_every_ticks,
@@ -172,10 +211,13 @@ def make_engine(world: World, loaded: list, settings: Settings, seed: int, repos
         )
 
     if settings.llm.llm_movement_enabled and agent_client is not None:
-        mv_client = module_client(settings, "move_advisor",
-                                    default_tier=2,
-                                    default_model=settings.llm.ollama_tier2_model,
-                                    base_client=agent_client)
+        mv_client = module_client(
+            settings,
+            "move_advisor",
+            default_tier=2,
+            default_model=settings.llm.ollama_tier2_model,
+            base_client=agent_client,
+        )
         engine.movement.llm_advisor = LLMMoveAdvisor(mv_client, memory_store=memory)
         engine.movement.llm_hf_only = settings.llm.llm_movement_hf_only
         engine.movement.llm_chance = settings.llm.llm_movement_chance
@@ -184,20 +226,26 @@ def make_engine(world: World, loaded: list, settings: Settings, seed: int, repos
 
     # Weekly planner — one LLM call per HF per week, produces structured plan
     if settings.llm.weekly_planning_enabled and agent_client is not None:
-        pl_client = module_client(settings, "planner",
-                                    default_tier=2,
-                                    default_model=settings.llm.ollama_tier2_model,
-                                    base_client=agent_client)
+        pl_client = module_client(
+            settings,
+            "planner",
+            default_tier=2,
+            default_model=settings.llm.ollama_tier2_model,
+            base_client=agent_client,
+        )
         engine.agent_planner = AgentPlanner(pl_client)
         engine.plan_hf_only = settings.llm.weekly_planning_hf_only
 
     # A→B dialogue reaction loop. Mutates affinity + beliefs from
     # actual conversation content. If no Tier-3 client, never fires.
     if agent_client is not None:
-        dg_client = module_client(settings, "dialogue",
-                                    default_tier=2,
-                                    default_model=settings.llm.ollama_tier2_model,
-                                    base_client=agent_client)
+        dg_client = module_client(
+            settings,
+            "dialogue",
+            default_tier=2,
+            default_model=settings.llm.ollama_tier2_model,
+            base_client=agent_client,
+        )
         engine.dialogue_generator = DialogueGenerator(dg_client)
     engine.conversation_loop_enabled = settings.llm.conversation_loop_enabled
 
@@ -211,7 +259,8 @@ def make_engine(world: World, loaded: list, settings: Settings, seed: int, repos
         declared_tier=3,
     )
     chronicler_client = module_client(
-        settings, "chronicler",
+        settings,
+        "chronicler",
         default_tier=3,
         default_model=settings.llm.ollama_tier3_model,
         base_client=tier3_client_for_chronicler or agent_client,
@@ -222,28 +271,37 @@ def make_engine(world: World, loaded: list, settings: Settings, seed: int, repos
 
     # Emergent event proposer — LLM invents novel events
     if settings.llm.emergent_events_enabled and agent_client is not None:
-        em_client = module_client(settings, "emergent",
-                                    default_tier=2,
-                                    default_model=settings.llm.ollama_tier2_model,
-                                    base_client=agent_client)
+        em_client = module_client(
+            settings,
+            "emergent",
+            default_tier=2,
+            default_model=settings.llm.ollama_tier2_model,
+            base_client=agent_client,
+        )
         engine.emergent_proposer = EmergentEventProposer(em_client)
         engine.emergent_max_per_tick = settings.llm.emergent_max_per_tick
 
     # Subjective perception — each agent's memory is rewritten from their POV.
     if settings.llm.subjective_perception_enabled and agent_client is not None:
-        pc_client = module_client(settings, "perception",
-                                    default_tier=2,
-                                    default_model=settings.llm.ollama_tier2_model,
-                                    base_client=agent_client)
+        pc_client = module_client(
+            settings,
+            "perception",
+            default_tier=2,
+            default_model=settings.llm.ollama_tier2_model,
+            base_client=agent_client,
+        )
         engine.perception = SubjectivePerception(pc_client)
         engine.perception_threshold = settings.llm.subjective_perception_threshold
 
     # AgentSelfUpdate — LLM mutates participant's inner state after big events.
     if settings.llm.self_update_enabled and agent_client is not None:
-        su_client = module_client(settings, "self_update",
-                                    default_tier=2,
-                                    default_model=settings.llm.ollama_tier2_model,
-                                    base_client=agent_client)
+        su_client = module_client(
+            settings,
+            "self_update",
+            default_tier=2,
+            default_model=settings.llm.ollama_tier2_model,
+            base_client=agent_client,
+        )
         engine.self_update = AgentSelfUpdate(su_client)
         engine.self_update_threshold = settings.llm.self_update_threshold
 
@@ -252,18 +310,26 @@ def make_engine(world: World, loaded: list, settings: Settings, seed: int, repos
     # abstractions instead of memory-concat strings. See KNOWN_ISSUES #14.
     if memory is not None and agent_client is not None:
         from living_world.agents.reflector import MemoryReflector
-        rf_client = module_client(settings, "reflector",
-                                    default_tier=2,
-                                    default_model=settings.llm.ollama_tier2_model,
-                                    base_client=agent_client)
+
+        rf_client = module_client(
+            settings,
+            "reflector",
+            default_tier=2,
+            default_model=settings.llm.ollama_tier2_model,
+            base_client=agent_client,
+        )
         memory.reflector = MemoryReflector(rf_client)
 
     if settings.llm.conscious_override_enabled and agent_client is not None:
         from living_world.agents.conscience import ConsciousnessLayer
-        cs_client = module_client(settings, "conscience",
-                                    default_tier=2,
-                                    default_model=settings.llm.ollama_tier2_model,
-                                    base_client=agent_client)
+
+        cs_client = module_client(
+            settings,
+            "conscience",
+            default_tier=2,
+            default_model=settings.llm.ollama_tier2_model,
+            base_client=agent_client,
+        )
         engine.consciousness = ConsciousnessLayer(
             cs_client,
             importance_threshold=settings.llm.conscious_override_threshold,
@@ -310,49 +376,55 @@ def build_world_state_json(
     """Serialize World state into the JSON shape consumed by the Canvas map JS."""
     tiles = []
     for t in world.all_tiles():
-        tiles.append({
-            "tile_id": t.tile_id,
-            "display_name": t.display_name,
-            "primary_pack": t.primary_pack,
-            "tile_type": t.tile_type,
-            "x": t.x,
-            "y": t.y,
-            "radius": t.radius,
-        })
+        tiles.append(
+            {
+                "tile_id": t.tile_id,
+                "display_name": t.display_name,
+                "primary_pack": t.primary_pack,
+                "tile_type": t.tile_type,
+                "x": t.x,
+                "y": t.y,
+                "radius": t.radius,
+            }
+        )
 
     agents = []
     for a in world.all_agents():
         if not a.is_alive():
             continue
-        agents.append({
-            "agent_id": a.agent_id,
-            "display_name": a.display_name,
-            "pack_id": a.pack_id,
-            "is_historical_figure": a.is_historical_figure,
-            "tags": sorted(a.tags),
-            "current_tile": a.current_tile,
-            "x": a.x,
-            "y": a.y,
-            "persona_card": a.persona_card,
-            "current_goal": a.current_goal,
-            "life_stage": a.life_stage.value,
-            "age": a.age,
-            "attributes": {k: v for k, v in list(a.attributes.items())[:8]},
-        })
+        agents.append(
+            {
+                "agent_id": a.agent_id,
+                "display_name": a.display_name,
+                "pack_id": a.pack_id,
+                "is_historical_figure": a.is_historical_figure,
+                "tags": sorted(a.tags),
+                "current_tile": a.current_tile,
+                "x": a.x,
+                "y": a.y,
+                "persona_card": a.persona_card,
+                "current_goal": a.current_goal,
+                "life_stage": a.life_stage.value,
+                "age": a.age,
+                "attributes": {k: v for k, v in list(a.attributes.items())[:8]},
+            }
+        )
 
     recent_events = []
     all_events = world.events_since(1)
     for e in all_events[-max_events:]:
-        recent_events.append({
-            "event_id": e.event_id,
-            "tick": e.tick,
-            "pack_id": e.pack_id,
-            "event_kind": e.event_kind,
-            "importance": e.importance,
-            "tier_used": e.tier_used,
-            "narrative": e.best_rendering(),
-            "participants": e.participants,
-        })
+        recent_events.append(
+            {
+                "event_id": e.event_id,
+                "tick": e.tick,
+                "pack_id": e.pack_id,
+                "event_kind": e.event_kind,
+                "importance": e.importance,
+                "tier_used": e.tier_used,
+                "narrative": e.best_rendering(),
+                "participants": e.participants,
+            }
+        )
 
     return {
         "tick": world.current_tick,

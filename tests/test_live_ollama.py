@@ -32,23 +32,23 @@ from living_world.core.tile import Tile
 from living_world.core.world import World
 from living_world.llm.ollama import OllamaClient
 
-
 # ── Module-level skip: if Ollama isn't reachable, skip everything here ──
 _PROBE = OllamaClient(base_url="http://localhost:11434")
 pytestmark = pytest.mark.skipif(
     not _PROBE.available(),
-    reason="Ollama not reachable at localhost:11434 — skipping live LLM tests"
+    reason="Ollama not reachable at localhost:11434 — skipping live LLM tests",
 )
+
 
 # Default test client. Use the small model so tests don't take an hour.
 def _client() -> OllamaClient:
-    return OllamaClient(model="gemma3:4b", base_url="http://localhost:11434",
-                         timeout=60.0)
+    return OllamaClient(model="gemma3:4b", base_url="http://localhost:11434", timeout=60.0)
 
 
 # ─────────────────────────────────────────────────────────────────────────
 # Smoke: the LLM responds at all and our OllamaClient parses the response
 # ─────────────────────────────────────────────────────────────────────────
+
 
 def test_ollama_basic_completion():
     """Ollama returns a non-empty completion for a trivial prompt."""
@@ -61,6 +61,7 @@ def test_ollama_basic_completion():
 # Narrator — Tier 3 narrative rewrite
 # ─────────────────────────────────────────────────────────────────────────
 
+
 def test_narrator_produces_clean_narrative():
     """Narrator should rewrite a template narrative into prose, no leak."""
     from living_world.agents.narrator import Narrator, NarratorBudget
@@ -68,8 +69,12 @@ def test_narrator_produces_clean_narrative():
     n = Narrator(tier3=_client(), budget=NarratorBudget())
     n.TIER3_THRESHOLD = 0.5  # force the LLM path
     event = LegendEvent(
-        event_id="e1", tick=1, pack_id="scp", tile_id="lab-floor-3",
-        event_kind="173-snap-neck", participants=["d-9001"],
+        event_id="e1",
+        tick=1,
+        pack_id="scp",
+        tile_id="lab-floor-3",
+        event_kind="173-snap-neck",
+        participants=["d-9001"],
         outcome="failure",
         template_rendering="[lab-floor-3] D-9001 was found with cervical fracture.",
         importance=0.7,
@@ -86,28 +91,35 @@ def test_narrator_produces_clean_narrative():
 # Conscience — verdict on a proposed event
 # ─────────────────────────────────────────────────────────────────────────
 
+
 def test_conscience_returns_valid_verdict():
     from living_world.agents.conscience import ConsciousnessLayer
-    from living_world.world_pack import EventTemplate
     from living_world.core.event import EventProposal
+    from living_world.world_pack import EventTemplate
 
     world = World()
-    tile = Tile(tile_id="lab", display_name="Lab", primary_pack="scp",
-                 tile_type="research-floor")
+    tile = Tile(tile_id="lab", display_name="Lab", primary_pack="scp", tile_type="research-floor")
     world.add_tile(tile)
-    a = Agent(agent_id="dr-glass", pack_id="scp", display_name="Dr. Glass",
-              persona_card="A cautious researcher who keeps to protocol.",
-              alignment="lawful_neutral", current_tile="lab",
-              attributes={"clearance": 3})
+    a = Agent(
+        agent_id="dr-glass",
+        pack_id="scp",
+        display_name="Dr. Glass",
+        persona_card="A cautious researcher who keeps to protocol.",
+        alignment="lawful_neutral",
+        current_tile="lab",
+        attributes={"clearance": 3},
+    )
     world.add_agent(a)
 
-    cl = ConsciousnessLayer(_client(), importance_threshold=0.0,
-                             activation_chance=1.0)
-    template = EventTemplate(event_kind="173-snap-neck",
-                              description="SCP-173 attacks an unobserved researcher",
-                              base_importance=0.7)
-    proposal = EventProposal(proposal_id="p1", pack_id="scp", tile_id="lab",
-                              event_kind="173-snap-neck", priority=0.7)
+    cl = ConsciousnessLayer(_client(), importance_threshold=0.0, activation_chance=1.0)
+    template = EventTemplate(
+        event_kind="173-snap-neck",
+        description="SCP-173 attacks an unobserved researcher",
+        base_importance=0.7,
+    )
+    proposal = EventProposal(
+        proposal_id="p1", pack_id="scp", tile_id="lab", event_kind="173-snap-neck", priority=0.7
+    )
     verdict = cl.consider(proposal, template, [a], world)
     assert verdict is not None
     assert verdict.verdict in ("APPROVE", "ADJUST", "VETO")
@@ -119,17 +131,26 @@ def test_conscience_returns_valid_verdict():
 # AgentSelfUpdate — LLM speaks as the agent and reports inner shifts
 # ─────────────────────────────────────────────────────────────────────────
 
+
 def test_self_update_produces_valid_delta():
     from living_world.agents.self_update import AgentSelfUpdate
 
-    a = Agent(agent_id="d-9045", pack_id="scp", display_name="D-9045",
-              persona_card="A test subject who has narrowly survived three trials.",
-              alignment="chaotic_neutral",
-              attributes={"fear": 60, "morale": 30})
+    a = Agent(
+        agent_id="d-9045",
+        pack_id="scp",
+        display_name="D-9045",
+        persona_card="A test subject who has narrowly survived three trials.",
+        alignment="chaotic_neutral",
+        attributes={"fear": 60, "morale": 30},
+    )
     event = LegendEvent(
-        event_id="e", tick=10, pack_id="scp", tile_id="lab-floor-3",
+        event_id="e",
+        tick=10,
+        pack_id="scp",
+        tile_id="lab-floor-3",
         event_kind="173-snap-neck",
-        participants=["d-9045"], outcome="failure",
+        participants=["d-9045"],
+        outcome="failure",
         template_rendering="D-9045 was attacked but survived.",
         importance=0.75,
     )
@@ -157,27 +178,40 @@ def test_self_update_produces_valid_delta():
 # Dialogue — A→B reaction loop
 # ─────────────────────────────────────────────────────────────────────────
 
+
 def test_dialogue_conversation_turn_returns_valid_reaction():
     from living_world.agents.dialogue import DialogueGenerator
 
     world = World()
-    tile = Tile(tile_id="t", display_name="T", primary_pack="scp",
-                 tile_type="hallway")
+    tile = Tile(tile_id="t", display_name="T", primary_pack="scp", tile_type="hallway")
     world.add_tile(tile)
-    speaker = Agent(agent_id="kondraki", pack_id="scp",
-                     display_name="Dr. Kondraki",
-                     persona_card="Reckless researcher; has crossed lines.",
-                     alignment="chaotic_neutral", current_tile="t")
-    listener = Agent(agent_id="glass", pack_id="scp",
-                      display_name="Dr. Glass",
-                      persona_card="Cautious by-the-book researcher.",
-                      alignment="lawful_neutral", current_tile="t")
-    world.add_agent(speaker); world.add_agent(listener)
+    speaker = Agent(
+        agent_id="kondraki",
+        pack_id="scp",
+        display_name="Dr. Kondraki",
+        persona_card="Reckless researcher; has crossed lines.",
+        alignment="chaotic_neutral",
+        current_tile="t",
+    )
+    listener = Agent(
+        agent_id="glass",
+        pack_id="scp",
+        display_name="Dr. Glass",
+        persona_card="Cautious by-the-book researcher.",
+        alignment="lawful_neutral",
+        current_tile="t",
+    )
+    world.add_agent(speaker)
+    world.add_agent(listener)
 
     event = LegendEvent(
-        event_id="e", tick=5, pack_id="scp", tile_id="t",
+        event_id="e",
+        tick=5,
+        pack_id="scp",
+        tile_id="t",
         event_kind="confrontation",
-        participants=["kondraki", "glass"], outcome="failure",
+        participants=["kondraki", "glass"],
+        outcome="failure",
         template_rendering="Kondraki shouted Glass down in the hall over a containment shortcut.",
         importance=0.6,
     )
@@ -193,15 +227,20 @@ def test_dialogue_conversation_turn_returns_valid_reaction():
 # Planner — weekly plan
 # ─────────────────────────────────────────────────────────────────────────
 
+
 def test_planner_produces_valid_plan_dict():
     from living_world.agents.planner import AgentPlanner
 
     world = World()
-    a = Agent(agent_id="bright", pack_id="scp", display_name="Dr. Bright",
-              persona_card="Sarcastic senior researcher with too many strange items.",
-              alignment="chaotic_neutral",
-              current_goal="finish weekly SCP-173 observation summary",
-              tags={"researcher", "scp"})
+    a = Agent(
+        agent_id="bright",
+        pack_id="scp",
+        display_name="Dr. Bright",
+        persona_card="Sarcastic senior researcher with too many strange items.",
+        alignment="chaotic_neutral",
+        current_goal="finish weekly SCP-173 observation summary",
+        tags={"researcher", "scp"},
+    )
     world.add_agent(a)
     p = AgentPlanner(_client())
     plan = p.plan_for_agent(a, world, memory_store=None)
@@ -218,22 +257,35 @@ def test_planner_produces_valid_plan_dict():
 # Emergent event — LLM invents an event from scratch
 # ─────────────────────────────────────────────────────────────────────────
 
+
 def test_emergent_proposer_can_invent_event():
     from living_world.agents.emergent import EmergentEventProposer
 
     world = World()
-    tile = Tile(tile_id="lounge", display_name="Lounge",
-                 primary_pack="scp", tile_type="social-area")
+    tile = Tile(
+        tile_id="lounge", display_name="Lounge", primary_pack="scp", tile_type="social-area"
+    )
     world.add_tile(tile)
-    a = Agent(agent_id="kondraki", pack_id="scp", display_name="Dr. Kondraki",
-              persona_card="Reckless researcher.", current_tile="lounge",
-              tags={"researcher"})
-    b = Agent(agent_id="glass", pack_id="scp", display_name="Dr. Glass",
-              persona_card="Cautious researcher.", current_tile="lounge",
-              tags={"researcher"})
+    a = Agent(
+        agent_id="kondraki",
+        pack_id="scp",
+        display_name="Dr. Kondraki",
+        persona_card="Reckless researcher.",
+        current_tile="lounge",
+        tags={"researcher"},
+    )
+    b = Agent(
+        agent_id="glass",
+        pack_id="scp",
+        display_name="Dr. Glass",
+        persona_card="Cautious researcher.",
+        current_tile="lounge",
+        tags={"researcher"},
+    )
     a.adjust_affinity("glass", -50, 1)  # they hate each other
     b.adjust_affinity("kondraki", -50, 1)
-    world.add_agent(a); world.add_agent(b)
+    world.add_agent(a)
+    world.add_agent(b)
 
     proposer = EmergentEventProposer(_client())
     event = proposer.propose(tile, world)
@@ -251,14 +303,23 @@ def test_emergent_proposer_can_invent_event():
 # Subjective perception — first-person reframing
 # ─────────────────────────────────────────────────────────────────────────
 
+
 def test_perception_returns_first_person_text():
     from living_world.agents.perception import SubjectivePerception
 
-    a = Agent(agent_id="d-9012", pack_id="scp", display_name="D-9012",
-              persona_card="A weary test subject who keeps his head down.")
+    a = Agent(
+        agent_id="d-9012",
+        pack_id="scp",
+        display_name="D-9012",
+        persona_card="A weary test subject who keeps his head down.",
+    )
     event = LegendEvent(
-        event_id="e", tick=8, pack_id="scp", tile_id="d-holding",
-        event_kind="173-snap-neck", participants=["d-9012"],
+        event_id="e",
+        tick=8,
+        pack_id="scp",
+        tile_id="d-holding",
+        event_kind="173-snap-neck",
+        participants=["d-9012"],
         outcome="failure",
         template_rendering="D-9045 was killed by SCP-173 while D-9012 watched.",
         importance=0.7,
@@ -273,12 +334,13 @@ def test_perception_returns_first_person_text():
 # End-to-end: real Ollama, 3 ticks, all hooks wired
 # ─────────────────────────────────────────────────────────────────────────
 
+
 def test_end_to_end_three_ticks_with_real_ollama():
     """The full engine runs 3 ticks with real Ollama and produces real LLM
     activity. Verifies wiring is correct under live conditions, not just
     that prompts parse."""
-    from living_world.factory import bootstrap_world, make_engine
     from living_world.config import load_settings
+    from living_world.factory import bootstrap_world, make_engine
 
     settings = load_settings()
     # Force LLM on (overrides yaml defaults if user set to none)
@@ -297,7 +359,6 @@ def test_end_to_end_three_ticks_with_real_ollama():
     if engine.memory is not None:
         # at least one agent should have memories
         any_remembered = any(
-            engine.memory.count(a.agent_id) > 0
-            for a in list(world.living_agents())[:5]
+            engine.memory.count(a.agent_id) > 0 for a in list(world.living_agents())[:5]
         )
         assert any_remembered, "No agent remembered any event after 3 ticks"

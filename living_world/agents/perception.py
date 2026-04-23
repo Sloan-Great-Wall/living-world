@@ -29,7 +29,6 @@ from living_world.core.agent import Agent
 from living_world.core.event import LegendEvent
 from living_world.llm.base import LLMClient
 
-
 SYSTEM_PROMPT = """You ARE the character below. Rewrite what just happened
 from YOUR first-person perspective, as a memory you would later recall.
 
@@ -54,15 +53,13 @@ def _build_prompt(agent: Agent, event: LegendEvent) -> str:
         parts.append(f"  Goal: {agent.current_goal}")
     beliefs = agent.get_beliefs()
     if beliefs:
-        parts.append(
-            "  Beliefs: " + " | ".join(
-                f"{k}: {v}" for k, v in list(beliefs.items())[:3]
-            )
-        )
+        parts.append("  Beliefs: " + " | ".join(f"{k}: {v}" for k, v in list(beliefs.items())[:3]))
     parts.append("")
     parts.append(f"WHAT OBJECTIVELY HAPPENED (day {event.tick})")
     parts.append(f"  Kind: {event.event_kind} ({event.outcome})")
-    parts.append(f"  Others involved: {', '.join(p for p in event.participants if p != agent.agent_id) or '(none)'}")
+    parts.append(
+        f"  Others involved: {', '.join(p for p in event.participants if p != agent.agent_id) or '(none)'}"
+    )
     parts.append(f"  Objective record: {event.best_rendering()[:280]}")
     parts.append("")
     parts.append("Now write your first-person memory of this moment:")
@@ -89,9 +86,9 @@ class SubjectivePerception:
         """Return a first-person rewrite, or the objective rendering on failure."""
         fallback = event.best_rendering()
         try:
-            resp = self.client.complete(_build_prompt(agent, event),
-                                         max_tokens=120, temperature=0.7,
-                                         system=SYSTEM_PROMPT)
+            resp = self.client.complete(
+                _build_prompt(agent, event), max_tokens=120, temperature=0.7, system=SYSTEM_PROMPT
+            )
         except Exception:
             return fallback
         return _clean(resp.text, fallback)
@@ -101,8 +98,9 @@ class SubjectivePerception:
         from every participant's POV in parallel."""
         fallback = event.best_rendering()
         try:
-            resp = await self.client.acomplete(_build_prompt(agent, event),
-                                                max_tokens=120, temperature=0.7)
+            resp = await self.client.acomplete(
+                _build_prompt(agent, event), max_tokens=120, temperature=0.7
+            )
         except Exception:
             return fallback
         return _clean(resp.text, fallback)

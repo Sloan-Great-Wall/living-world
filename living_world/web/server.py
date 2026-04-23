@@ -18,9 +18,9 @@ POST /api/tick               advance N ticks    body: {n:int}
 Single shared engine instance (Stage A single-user model). Re-bootstrap
 discards the previous world.
 """
+
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -28,6 +28,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from living_world import PACKS_DIR
+from living_world.config import load_settings
+from living_world.factory import bootstrap_world, make_engine
+from living_world.queries import (
+    diversity_summary,
+    event_kind_distribution,
+    export_chronicle_markdown,
+    feature_status,
+)
 
 
 class BootstrapBody(BaseModel):
@@ -37,14 +45,6 @@ class BootstrapBody(BaseModel):
 
 class TickBody(BaseModel):
     n: int = 1
-from living_world.config import load_settings
-from living_world.factory import bootstrap_world, make_engine
-from living_world.queries import (
-    diversity_summary,
-    event_kind_distribution,
-    export_chronicle_markdown,
-    feature_status,
-)
 
 
 class _State:
@@ -66,53 +66,78 @@ def _need_engine():
 # Every key returned to the frontend is camelCase so the eventual
 # TS-sim port produces identical JSON shape — zero-change UI migration.
 
+
 def _agent_dict(a, full: bool = False) -> dict:
     base = {
-        "id": a.agent_id, "name": a.display_name, "pack": a.pack_id,
-        "alignment": a.alignment, "isHf": a.is_historical_figure,
-        "alive": a.is_alive(), "tile": a.current_tile,
-        "x": a.x, "y": a.y, "tags": sorted(a.tags),
+        "id": a.agent_id,
+        "name": a.display_name,
+        "pack": a.pack_id,
+        "alignment": a.alignment,
+        "isHf": a.is_historical_figure,
+        "alive": a.is_alive(),
+        "tile": a.current_tile,
+        "x": a.x,
+        "y": a.y,
+        "tags": sorted(a.tags),
     }
     if not full:
         return base
-    base.update({
-        "persona": (a.persona_card or "").strip(),
-        "goal": a.current_goal,
-        "needs": a.get_needs(),
-        "emotions": a.get_emotions(),
-        "attributes": dict(a.attributes),
-        "beliefs": a.get_beliefs(),
-        "motivations": a.get_motivations(),
-        "weeklyPlan": a.get_weekly_plan(),
-        "relationships": [
-            {"target": r.target_id, "kind": r.kind, "affinity": r.affinity}
-            for r in sorted(a.relationships.values(),
-                            key=lambda r: -abs(r.affinity))[:10]
-        ],
-    })
+    base.update(
+        {
+            "persona": (a.persona_card or "").strip(),
+            "goal": a.current_goal,
+            "needs": a.get_needs(),
+            "emotions": a.get_emotions(),
+            "attributes": dict(a.attributes),
+            "beliefs": a.get_beliefs(),
+            "motivations": a.get_motivations(),
+            "weeklyPlan": a.get_weekly_plan(),
+            "relationships": [
+                {"target": r.target_id, "kind": r.kind, "affinity": r.affinity}
+                for r in sorted(a.relationships.values(), key=lambda r: -abs(r.affinity))[:10]
+            ],
+        }
+    )
     return base
 
 
 def _event_dict(e) -> dict:
     return {
-        "id": e.event_id, "tick": e.tick, "pack": e.pack_id, "tile": e.tile_id,
-        "kind": e.event_kind, "outcome": e.outcome,
-        "importance": e.importance, "tier": e.tier_used,
-        "isEmergent": e.is_emergent, "participants": e.participants,
+        "id": e.event_id,
+        "tick": e.tick,
+        "pack": e.pack_id,
+        "tile": e.tile_id,
+        "kind": e.event_kind,
+        "outcome": e.outcome,
+        "importance": e.importance,
+        "tier": e.tier_used,
+        "isEmergent": e.is_emergent,
+        "participants": e.participants,
         "narrative": e.best_rendering(),
     }
 
 
 def _world_snapshot() -> dict:
     if STATE.world is None:
-        return {"loaded": False, "tick": 0, "packs": [], "agentsAlive": 0,
-                "agentsTotal": 0, "eventsTotal": 0, "deaths": 0,
-                "chapters": 0, "tiles": 0, "diversity": None,
-                "modelTier2": STATE.settings.llm.ollama_tier2_model,
-                "modelTier3": STATE.settings.llm.ollama_tier3_model}
+        return {
+            "loaded": False,
+            "tick": 0,
+            "packs": [],
+            "agentsAlive": 0,
+            "agentsTotal": 0,
+            "eventsTotal": 0,
+            "deaths": 0,
+            "chapters": 0,
+            "tiles": 0,
+            "diversity": None,
+            "modelTier2": STATE.settings.llm.ollama_tier2_model,
+            "modelTier3": STATE.settings.llm.ollama_tier3_model,
+        }
     w = STATE.world
     return {
-        "loaded": True, "tick": w.current_tick, "packs": STATE.loaded_packs,
+        "loaded": True,
+        "tick": w.current_tick,
+        "packs": STATE.loaded_packs,
         "agentsAlive": sum(1 for _ in w.living_agents()),
         "agentsTotal": sum(1 for _ in w.all_agents()),
         "eventsTotal": w.event_count(),
@@ -127,9 +152,12 @@ def _world_snapshot() -> dict:
 
 def _tile_dict(t) -> dict:
     return {
-        "id": t.tile_id, "name": t.display_name,
-        "pack": t.primary_pack, "type": t.tile_type,
-        "x": getattr(t, "x", 0.0), "y": getattr(t, "y", 0.0),
+        "id": t.tile_id,
+        "name": t.display_name,
+        "pack": t.primary_pack,
+        "type": t.tile_type,
+        "x": getattr(t, "x", 0.0),
+        "y": getattr(t, "y", 0.0),
     }
 
 
@@ -139,7 +167,8 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        allow_methods=["*"], allow_headers=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     @app.post("/api/bootstrap")
@@ -186,8 +215,7 @@ def create_app() -> FastAPI:
         out = _agent_dict(a, full=True)
         # camelCase by API hygiene rule (KNOWN_ISSUES TS-port plan)
         out["recentEvents"] = [
-            _event_dict(e) for e in STATE.world.events_since(1)
-            if agent_id in e.participants
+            _event_dict(e) for e in STATE.world.events_since(1) if agent_id in e.participants
         ][-15:]
         return out
 
@@ -195,6 +223,32 @@ def create_app() -> FastAPI:
     def tiles():
         _need_engine()
         return [_tile_dict(t) for t in STATE.world.all_tiles()]
+
+    @app.get("/api/social_graph")
+    def social_graph():
+        """Lightweight projection for client-side social-metrics compute.
+
+        Returns just (agentId, packId, alive, relationships) — exactly
+        what `@living-world/sim-core` `computeSocialMetrics` consumes.
+        Keeping the heavy computation client-side proves the TS port is
+        a real consumer (not just an isomorphic re-implementation
+        sitting unused). Server stays a thin data tap.
+        """
+        _need_engine()
+        agents_payload = []
+        for a in STATE.world.all_agents():
+            agents_payload.append(
+                {
+                    "agentId": a.agent_id,
+                    "packId": a.pack_id,
+                    "alive": a.is_alive(),
+                    "relationships": [
+                        {"targetId": r.target_id, "affinity": int(r.affinity)}
+                        for r in a.relationships.values()
+                    ],
+                }
+            )
+        return {"agents": agents_payload}
 
     @app.get("/api/events")
     def events(since: int = 1, limit: int = 80):
@@ -233,7 +287,8 @@ def create_app() -> FastAPI:
         prompt the user to Reset → Simulate again after important
         changes (model swap, packs, feature flags).
         """
-        from living_world.config import save_settings, Settings
+        from living_world.config import Settings, save_settings
+
         current = STATE.settings.model_dump()
         for section, fields in payload.items():
             if isinstance(fields, dict) and isinstance(current.get(section), dict):
@@ -243,7 +298,7 @@ def create_app() -> FastAPI:
         try:
             new_settings = Settings(**current)
         except Exception as e:
-            raise HTTPException(400, f"invalid settings: {e}")
+            raise HTTPException(400, f"invalid settings: {e}") from e
         STATE.settings = new_settings
         save_settings(new_settings)
         return STATE.settings.model_dump()
@@ -260,8 +315,7 @@ def create_app() -> FastAPI:
     @app.get("/api/packs_available")
     def packs_available():
         return sorted(
-            p.name for p in PACKS_DIR.iterdir()
-            if p.is_dir() and (p / "pack.yaml").exists()
+            p.name for p in PACKS_DIR.iterdir() if p.is_dir() and (p / "pack.yaml").exists()
         )
 
     @app.get("/api/templates")
@@ -271,13 +325,15 @@ def create_app() -> FastAPI:
         out: list[dict] = []
         for pack_id, pack in STATE.engine.packs.items():
             for kind, t in pack.events.items():
-                out.append({
-                    "pack": pack_id,
-                    "eventKind": kind,
-                    "description": getattr(t, "description", "") or "",
-                    "baseImportance": getattr(t, "base_importance", 0.0),
-                    "source": getattr(t, "source", "yaml"),
-                })
+                out.append(
+                    {
+                        "pack": pack_id,
+                        "eventKind": kind,
+                        "description": getattr(t, "description", "") or "",
+                        "baseImportance": getattr(t, "base_importance", 0.0),
+                        "source": getattr(t, "source", "yaml"),
+                    }
+                )
         out.sort(key=lambda r: (r["pack"], -r["baseImportance"]))
         return out
 
@@ -292,15 +348,17 @@ def create_app() -> FastAPI:
         out: list[dict] = []
         for pack_id, pack in STATE.engine.packs.items():
             for p in pack.personas:
-                out.append({
-                    "id": p.agent_id,
-                    "name": p.display_name,
-                    "pack": pack_id,
-                    "alignment": getattr(p, "alignment", "neutral"),
-                    "isHf": getattr(p, "is_historical_figure", False),
-                    "tags": sorted(getattr(p, "tags", set())),
-                    "persona": (getattr(p, "persona_card", "") or "").strip(),
-                })
+                out.append(
+                    {
+                        "id": p.agent_id,
+                        "name": p.display_name,
+                        "pack": pack_id,
+                        "alignment": getattr(p, "alignment", "neutral"),
+                        "isHf": getattr(p, "is_historical_figure", False),
+                        "tags": sorted(getattr(p, "tags", set())),
+                        "persona": (getattr(p, "persona_card", "") or "").strip(),
+                    }
+                )
         return out
 
     @app.get("/api/health")

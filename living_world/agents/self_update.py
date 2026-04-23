@@ -27,7 +27,6 @@ from living_world.core.agent import Agent
 from living_world.core.event import LegendEvent
 from living_world.llm.base import LLMClient
 
-
 SYSTEM_PROMPT = """You ARE the character below. Something just happened to you.
 Report how the experience changed your inner state.
 
@@ -89,15 +88,9 @@ def _build_prompt(agent: Agent, event: LegendEvent) -> str:
         attrs = " ".join(f"{k}:{v}" for k, v in list(agent.attributes.items())[:8])
         parts.append(f"  Attributes: {attrs}")
     needs = agent.get_needs()
-    parts.append(
-        "  Needs: "
-        + " ".join(f"{k}:{v:.0f}" for k, v in needs.items())
-    )
+    parts.append("  Needs: " + " ".join(f"{k}:{v:.0f}" for k, v in needs.items()))
     emotions = agent.get_emotions()
-    parts.append(
-        "  Emotions: "
-        + " ".join(f"{k}:{v:.0f}" for k, v in emotions.items())
-    )
+    parts.append("  Emotions: " + " ".join(f"{k}:{v:.0f}" for k, v in emotions.items()))
     beliefs = agent.get_beliefs()
     if beliefs:
         bits = " | ".join(f"{k}: {v}" for k, v in list(beliefs.items())[:3])
@@ -108,7 +101,7 @@ def _build_prompt(agent: Agent, event: LegendEvent) -> str:
     parts.append(f"  Event: {event.event_kind} ({event.outcome}, day {event.tick})")
     parts.append(f"  Where: {event.tile_id}")
     parts.append(
-        f"  Others involved: "
+        "  Others involved: "
         + (", ".join(p for p in event.participants if p != agent.agent_id) or "(none)")
     )
     parts.append(f"  What it was: {event.best_rendering()[:280]}")
@@ -118,9 +111,18 @@ def _build_prompt(agent: Agent, event: LegendEvent) -> str:
 
 
 # ── Validator constants ───────────────────────────────────────────────────
-_PROTECTED_TAGS = {"scp", "cthulhu", "liaozhai", "anomaly",
-                    "great-old-one", "outer-god", "deity",
-                    "permanent_historical", "d-class", "researcher"}
+_PROTECTED_TAGS = {
+    "scp",
+    "cthulhu",
+    "liaozhai",
+    "anomaly",
+    "great-old-one",
+    "outer-god",
+    "deity",
+    "permanent_historical",
+    "d-class",
+    "researcher",
+}
 _NEED_KEYS = {"hunger", "safety"}
 _EMOTION_KEYS = {"fear", "joy", "anger"}
 _BANNED_TAGS = {"deceased", "alive", "born"}  # state changes only via rules
@@ -180,17 +182,27 @@ class AgentSelfUpdate:
     def __init__(self, client: LLMClient) -> None:
         self.client = client
         # Diagnostic counters
-        self.stats = {"calls": 0, "llm_error": 0, "parse_fail": 0,
-                       "empty_dict": 0, "ok_real": 0, "ok_fallback": 0}
+        self.stats = {
+            "calls": 0,
+            "llm_error": 0,
+            "parse_fail": 0,
+            "empty_dict": 0,
+            "ok_real": 0,
+            "ok_fallback": 0,
+        }
 
     def apply(self, agent: Agent, event: LegendEvent) -> dict:
         """Mutate the agent based on LLM-emitted delta. Returns the parsed
         delta for logging (empty dict on any failure or noise)."""
         self.stats["calls"] += 1
         try:
-            resp = self.client.complete(_build_prompt(agent, event),
-                                         max_tokens=380, temperature=0.7,
-                                         json_mode=True, system=SYSTEM_PROMPT)
+            resp = self.client.complete(
+                _build_prompt(agent, event),
+                max_tokens=380,
+                temperature=0.7,
+                json_mode=True,
+                system=SYSTEM_PROMPT,
+            )
         except Exception:
             self.stats["llm_error"] += 1
             return {}
@@ -202,9 +214,9 @@ class AgentSelfUpdate:
         Big tick-time win for events with 2-4 participants."""
         self.stats["calls"] += 1
         try:
-            resp = await self.client.acomplete(_build_prompt(agent, event),
-                                                max_tokens=380, temperature=0.7,
-                                                json_mode=True)
+            resp = await self.client.acomplete(
+                _build_prompt(agent, event), max_tokens=380, temperature=0.7, json_mode=True
+            )
         except Exception:
             self.stats["llm_error"] += 1
             return {}
@@ -306,8 +318,11 @@ class AgentSelfUpdate:
         # Motivations
         mots = data.get("motivations")
         if isinstance(mots, list):
-            cleaned = [str(m).strip()[:80] for m in mots[:3]
-                       if isinstance(m, (str, int, float)) and str(m).strip()]
+            cleaned = [
+                str(m).strip()[:80]
+                for m in mots[:3]
+                if isinstance(m, (str, int, float)) and str(m).strip()
+            ]
             if cleaned:
                 agent.state_extra["motivations"] = cleaned
                 applied["motivations"] = cleaned

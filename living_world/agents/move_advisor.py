@@ -14,7 +14,6 @@ from living_world.core.agent import Agent
 from living_world.core.world import World
 from living_world.llm.base import LLMClient
 
-
 PROMPT_TEMPLATE = """You are deciding where a character wants to go next.
 
 CHARACTER
@@ -54,17 +53,22 @@ class LLMMoveAdvisor:
             return ""
         query = agent.current_goal or agent.display_name
         try:
-            entries = self.memory_store.recall(
-                agent.agent_id, query, top_k=2,
-                current_tick=world.current_tick if world else None,
-            ) or []
+            entries = (
+                self.memory_store.recall(
+                    agent.agent_id,
+                    query,
+                    top_k=2,
+                    current_tick=world.current_tick if world else None,
+                )
+                or []
+            )
         except Exception:
             return ""
         lines = [getattr(e, "doc", "")[:120].replace("\n", " ") for e in entries]
-        lines = [l for l in lines if l]
+        lines = [line for line in lines if line]
         if not lines:
             return ""
-        return "Relevant memories:\n" + "\n".join(f"  - {l}" for l in lines) + "\n"
+        return "Relevant memories:\n" + "\n".join(f"  - {line}" for line in lines) + "\n"
 
     def suggest(
         self,
@@ -76,10 +80,13 @@ class LLMMoveAdvisor:
             return None
         # Prompt with top 8 candidates by weight
         sorted_cands = sorted(candidates, key=lambda c: -c[1])[:8]
+        # Resolve tiles up front so the comprehension's type narrows cleanly
+        # for pyright (avoids Optional access via a separate .get_tile() call).
+        cand_tiles = [(tid, world.get_tile(tid)) for tid, _ in sorted_cands]
         cand_text = "\n".join(
-            f"- {tid} ({world.get_tile(tid).tile_type}: "
-            f"{(world.get_tile(tid).description or '')[:80]})"
-            for tid, _ in sorted_cands if world.get_tile(tid) is not None
+            f"- {tid} ({tile.tile_type}: {(tile.description or '')[:80]})"
+            for tid, tile in cand_tiles
+            if tile is not None
         )
         prompt = PROMPT_TEMPLATE.format(
             name=agent.display_name,

@@ -58,18 +58,68 @@ class TileStoryteller:
         # Phase E: optional goal-alignment hooks. Factory sets these when
         # wiring up the engine; plain TickEngine usage leaves them None and
         # the behavior is identical to before.
-        self.world = None
+        # `World` typed as Any to avoid circular import; the read sites
+        # all guard `if self.world is None` first.
+        from typing import Any as _Any
+
+        self.world: _Any = None
         self.goal_bonus: float = 1.0
 
     # Words carrying no signal. Keep in sync with movement._GOAL_STOPWORDS
     # (duplicated so this module stays standalone).
-    _GOAL_STOPWORDS: frozenset[str] = frozenset({
-        "the", "a", "an", "to", "of", "in", "on", "at", "for", "with", "from",
-        "by", "and", "or", "but", "is", "are", "was", "were", "be", "been",
-        "do", "does", "did", "have", "has", "had", "will", "would", "should",
-        "i", "me", "my", "you", "your", "he", "she", "it", "we", "they",
-        "find", "get", "go", "come", "see", "make", "take", "some", "any",
-    })
+    _GOAL_STOPWORDS: frozenset[str] = frozenset(
+        {
+            "the",
+            "a",
+            "an",
+            "to",
+            "of",
+            "in",
+            "on",
+            "at",
+            "for",
+            "with",
+            "from",
+            "by",
+            "and",
+            "or",
+            "but",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "do",
+            "does",
+            "did",
+            "have",
+            "has",
+            "had",
+            "will",
+            "would",
+            "should",
+            "i",
+            "me",
+            "my",
+            "you",
+            "your",
+            "he",
+            "she",
+            "it",
+            "we",
+            "they",
+            "find",
+            "get",
+            "go",
+            "come",
+            "see",
+            "make",
+            "take",
+            "some",
+            "any",
+        }
+    )
 
     def _resident_goal_tokens(self) -> set[str]:
         """Collect goal + weekly-plan tokens from every agent currently in the tile."""
@@ -132,7 +182,7 @@ class TileStoryteller:
             for tpl in available
         ]
         picked: list[EventTemplate] = []
-        remaining = list(zip(available, weights))
+        remaining = list(zip(available, weights, strict=True))
         for _ in range(min(n, len(available))):
             total = sum(w for _, w in remaining)
             r = self.rng.uniform(0, total)

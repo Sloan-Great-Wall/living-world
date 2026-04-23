@@ -17,11 +17,11 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, Field
 
-
 ProviderName = Literal["none", "ollama"]
 
 
 # ---- Tunable groups ----
+
 
 class LLMSettings(BaseModel):
     """Which backend to use for each tier + model names."""
@@ -47,8 +47,8 @@ class LLMSettings(BaseModel):
 
     # when provider = ollama
     ollama_base_url: str = "http://localhost:11434"
-    ollama_tier2_model: str = "gemma3:4b"   # the "agent-layer" model
-    ollama_tier3_model: str = "gemma3:4b"   # the "narrator" model
+    ollama_tier2_model: str = "gemma3:4b"  # the "agent-layer" model
+    ollama_tier3_model: str = "gemma3:4b"  # the "narrator" model
     ollama_timeout_seconds: float = 60.0
     # P4: dual-instance support. If set, tier-3 calls go to a separate
     # Ollama daemon (run on a different port). Lets tier-2 (small/fast)
@@ -99,7 +99,7 @@ class LLMSettings(BaseModel):
 
     llm_movement_enabled: bool = True
     llm_movement_hf_only: bool = True
-    llm_movement_chance: float = 0.6   # was 0.3 — HF agents now LLM-thought 60% of moves
+    llm_movement_chance: float = 0.6  # was 0.3 — HF agents now LLM-thought 60% of moves
 
     # Conscious event override — when a rule-proposed event happens, the LLM
     # may APPROVE / ADJUST / VETO based on participants' personas + memory.
@@ -107,8 +107,10 @@ class LLMSettings(BaseModel):
     # (more of those eligible actually go to LLM) ≈ humans deliberating
     # over a wider range of social situations, not just crises.
     conscious_override_enabled: bool = True
-    conscious_override_threshold: float = 0.35  # was 0.50 — lower = more events get conscious review
-    conscious_override_chance: float = 0.70     # was 0.50 — more eligible events actually fire
+    conscious_override_threshold: float = (
+        0.35  # was 0.50 — lower = more events get conscious review
+    )
+    conscious_override_chance: float = 0.70  # was 0.50 — more eligible events actually fire
 
     # ── Decision-layer LLM features (goal-driven behavior) ──
 
@@ -156,7 +158,6 @@ class LLMSettings(BaseModel):
     # the rigid pre-authored stat ripples for important events.
     self_update_enabled: bool = True
     self_update_threshold: float = 0.5
-
 
 
 class BudgetSettings(BaseModel):
@@ -214,6 +215,7 @@ class PersistenceSettings(BaseModel):
 
 class DisplaySettings(BaseModel):
     """What the user sees. Completely separate from what the LLM receives."""
+
     locale: Literal["en", "zh"] = "en"
     # "en" → show English source content as-is + no translation of generated text
     # "zh" → show Chinese locale overlay for static content + translate generated text

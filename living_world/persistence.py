@@ -6,11 +6,9 @@ Postgres: pgvector-backed, requires `pip install -e '.[db]'`.
 
 from __future__ import annotations
 
-import json
-import uuid
-from typing import Any, Protocol
+from typing import Protocol
 
-from living_world.core.agent import Agent, Item, LifeStage, Relationship
+from living_world.core.agent import Agent
 from living_world.core.event import LegendEvent
 from living_world.core.tile import Tile
 from living_world.core.world import World
@@ -34,6 +32,7 @@ class Repository(Protocol):
 # ────────────────────────────────────────────────────────────────
 # In-memory (default)
 # ────────────────────────────────────────────────────────────────
+
 
 class MemoryRepository:
     """Trivial in-memory repository — default backend for tests & single-session runs."""
@@ -72,4 +71,3 @@ class MemoryRepository:
 
     def close(self) -> None:
         pass
-

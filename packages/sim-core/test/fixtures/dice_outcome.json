@@ -1,0 +1,347 @@
+[
+  {
+    "name": "two_agents_raw1",
+    "template": {
+      "eventKind": "containment-test",
+      "baseImportance": 0.4,
+      "diceRoll": {
+        "stat": "insight",
+        "dc": 14,
+        "mod": 0
+      },
+      "triggerConditions": {
+        "requiredTags": [
+          "scp",
+          "test"
+        ]
+      }
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {
+          "insight": 14
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      },
+      {
+        "agentId": "bob",
+        "displayName": "Bob",
+        "attributes": {
+          "insight": 8
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": [
+          {
+            "tags": [
+              "test"
+            ],
+            "power": 3
+          }
+        ]
+      }
+    ],
+    "rawD20": 1,
+    "expected": "neutral"
+  },
+  {
+    "name": "two_agents_raw5",
+    "template": {
+      "eventKind": "containment-test",
+      "baseImportance": 0.4,
+      "diceRoll": {
+        "stat": "insight",
+        "dc": 14,
+        "mod": 0
+      },
+      "triggerConditions": {
+        "requiredTags": [
+          "scp",
+          "test"
+        ]
+      }
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {
+          "insight": 14
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      },
+      {
+        "agentId": "bob",
+        "displayName": "Bob",
+        "attributes": {
+          "insight": 8
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": [
+          {
+            "tags": [
+              "test"
+            ],
+            "power": 3
+          }
+        ]
+      }
+    ],
+    "rawD20": 5,
+    "expected": "neutral"
+  },
+  {
+    "name": "two_agents_raw10",
+    "template": {
+      "eventKind": "containment-test",
+      "baseImportance": 0.4,
+      "diceRoll": {
+        "stat": "insight",
+        "dc": 14,
+        "mod": 0
+      },
+      "triggerConditions": {
+        "requiredTags": [
+          "scp",
+          "test"
+        ]
+      }
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {
+          "insight": 14
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      },
+      {
+        "agentId": "bob",
+        "displayName": "Bob",
+        "attributes": {
+          "insight": 8
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": [
+          {
+            "tags": [
+              "test"
+            ],
+            "power": 3
+          }
+        ]
+      }
+    ],
+    "rawD20": 10,
+    "expected": "success"
+  },
+  {
+    "name": "two_agents_raw12",
+    "template": {
+      "eventKind": "containment-test",
+      "baseImportance": 0.4,
+      "diceRoll": {
+        "stat": "insight",
+        "dc": 14,
+        "mod": 0
+      },
+      "triggerConditions": {
+        "requiredTags": [
+          "scp",
+          "test"
+        ]
+      }
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {
+          "insight": 14
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      },
+      {
+        "agentId": "bob",
+        "displayName": "Bob",
+        "attributes": {
+          "insight": 8
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": [
+          {
+            "tags": [
+              "test"
+            ],
+            "power": 3
+          }
+        ]
+      }
+    ],
+    "rawD20": 12,
+    "expected": "success"
+  },
+  {
+    "name": "two_agents_raw15",
+    "template": {
+      "eventKind": "containment-test",
+      "baseImportance": 0.4,
+      "diceRoll": {
+        "stat": "insight",
+        "dc": 14,
+        "mod": 0
+      },
+      "triggerConditions": {
+        "requiredTags": [
+          "scp",
+          "test"
+        ]
+      }
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {
+          "insight": 14
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      },
+      {
+        "agentId": "bob",
+        "displayName": "Bob",
+        "attributes": {
+          "insight": 8
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": [
+          {
+            "tags": [
+              "test"
+            ],
+            "power": 3
+          }
+        ]
+      }
+    ],
+    "rawD20": 15,
+    "expected": "success"
+  },
+  {
+    "name": "two_agents_raw20",
+    "template": {
+      "eventKind": "containment-test",
+      "baseImportance": 0.4,
+      "diceRoll": {
+        "stat": "insight",
+        "dc": 14,
+        "mod": 0
+      },
+      "triggerConditions": {
+        "requiredTags": [
+          "scp",
+          "test"
+        ]
+      }
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {
+          "insight": 14
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      },
+      {
+        "agentId": "bob",
+        "displayName": "Bob",
+        "attributes": {
+          "insight": 8
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": [
+          {
+            "tags": [
+              "test"
+            ],
+            "power": 3
+          }
+        ]
+      }
+    ],
+    "rawD20": 20,
+    "expected": "success"
+  },
+  {
+    "name": "no_dice_neutral",
+    "template": {
+      "eventKind": "meal-break",
+      "baseImportance": 0.05,
+      "diceRoll": null,
+      "triggerConditions": {
+        "requiredTags": []
+      }
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {
+          "insight": 14
+        },
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      }
+    ],
+    "rawD20": 20,
+    "expected": "neutral"
+  }
+]

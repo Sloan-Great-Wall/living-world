@@ -1,0 +1,91 @@
+[
+  {
+    "name": "vanilla_low",
+    "event": {
+      "eventKind": "meal-break",
+      "outcome": "neutral",
+      "tileId": "t1",
+      "relationshipChanges": []
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {},
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      }
+    ],
+    "opts": {
+      "baseImportance": 0.1
+    },
+    "expected": 0.1
+  },
+  {
+    "name": "spotlight_two_hfs_failure",
+    "event": {
+      "eventKind": "containment-breach",
+      "outcome": "failure",
+      "tileId": "t1",
+      "relationshipChanges": [
+        {},
+        {}
+      ]
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {},
+        "isHistoricalFigure": true,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      },
+      {
+        "agentId": "bob",
+        "displayName": "Bob",
+        "attributes": {},
+        "isHistoricalFigure": true,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      }
+    ],
+    "opts": {
+      "baseImportance": 0.6
+    },
+    "expected": 0.9299999999999999
+  },
+  {
+    "name": "with_active_player",
+    "event": {
+      "eventKind": "meal-break",
+      "outcome": "neutral",
+      "tileId": "t1",
+      "relationshipChanges": []
+    },
+    "participants": [
+      {
+        "agentId": "alice",
+        "displayName": "Alice",
+        "attributes": {},
+        "isHistoricalFigure": false,
+        "beliefs": {},
+        "weeklyPlan": {},
+        "motivations": [],
+        "inventory": []
+      }
+    ],
+    "opts": {
+      "baseImportance": 0.2,
+      "tileHasActivePlayer": true
+    },
+    "expected": 0.55
+  }
+]

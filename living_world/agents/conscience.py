@@ -16,11 +16,10 @@ import re
 from dataclasses import dataclass
 
 from living_world.core.agent import Agent
-from living_world.core.event import EventProposal, LegendEvent
+from living_world.core.event import EventProposal
 from living_world.core.world import World
 from living_world.llm.base import LLMClient
 from living_world.world_pack import EventTemplate
-
 
 SYSTEM_PROMPT = """You decide whether characters actually carry out a proposed action.
 You know their persona, current goal, and recent history. The rules machine has
@@ -42,8 +41,8 @@ Keep reasons to <15 words. Be decisive — most proposals should APPROVE.
 
 @dataclass
 class ConsciousVerdict:
-    verdict: str           # "APPROVE" | "ADJUST" | "VETO"
-    outcome: str | None    # only set when ADJUST
+    verdict: str  # "APPROVE" | "ADJUST" | "VETO"
+    outcome: str | None  # only set when ADJUST
     reason: str = ""
 
     @property
@@ -129,23 +128,32 @@ class ConsciousnessLayer:
                 bits = [f"{k}: {v}" for k, v in list(beliefs.items())[:3]]
                 parts.append(f"    Beliefs: {' | '.join(bits)}")
             # Recent events this agent was in
-            recent = [e for e in world.events_since(max(1, world.current_tick - 3))
-                      if a.agent_id in e.participants][-2:]
+            recent = [
+                e
+                for e in world.events_since(max(1, world.current_tick - 3))
+                if a.agent_id in e.participants
+            ][-2:]
             if recent:
                 parts.append(f"    Recent: {' | '.join(e.best_rendering()[:80] for e in recent)}")
             # Memory recall — relevant memories for this event
             if self.memory is not None:
                 try:
                     query = f"{template.event_kind} {proposal.tile_id}"
-                    entries = self.memory.recall(
-                        a.agent_id, query, top_k=3,
-                        current_tick=world.current_tick,
-                    ) or []
+                    entries = (
+                        self.memory.recall(
+                            a.agent_id,
+                            query,
+                            top_k=3,
+                            current_tick=world.current_tick,
+                        )
+                        or []
+                    )
                 except Exception:
                     entries = []
                 if entries:
-                    snippets = [e.doc[:110].replace("\n", " ")
-                                for e in entries if getattr(e, "doc", None)]
+                    snippets = [
+                        e.doc[:110].replace("\n", " ") for e in entries if getattr(e, "doc", None)
+                    ]
                     if snippets:
                         parts.append(f"    Relevant memories: {' || '.join(snippets)}")
 
@@ -217,4 +225,3 @@ class ConsciousnessLayer:
             "adjustments": self.adjustments,
             "vetoes": self.vetoes,
         }
-

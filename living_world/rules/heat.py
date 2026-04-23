@@ -35,7 +35,7 @@ def score_tile_heat(tile: Tile, world: World, *, recent_ticks: int = 3) -> float
     hf_count = sum(1 for a in residents if a.is_historical_figure)
     strong_pairs = 0
     for i, a in enumerate(residents):
-        for b in residents[i + 1:]:
+        for b in residents[i + 1 :]:
             if abs(a.get_affinity(b.agent_id)) >= 40:
                 strong_pairs += 1
     since = max(1, world.current_tick - recent_ticks)

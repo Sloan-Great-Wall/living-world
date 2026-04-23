@@ -19,7 +19,6 @@ from living_world.core.agent import Agent, LifeStage
 from living_world.core.event import LegendEvent
 from living_world.core.world import World
 
-
 # ─── Lethal SCP rules: tag triggers + victim filter ────────────────────────
 #
 # Authoring principle: filters reflect *canonical victim profile*, not game
@@ -28,8 +27,16 @@ from living_world.core.world import World
 #
 # Special-case tags universally exempt from physical lethal interactions
 # (mostly other anomalies that 173 can't snap, fellow Keter-class, etc.).
-HUMAN_TAGS = {"d-class", "staff", "researcher", "field-agent", "elite",
-              "psychologist", "antiquarian", "o5"}
+HUMAN_TAGS = {
+    "d-class",
+    "staff",
+    "researcher",
+    "field-agent",
+    "elite",
+    "psychologist",
+    "antiquarian",
+    "o5",
+}
 
 LETHAL_SCP_RULES: dict[str, dict] = {
     # SCP-173: attacks ANY human in the tile if eye contact lapses. No role
@@ -48,7 +55,7 @@ LETHAL_SCP_RULES: dict[str, dict] = {
     # the room is collateral.
     "SCP-096": {
         "victim_tags": HUMAN_TAGS,
-        "trigger_attr": "threat",                        # requires agitated state (>=80)
+        "trigger_attr": "threat",  # requires agitated state (>=80)
         "kind": "096-rampage",
         "template": "[$tile] SCP-096's face was inadvertently exposed. ${victim} did not survive the response that followed.",
         "kills": True,
@@ -89,8 +96,7 @@ LETHAL_CTHULHU_RULES: dict[str, dict] = {
     # target scholars and investigators who learn too much, but also
     # reporters, locals — anyone whose mind is worth keeping.
     "mi-go-envoy": {
-        "victim_tags": {"investigator", "local", "scholar", "academic",
-                        "reporter", "antiquarian"},
+        "victim_tags": {"investigator", "local", "scholar", "academic", "reporter", "antiquarian"},
         "kind": "mi-go-harvest",
         "template": "[$tile] The Mi-go envoy extracted ${victim}'s brain canister by quiet agreement. Only the canister will remain.",
         "kills": True,
@@ -103,8 +109,7 @@ LETHAL_LIAOZHAI_RULES: dict[str, dict] = {
     # any unprotected mortal (官、商、农) are valid prey. Cultivators
     # (monk, fox-spirit) can resist; this filter encodes the survival edge.
     "yaksha-shi": {
-        "victim_tags": {"scholar", "mortal", "academic", "official",
-                        "merchant", "antiquarian"},
+        "victim_tags": {"scholar", "mortal", "academic", "official", "merchant", "antiquarian"},
         "unless_any_tag": {"monk", "fox-spirit"},
         "kind": "yaksha-takes-soul",
         "template": "[$tile] The yaksha of Lanruo Temple fell upon ${victim} in the dark. No sunrise watcher found the body — only the bell's last echo.",
@@ -120,7 +125,7 @@ LETHAL_LIAOZHAI_RULES: dict[str, dict] = {
         "kind": "ghost-lure",
         "template": "[$tile] Nie Xiaoqian appeared at ${victim}'s lamp-lit corner. They spoke half the night. In the morning ${victim} looked paler by a tone.",
         "kills": False,
-        "lethal_chance": 0.08,   # rare actual death (coerced by the yaksha)
+        "lethal_chance": 0.08,  # rare actual death (coerced by the yaksha)
     },
 }
 
@@ -163,7 +168,9 @@ def _render(template: str, victim: Agent, tile_id: str, attacker: Agent | None =
     out = template.replace("$tile", tile_id).replace("${tile}", tile_id)
     out = out.replace("${victim}", victim.display_name).replace("$victim", victim.display_name)
     if attacker:
-        out = out.replace("${attacker}", attacker.display_name).replace("$attacker", attacker.display_name)
+        out = out.replace("${attacker}", attacker.display_name).replace(
+            "$attacker", attacker.display_name
+        )
     return out
 
 
@@ -198,9 +205,11 @@ class InteractionEngine:
                     continue
                 # Pick a victim
                 victim_tags = rule.get("victim_tags", set())
-                victims = [a for a in residents
-                           if a is not predator
-                           and (not victim_tags or (victim_tags & a.tags))]
+                victims = [
+                    a
+                    for a in residents
+                    if a is not predator and (not victim_tags or (victim_tags & a.tags))
+                ]
                 if not victims:
                     continue
                 if self.rng.random() > rule.get("lethal_chance", 0.4):
@@ -210,14 +219,17 @@ class InteractionEngine:
                 # Snapshot witnesses BEFORE the kill — anyone alive in tile
                 # who is not the predator or victim.
                 witness_ids = [
-                    a.agent_id for a in residents
+                    a.agent_id
+                    for a in residents
                     if a.agent_id != predator.agent_id
                     and a.agent_id != victim.agent_id
                     and a.is_alive()
                 ]
                 evt = LegendEvent(
                     event_id=str(uuid.uuid4()),
-                    tick=tick, pack_id=predator.pack_id, tile_id=tile_id,
+                    tick=tick,
+                    pack_id=predator.pack_id,
+                    tile_id=tile_id,
                     event_kind=rule["kind"],
                     participants=[predator.agent_id, victim.agent_id],
                     witnesses=witness_ids,
@@ -237,9 +249,11 @@ class InteractionEngine:
                 if not rule:
                     continue
                 victim_tags = rule.get("victim_tags", set())
-                victims = [a for a in residents
-                           if a is not predator
-                           and (not victim_tags or (victim_tags & a.tags))]
+                victims = [
+                    a
+                    for a in residents
+                    if a is not predator and (not victim_tags or (victim_tags & a.tags))
+                ]
                 if not victims:
                     continue
                 if self.rng.random() > 0.4:  # moderate trigger rate
@@ -247,7 +261,9 @@ class InteractionEngine:
                 victim = self.rng.choice(victims)
                 evt = LegendEvent(
                     event_id=str(uuid.uuid4()),
-                    tick=tick, pack_id=predator.pack_id, tile_id=tile_id,
+                    tick=tick,
+                    pack_id=predator.pack_id,
+                    tile_id=tile_id,
                     event_kind=rule["kind"],
                     participants=[predator.agent_id, victim.agent_id],
                     outcome="success" if rule.get("beneficial") else "neutral",
@@ -269,7 +285,7 @@ class InteractionEngine:
             if len(residents) < 2:
                 continue
             for i, a in enumerate(residents):
-                for b in residents[i + 1:]:
+                for b in residents[i + 1 :]:
                     if a.agent_id == b.agent_id:
                         continue
                     aff = a.get_affinity(b.agent_id)
@@ -283,7 +299,9 @@ class InteractionEngine:
                     b.adjust_affinity(a.agent_id, +3, tick)
                     evt = LegendEvent(
                         event_id=str(uuid.uuid4()),
-                        tick=tick, pack_id=a.pack_id, tile_id=tile_id,
+                        tick=tick,
+                        pack_id=a.pack_id,
+                        tile_id=tile_id,
                         event_kind=kind,
                         participants=[a.agent_id, b.agent_id],
                         outcome="success",
@@ -302,14 +320,19 @@ class InteractionEngine:
             predators = [a for a in residents if a.agent_id in ALL_LETHAL_RULES]
             if not predators:
                 continue
-            frightened = [a for a in residents
-                          if a not in predators
-                          and {"d-class", "scholar", "mortal"} & a.tags
-                          and self.rng.random() < 0.1]
+            frightened = [
+                a
+                for a in residents
+                if a not in predators
+                and {"d-class", "scholar", "mortal"} & a.tags
+                and self.rng.random() < 0.1
+            ]
             for prey in frightened:
                 evt = LegendEvent(
                     event_id=str(uuid.uuid4()),
-                    tick=tick, pack_id=prey.pack_id, tile_id=tile_id,
+                    tick=tick,
+                    pack_id=prey.pack_id,
+                    tile_id=tile_id,
                     event_kind="flight",
                     participants=[prey.agent_id, predators[0].agent_id],
                     outcome="success",

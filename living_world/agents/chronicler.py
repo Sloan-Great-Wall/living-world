@@ -21,7 +21,6 @@ from living_world.core.event import LegendEvent
 from living_world.core.world import World
 from living_world.llm.base import LLMClient
 
-
 SYSTEM_PROMPT = """You are a chronicler of a world simulation.
 Your job is to RECORD what has emerged, not invent what will come.
 
@@ -49,8 +48,10 @@ class Chapter:
 
 def _rank_events(events: list[LegendEvent], limit: int = 8) -> list[LegendEvent]:
     """Rank by importance desc; break ties by tier_used and participant count."""
+
     def score(e: LegendEvent) -> tuple:
         return (e.importance, e.tier_used, len(e.participants))
+
     return sorted(events, key=score, reverse=True)[:limit]
 
 
@@ -74,6 +75,7 @@ def _parse(text: str) -> tuple[str, str] | None:
     """Extract (title, body). Returns None on any parse failure."""
     import json
     import re
+
     t = (text or "").strip()
     if "```" in t:
         m = re.search(r"\{[\s\S]*\}", t)
@@ -111,8 +113,14 @@ class Chronicler:
     def __init__(self, client: LLMClient) -> None:
         self.client = client
         # Diagnostic counters
-        self.stats = {"calls": 0, "window_too_small": 0, "llm_error": 0,
-                       "parse_fail": 0, "ok": 0, "last_raw_sample": ""}
+        self.stats = {
+            "calls": 0,
+            "window_too_small": 0,
+            "llm_error": 0,
+            "parse_fail": 0,
+            "ok": 0,
+            "last_raw_sample": "",
+        }
 
     def write_chapter(
         self,
@@ -125,7 +133,8 @@ class Chronicler:
         """Return a Chapter or None (if nothing interesting enough happened)."""
         self.stats["calls"] += 1
         window = [
-            e for e in world.events_since(since_tick)
+            e
+            for e in world.events_since(since_tick)
             if e.pack_id == pack_id and e.importance >= min_importance
         ]
         if len(window) < min_events:
@@ -134,8 +143,9 @@ class Chronicler:
         ranked = _rank_events(window)
         prompt = _build_prompt(pack_id, ranked)
         try:
-            resp = self.client.complete(prompt, max_tokens=420, temperature=0.55,
-                                         json_mode=True, system=SYSTEM_PROMPT)
+            resp = self.client.complete(
+                prompt, max_tokens=420, temperature=0.55, json_mode=True, system=SYSTEM_PROMPT
+            )
         except Exception:
             self.stats["llm_error"] += 1
             return None
