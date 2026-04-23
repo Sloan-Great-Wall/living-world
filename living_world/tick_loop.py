@@ -175,14 +175,15 @@ class TickEngine:
             docs: dict[str, str] = {}
             if use_subjective:
                 import asyncio
-                tasks = [
-                    self.perception.reframe_async(a, event)
-                    for a in participant_agents if a is not None
-                ]
-                if tasks:
-                    rewritten = asyncio.run(asyncio.gather(*tasks))
-                    alive_aids = [a.agent_id for a in participant_agents if a is not None]
-                    docs = dict(zip(alive_aids, rewritten))
+                alive_agents = [a for a in participant_agents if a is not None]
+                if alive_agents:
+                    async def _gather_perception():
+                        return await asyncio.gather(*[
+                            self.perception.reframe_async(a, event)
+                            for a in alive_agents
+                        ])
+                    rewritten = asyncio.run(_gather_perception())
+                    docs = dict(zip([a.agent_id for a in alive_agents], rewritten))
             for aid in event.participants:
                 doc = docs.get(aid, event.best_rendering())
                 self.memory.remember(
@@ -232,12 +233,14 @@ class TickEngine:
                 # ── PARALLEL self-update ──
                 # Each participant's inner-state update is independent;
                 # gather them so 4-participant events still cost ~1
-                # round-trip. The mutations on agent objects are applied
-                # synchronously inside _apply_response, so no race.
-                results = asyncio.run(asyncio.gather(*[
-                    self.self_update.apply_async(agent, event)
-                    for agent in update_targets
-                ]))
+                # round-trip. asyncio.run() requires a coroutine (not a
+                # Future), so we wrap gather in an async helper.
+                async def _gather_updates():
+                    return await asyncio.gather(*[
+                        self.self_update.apply_async(agent, event)
+                        for agent in update_targets
+                    ])
+                results = asyncio.run(_gather_updates())
                 for agent, applied in zip(update_targets, results):
                     if not applied:
                         continue
