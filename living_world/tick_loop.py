@@ -99,6 +99,8 @@ class TickEngine:
         # behaviour or `engine.pipeline.insert(0, MyInboxPhase())` to extend.
         from living_world.phases import DEFAULT_PIPELINE
         self.pipeline = list(DEFAULT_PIPELINE)
+        # Per-phase latency history for telemetry / lw smoke perf table
+        self.phase_latency: dict[str, list[float]] = {}
 
         # one storyteller per tile, using its primary pack's storyteller config
         self.storytellers: dict[str, TileStoryteller] = {}
@@ -328,7 +330,13 @@ class TickEngine:
         """One virtual day. The 13-stage pipeline lives in `phases.py`;
         this method just drives it. To customise, swap `self.pipeline`
         before calling `step()` (insert/remove/reorder phases freely).
+
+        Each phase is timed and aggregated into `self.phase_latency`
+        (rolling list of seconds per phase name). `lw smoke` surfaces a
+        latency table at the end so you can see WHERE time goes —
+        prerequisite for any future optimisation.
         """
+        import time as _time
         self.world.current_tick += 1
         t = self.world.current_tick
         stats = TickStats(tick=t)
@@ -338,14 +346,17 @@ class TickEngine:
             log.tick_start(t)
 
         for phase in self.pipeline:
+            t0 = _time.time()
             try:
                 phase.run(self, t, stats)
             except Exception as exc:  # noqa: BLE001 — phase isolation
-                # One bad phase shouldn't kill the rest of the tick.
                 if log and hasattr(log, "phase_error"):
                     log.phase_error(phase.name, exc)
                 else:
                     print(f"[phase {phase.name}] error: {exc!r}")
+            # Tolerate stub engines (in tests) that don't carry phase_latency.
+            if hasattr(self, "phase_latency"):
+                self.phase_latency.setdefault(phase.name, []).append(_time.time() - t0)
 
         stats.tier1 = self.narrator.stats.tier1
         stats.tier3 = self.narrator.stats.tier3

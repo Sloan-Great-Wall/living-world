@@ -27,11 +27,18 @@ from living_world.llm.base import LLMResponse
 
 @dataclass
 class FakeClient:
-    """Returns a scripted text. Accepts json_mode kwarg for protocol parity."""
+    """Returns a scripted text. Accepts json_mode + system kwargs for
+    protocol parity with the real OllamaClient (P1 KV-cache support)."""
     scripted: str = ""
 
     def complete(self, prompt: str, max_tokens: int = 256,
-                 temperature: float = 0.7, json_mode: bool = False):
+                 temperature: float = 0.7, json_mode: bool = False,
+                 system: str = ""):
+        return LLMResponse(text=self.scripted, tokens_in=1, tokens_out=1)
+
+    async def acomplete(self, prompt: str, max_tokens: int = 256,
+                         temperature: float = 0.7, json_mode: bool = False,
+                         system: str = ""):
         return LLMResponse(text=self.scripted, tokens_in=1, tokens_out=1)
 
     def available(self) -> bool:
@@ -391,7 +398,10 @@ def test_emergent_pair_cooldown_blocks_repeat_cast():
                 f'"narrative":"{narrative}"}}'
             )
         def complete(self, prompt, max_tokens=128, temperature=0.5,
-                     json_mode=False):
+                     json_mode=False, system=""):
+            return LLMResponse(text=self.text, tokens_in=1, tokens_out=1)
+        async def acomplete(self, prompt, max_tokens=128, temperature=0.5,
+                             json_mode=False, system=""):
             return LLMResponse(text=self.text, tokens_in=1, tokens_out=1)
         def available(self): return True
 

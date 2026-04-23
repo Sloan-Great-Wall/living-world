@@ -74,11 +74,18 @@ def module_client(
     )
 
 
+def _tier3_url(settings: Settings) -> str:
+    """Resolve which Ollama URL tier-3 calls should hit. P4 dual-instance:
+    if settings.llm.ollama_tier3_base_url is set, use it (separate daemon
+    on a different port); otherwise share the tier-2 URL."""
+    return settings.llm.ollama_tier3_base_url or settings.llm.ollama_base_url
+
+
 def build_narrator(settings: Settings) -> Narrator:
     t3 = build_tier_client(
         settings.llm.tier3_provider,
         ollama_model=settings.llm.ollama_tier3_model,
-        ollama_url=settings.llm.ollama_base_url,
+        ollama_url=_tier3_url(settings),
         timeout=settings.llm.ollama_timeout_seconds,
         declared_tier=3,
     )
@@ -172,7 +179,7 @@ def make_engine(world: World, loaded: list, settings: Settings, seed: int, repos
     tier3_client_for_chronicler = build_tier_client(
         settings.llm.tier3_provider,
         ollama_model=settings.llm.ollama_tier3_model,
-        ollama_url=settings.llm.ollama_base_url,
+        ollama_url=_tier3_url(settings),  # P4: dual-instance aware
         timeout=settings.llm.ollama_timeout_seconds,
         declared_tier=3,
     )

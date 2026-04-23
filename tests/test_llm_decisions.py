@@ -32,10 +32,15 @@ class FakeClient:
     scripted: str = ""
 
     def complete(self, prompt: str, max_tokens: int = 128, temperature: float = 0.5,
-                 json_mode: bool = False):
-        # `json_mode` is accepted for protocol compat (real OllamaClient
-        # uses it to enable Ollama's format=json grammar); FakeClient just
-        # returns the scripted text either way.
+                 json_mode: bool = False, system: str = ""):
+        # `json_mode` + `system` accepted for protocol compat — the real
+        # OllamaClient uses these for grammar-constrained JSON + KV-cache
+        # reuse (P1). FakeClient ignores both, returns scripted text.
+        return LLMResponse(text=self.scripted, tokens_in=1, tokens_out=1)
+
+    async def acomplete(self, prompt: str, max_tokens: int = 128,
+                         temperature: float = 0.5, json_mode: bool = False,
+                         system: str = ""):
         return LLMResponse(text=self.scripted, tokens_in=1, tokens_out=1)
 
     def available(self) -> bool:

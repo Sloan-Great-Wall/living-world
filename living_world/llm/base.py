@@ -26,10 +26,17 @@ class LLMClient(ABC):
         max_tokens: int = 512,
         temperature: float = 0.7,
         json_mode: bool = False,
+        system: str = "",
     ) -> LLMResponse:
         """If json_mode=True the impl should constrain output to valid JSON
-        (e.g. Ollama's `format=json` grammar). Falls back to free-form text
-        if the backend doesn't support it."""
+        (e.g. Ollama's `format=json` grammar).
+
+        `system` (P1 KV-cache hint): if non-empty, treated as the system
+        prompt and kept STABLE across calls so the model's KV state for
+        this prefix can be reused. Move all variable / dynamic content
+        into `prompt`; keep instructions + examples in `system`. Backends
+        that don't support a separate system field should prepend it.
+        """
         ...
 
     async def acomplete(
@@ -39,6 +46,7 @@ class LLMClient(ABC):
         max_tokens: int = 512,
         temperature: float = 0.7,
         json_mode: bool = False,
+        system: str = "",
     ) -> LLMResponse:
         """Async variant. Default impl runs sync `complete` in a thread so
         any LLMClient gains async without per-impl plumbing. Real concurrency
@@ -47,7 +55,8 @@ class LLMClient(ABC):
         import asyncio
         return await asyncio.to_thread(
             self.complete, prompt,
-            max_tokens=max_tokens, temperature=temperature, json_mode=json_mode,
+            max_tokens=max_tokens, temperature=temperature,
+            json_mode=json_mode, system=system,
         )
 
     @property

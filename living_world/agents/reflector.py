@@ -46,7 +46,8 @@ Rules:
 
 
 def _build_prompt(agent: Agent, recent_memories: list[str]) -> str:
-    parts = [SYSTEM_PROMPT, "", "CHARACTER"]
+    # Dynamic part only — SYSTEM_PROMPT goes via system= for KV-cache (P1)
+    parts = ["CHARACTER"]
     parts.append(f"  Name: {agent.display_name}")
     parts.append(f"  Persona: {(agent.persona_card or '').strip()[:200]}")
     if agent.current_goal:
@@ -128,6 +129,7 @@ class MemoryReflector:
             resp = self.client.complete(
                 _build_prompt(agent, recent_memories),
                 max_tokens=240, temperature=0.55, json_mode=True,
+                system=SYSTEM_PROMPT,
             )
         except Exception:
             self.stats["llm_error"] += 1

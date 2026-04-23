@@ -76,7 +76,9 @@ EXAMPLE 2 — A scholar who finally cornered a fox-spirit and it laughed and van
 
 
 def _build_prompt(agent: Agent, event: LegendEvent) -> str:
-    parts = [SYSTEM_PROMPT, "", "YOU"]
+    """Returns only the DYNAMIC part. SYSTEM_PROMPT is sent separately
+    via client.complete(system=...) so Ollama can KV-cache it (P1)."""
+    parts = ["YOU"]
     parts.append(f"  Name: {agent.display_name}")
     parts.append(f"  Persona: {(agent.persona_card or '').strip()[:200]}")
     if agent.current_goal:
@@ -188,7 +190,7 @@ class AgentSelfUpdate:
         try:
             resp = self.client.complete(_build_prompt(agent, event),
                                          max_tokens=380, temperature=0.7,
-                                         json_mode=True)
+                                         json_mode=True, system=SYSTEM_PROMPT)
         except Exception:
             self.stats["llm_error"] += 1
             return {}

@@ -25,14 +25,17 @@ class OllamaClient(LLMClient):
         base_url: str = "http://localhost:11434",
         declared_tier: int = 2,
         timeout: float = 60.0,
+        keep_alive: str = "30m",
     ) -> None:
         self.model = model
         self.base_url = base_url.rstrip("/")
         self._declared_tier = declared_tier
         self.timeout = timeout
-        # Lazily-created reusable async client. Sharing one client keeps
-        # the connection pool warm across the whole sim, which is where
-        # the bulk of the concurrency win lives.
+        # KV-cache hint: keep model loaded for `keep_alive` after last call
+        # (default 30m, "−1" = forever). Shorter prompts to a hot model
+        # let Ollama reuse the system-prompt KV state across requests
+        # → 2-3x speedup for stable system prompts.
+        self.keep_alive = keep_alive
         self._async_client: httpx.AsyncClient | None = None
 
     @property
@@ -40,17 +43,25 @@ class OllamaClient(LLMClient):
         return self._declared_tier
 
     def _build_body(
-        self, prompt: str, *, max_tokens: int, temperature: float, json_mode: bool,
+        self, prompt: str, *,
+        max_tokens: int, temperature: float, json_mode: bool,
+        system: str = "",
     ) -> dict[str, Any]:
         body: dict[str, Any] = {
             "model": self.model,
             "prompt": prompt,
             "stream": False,
+            "keep_alive": self.keep_alive,  # P1: hold model + KV cache warm
             "options": {
                 "num_predict": max_tokens,
                 "temperature": temperature,
             },
         }
+        # P1: separate `system` field is what Ollama caches across calls.
+        # The same `system` text + same model → KV state reused → only
+        # the dynamic `prompt` part needs fresh evaluation.
+        if system:
+            body["system"] = system
         if json_mode:
             body["format"] = "json"
         return body
@@ -83,10 +94,12 @@ class OllamaClient(LLMClient):
     def complete(
         self, prompt: str, *,
         max_tokens: int = 256, temperature: float = 0.7, json_mode: bool = False,
+        system: str = "",
     ) -> LLMResponse:
         t0 = time.time()
         body = self._build_body(prompt, max_tokens=max_tokens,
-                                  temperature=temperature, json_mode=json_mode)
+                                  temperature=temperature, json_mode=json_mode,
+                                  system=system)
         try:
             r = httpx.post(f"{self.base_url}/api/generate",
                            json=body, timeout=self.timeout)
@@ -98,13 +111,15 @@ class OllamaClient(LLMClient):
     async def acomplete(
         self, prompt: str, *,
         max_tokens: int = 256, temperature: float = 0.7, json_mode: bool = False,
+        system: str = "",
     ) -> LLMResponse:
         """Async variant — drop into asyncio.gather() to run many calls
         in parallel against a single Ollama daemon (which itself batches
         4 requests in parallel when started with OLLAMA_NUM_PARALLEL=4)."""
         t0 = time.time()
         body = self._build_body(prompt, max_tokens=max_tokens,
-                                  temperature=temperature, json_mode=json_mode)
+                                  temperature=temperature, json_mode=json_mode,
+                                  system=system)
         if self._async_client is None:
             self._async_client = httpx.AsyncClient(timeout=self.timeout)
         try:

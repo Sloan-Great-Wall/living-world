@@ -288,6 +288,22 @@ def smoke(
     top = event_kind_distribution(world, top_k=5)
     console.print("  top kinds:   " + ", ".join(f"{k}×{n}" for k, n in top))
 
+    # ── Per-phase latency table (P3 telemetry) ──
+    console.rule("Phase latency · mean s/tick (top 8)")
+    rows: list[tuple[float, float, str, int]] = []
+    for name, samples in engine.phase_latency.items():
+        if not samples:
+            continue
+        mean = sum(samples) / len(samples)
+        rows.append((mean, max(samples), name, len(samples)))
+    rows.sort(key=lambda r: -r[0])
+    for mean, peak, name, n in rows[:8]:
+        bar = "█" * min(40, int(mean * 4))
+        console.print(
+            f"  [bold]{name:22s}[/]  [gold1]{mean:5.2f}s[/]  "
+            f"[dim]peak {peak:5.2f}s · n={n}[/]  {bar}"
+        )
+
     # ── HF inner-state drift (the proof self_update + reflector worked) ──
     console.rule("HF inner-state drift (top 8 by absolute change)")
     drifts: list[tuple[str, str, str]] = []

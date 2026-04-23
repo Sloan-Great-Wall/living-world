@@ -293,10 +293,11 @@ class EmergentEventProposer:
                 "(they just had an event together):\n  - "
                 + "\n  - ".join(recent_pairs)
             )
-        prompt = SYSTEM_PROMPT + "\n\n" + _tile_context(tile, world) + avoid_block + "\n\nYour JSON:"
+        # Dynamic part only — SYSTEM_PROMPT goes via system= for KV-cache (P1)
+        prompt = _tile_context(tile, world) + avoid_block + "\n\nYour JSON:"
         try:
             resp = self.client.complete(prompt, max_tokens=320, temperature=0.75,
-                                         json_mode=True)
+                                         json_mode=True, system=SYSTEM_PROMPT)
         except Exception:
             self.stats["llm_error"] += 1
             return None

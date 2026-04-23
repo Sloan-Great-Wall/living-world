@@ -46,7 +46,8 @@ def _build_prompt(
     world: World,
     memory_snippets: list[str] | None,
 ) -> str:
-    parts: list[str] = [SYSTEM_PROMPT, "", "CHARACTER"]
+    # Dynamic part only — SYSTEM_PROMPT goes via system= for KV-cache (P1)
+    parts: list[str] = ["CHARACTER"]
     parts.append(f"Name: {agent.display_name}")
     parts.append(f"Pack: {agent.pack_id}")
     parts.append(f"Persona: {(agent.persona_card or '').strip()[:300]}")
@@ -146,7 +147,7 @@ class AgentPlanner:
         prompt = _build_prompt(agent, world, memory_snippets)
         try:
             resp = self.client.complete(prompt, max_tokens=220, temperature=0.6,
-                                         json_mode=True)
+                                         json_mode=True, system=SYSTEM_PROMPT)
         except Exception:
             self.stats["llm_error"] += 1
             return {}

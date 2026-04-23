@@ -45,7 +45,9 @@ RULES
 
 
 def _build_prompt(agent: Agent, event: LegendEvent) -> str:
-    parts = [SYSTEM_PROMPT, "", "YOU"]
+    """Dynamic part only — SYSTEM_PROMPT goes via client.complete(system=)
+    for KV-cache reuse (P1)."""
+    parts = ["YOU"]
     parts.append(f"  Name: {agent.display_name}")
     parts.append(f"  Persona: {(agent.persona_card or '').strip()[:200]}")
     if agent.current_goal:
@@ -88,7 +90,8 @@ class SubjectivePerception:
         fallback = event.best_rendering()
         try:
             resp = self.client.complete(_build_prompt(agent, event),
-                                         max_tokens=120, temperature=0.7)
+                                         max_tokens=120, temperature=0.7,
+                                         system=SYSTEM_PROMPT)
         except Exception:
             return fallback
         return _clean(resp.text, fallback)

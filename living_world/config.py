@@ -50,6 +50,15 @@ class LLMSettings(BaseModel):
     ollama_tier2_model: str = "gemma3:4b"   # the "agent-layer" model
     ollama_tier3_model: str = "gemma3:4b"   # the "narrator" model
     ollama_timeout_seconds: float = 60.0
+    # P4: dual-instance support. If set, tier-3 calls go to a separate
+    # Ollama daemon (run on a different port). Lets tier-2 (small/fast)
+    # and tier-3 (big/literary) saturate the GPU in parallel rather than
+    # take turns. Leave null to use ollama_base_url for both tiers.
+    # Example dual-instance recipe (M3 32GB Mac):
+    #   ollama serve --port 11434          # tier 2 (llama3.2:3b)
+    #   ollama serve --port 11435          # tier 3 (gemma4:e4b or qwen3:14b)
+    # then settings.yaml: ollama_tier3_base_url: http://localhost:11435
+    ollama_tier3_base_url: str | None = None
 
     # Per-module overrides — leave a key out (or null) to inherit the
     # tier default above. Use this when you want to give one module a

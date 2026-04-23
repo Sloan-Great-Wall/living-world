@@ -55,7 +55,8 @@ def _rank_events(events: list[LegendEvent], limit: int = 8) -> list[LegendEvent]
 
 
 def _build_prompt(pack_id: str, events: list[LegendEvent]) -> str:
-    parts: list[str] = [SYSTEM_PROMPT, "", f"PACK: {pack_id}"]
+    # Dynamic part only — SYSTEM_PROMPT goes via system= for KV-cache (P1)
+    parts: list[str] = [f"PACK: {pack_id}"]
     parts.append(f"EVENTS ({len(events)})")
     for e in events:
         parts.append(
@@ -134,7 +135,7 @@ class Chronicler:
         prompt = _build_prompt(pack_id, ranked)
         try:
             resp = self.client.complete(prompt, max_tokens=420, temperature=0.55,
-                                         json_mode=True)
+                                         json_mode=True, system=SYSTEM_PROMPT)
         except Exception:
             self.stats["llm_error"] += 1
             return None
