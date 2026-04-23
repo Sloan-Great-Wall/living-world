@@ -46,6 +46,12 @@ class Agent(BaseModel):
     pack_id: str  # "scp" | "cthulhu" | "liaozhai"
     display_name: str
     persona_card: str  # < 500 chars, written in target-language tone
+    # Cross-pack bridge: pack_id may CHANGE if the agent migrates into
+    # another world (e.g. fox-spirit ends up in an SCP corridor), but
+    # pack_origin records where they were originally authored. Used by
+    # narrator + chronicler to keep the character's voice grounded in
+    # their home mythology even when they're somewhere alien.
+    pack_origin: str | None = None  # defaults to pack_id at bootstrap
 
     # bucketed rank
     is_historical_figure: bool = False

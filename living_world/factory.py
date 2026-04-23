@@ -103,7 +103,34 @@ def bootstrap_world(packs_dir: Path, pack_ids: list[str]) -> tuple[World, list]:
         for tile in pack.tiles:
             world.add_tile(tile)
         for agent in pack.personas:
+            # Cross-pack bridge (KNOWN_ISSUES #7): record where each
+            # agent was authored so they keep their voice if they
+            # later migrate into a different pack's tile.
+            if agent.pack_origin is None:
+                agent.pack_origin = agent.pack_id
             world.add_agent(agent)
+
+    # Cross-pack bridge: when 2+ packs are loaded, add a shared liminal
+    # tile that any pack's agents can be migrated into. From there
+    # cross-pack interactions become possible (Foundation researcher
+    # meets fox-spirit meets Cthulhu cultist). Migration event templates
+    # per pack will populate this in the next iteration of #7.
+    if len(loaded) >= 2:
+        from living_world.core.tile import Tile
+        liminal = Tile(
+            tile_id="_liminal_void",
+            display_name="The Liminal Void",
+            primary_pack=loaded[0].pack_id,  # nominal owner; really shared
+            tile_type="liminal",
+            description=("A grey expanse where worlds touch. Foundation "
+                          "researchers, fox-spirits, and cultists alike "
+                          "find themselves here when reality slips."),
+            allowed_packs=[p.pack_id for p in loaded],
+            is_liminal=True,
+            x=0.0, y=0.0, radius=80.0,
+        )
+        world.add_tile(liminal)
+
     return world, loaded
 
 
