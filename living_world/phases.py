@@ -239,9 +239,15 @@ class ReflectionPhase(Phase):
             return
         if t % engine.reflect_every_ticks != 0:
             return
+        log = engine.tick_logger
         for agent in engine.world.historical_figures():
-            engine.memory.reflect(agent.agent_id, t, agent=agent)
+            beliefs_before = len(agent.get_beliefs())
+            entry = engine.memory.reflect(agent.agent_id, t, agent=agent)
             engine.memory.decay(agent.agent_id, t)
+            beliefs_after = len(agent.get_beliefs())
+            n_new = beliefs_after - beliefs_before
+            if log and entry is not None and hasattr(log, "reflection"):
+                log.reflection(agent.agent_id, t, n_new)
 
 
 class SnapshotPhase(Phase):

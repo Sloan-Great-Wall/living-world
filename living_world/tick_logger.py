@@ -137,6 +137,13 @@ class TickLogger:
     def belief_updated(self, agent_id: str, topic: str, belief: str) -> None:
         self._write(f"  BELIEF  [LLM] {agent_id}: {topic} -> {belief[:120]}")
 
+    def reflection(self, agent_id: str, tick: int, new_beliefs: int) -> None:
+        """Park-style reflection fired for an agent on this tick."""
+        self._write(
+            f"  REFLECT  [LLM] {agent_id} @ d{tick:03d}: "
+            f"{new_beliefs} new belief(s)"
+        )
+
     def dialogue_reaction(
         self, listener_id: str, speaker_id: str,
         affinity_delta: int, reply: str, belief_update: str | None,

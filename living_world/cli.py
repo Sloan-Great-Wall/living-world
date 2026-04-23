@@ -220,6 +220,18 @@ def smoke(
     world, loaded = bootstrap_world(PACKS_DIR, pack_ids)
     engine = make_engine(world, loaded, settings, seed)
 
+    # Snapshot HF inner state at t=0 so we can show drift after the run.
+    initial_hf_state = {
+        a.agent_id: {
+            "name": a.display_name,
+            "needs": dict(a.get_needs()),
+            "emotions": dict(a.get_emotions()),
+            "beliefs_count": len(a.get_beliefs()),
+            "goal": a.current_goal,
+        }
+        for a in world.historical_figures()
+    }
+
     # Probe Ollama; warn if down (sim still runs on rules)
     if settings.llm.tier2_provider == "ollama":
         probe = OllamaClient(model=settings.llm.ollama_tier2_model,
@@ -275,6 +287,45 @@ def smoke(
                    f"alive [bold]{ds['total'] and sum(1 for _ in world.living_agents())}[/]")
     top = event_kind_distribution(world, top_k=5)
     console.print("  top kinds:   " + ", ".join(f"{k}×{n}" for k, n in top))
+
+    # ── HF inner-state drift (the proof self_update + reflector worked) ──
+    console.rule("HF inner-state drift (top 8 by absolute change)")
+    drifts: list[tuple[str, str, str]] = []
+    for a in world.historical_figures():
+        before = initial_hf_state.get(a.agent_id)
+        if not before:
+            continue
+        n_now = a.get_needs(); e_now = a.get_emotions()
+        n_b = before["needs"]; e_b = before["emotions"]
+        deltas: list[str] = []
+        total_abs = 0.0
+        for k in ("hunger", "safety"):
+            d = n_now.get(k, 0) - n_b.get(k, 0)
+            if abs(d) >= 1:
+                deltas.append(f"{k}{d:+.0f}")
+                total_abs += abs(d)
+        for k in ("fear", "joy", "anger"):
+            d = e_now.get(k, 0) - e_b.get(k, 0)
+            if abs(d) >= 1:
+                deltas.append(f"{k}{d:+.0f}")
+                total_abs += abs(d)
+        belief_delta = len(a.get_beliefs()) - before["beliefs_count"]
+        if belief_delta:
+            deltas.append(f"beliefs+{belief_delta}")
+            total_abs += belief_delta * 5  # weight beliefs heavily
+        goal_changed = a.current_goal != before["goal"]
+        if goal_changed:
+            deltas.append("goal↻")
+            total_abs += 10
+        if deltas:
+            drifts.append((f"{total_abs:6.1f}", a.display_name, " · ".join(deltas)))
+    drifts.sort(key=lambda x: -float(x[0]))
+    if drifts:
+        for score, name, delta in drifts[:8]:
+            console.print(f"  [dim]{score}[/]  [bold]{name:35s}[/]  {delta}")
+    else:
+        console.print("  [yellow]⚠ no HF inner-state drift detected — "
+                       "self_update / reflector may not be firing[/]")
 
     # Exit code for CI
     if failed > 0 or (fail_on_warn and warned > 0):

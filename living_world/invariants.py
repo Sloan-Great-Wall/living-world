@@ -199,6 +199,58 @@ def alive_count_monotone(world, engine) -> InvariantResult:
     )
 
 
+def high_importance_events_leave_marks(
+    world, engine, *, importance_threshold: float = 0.7,
+    min_marked_pct: float = 60.0,
+) -> InvariantResult:
+    """A high-importance event SHOULD shift its participants' inner state
+    (self_update fires + writes deltas, OR fallback emotion bumps).
+
+    Failing this invariant means narrative ("O5-03 was dragged into a
+    pocket dimension and lost his sanity") doesn't match mechanics
+    (his fear/morale unchanged). Surfaced 2026-04-22 from 6-tick smoke
+    where the user noticed "缺 self_update 数值反映".
+
+    We can only check this if engine has a self_update module wired
+    AND it tracks .stats — otherwise we skip with severity=info.
+    """
+    su = getattr(engine, "self_update", None)
+    if su is None or not hasattr(su, "stats"):
+        return InvariantResult(
+            name="high_importance_events_leave_marks",
+            passed=True,
+            detail="self_update module not wired — invariant skipped",
+            severity="info",
+        )
+    high_imp = [
+        e for e in world.events_since(1)
+        if e.importance >= importance_threshold and not e.is_emergent
+    ]
+    if not high_imp:
+        return InvariantResult(
+            name="high_importance_events_leave_marks",
+            passed=True,
+            detail=f"no events ≥ {importance_threshold} importance yet",
+            severity="info",
+        )
+    # We can't trace per-event whether self_update fired (no per-event
+    # log). Use aggregate proxy: the ratio of self_update calls to
+    # high-importance event-participants pairs. If it's <50%, something
+    # is dropping calls.
+    expected_calls = sum(len(e.participants) for e in high_imp)
+    actual_calls = su.stats.get("calls", 0)
+    pct = 100.0 * actual_calls / max(1, expected_calls)
+    return InvariantResult(
+        name="high_importance_events_leave_marks",
+        passed=pct >= min_marked_pct,
+        detail=(
+            f"{actual_calls} self_update calls / {expected_calls} expected "
+            f"(high-imp participants) = {pct:.0f}% (need ≥ {min_marked_pct:.0f}%)"
+        ),
+        severity="warn",
+    )
+
+
 def no_orphan_chapters(world, engine) -> InvariantResult:
     """Every chapter's event_ids should reference real events."""
     known = {e.event_id for e in world.events_since(1)}
@@ -228,6 +280,7 @@ ALL_INVARIANTS = [
     diversity_floor,
     alive_count_monotone,
     no_orphan_chapters,
+    high_importance_events_leave_marks,
 ]
 
 
