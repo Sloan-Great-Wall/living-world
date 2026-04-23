@@ -1,0 +1,20 @@
+{
+  "name": "living-world-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Root workspace — Python sim + TypeScript dashboard + Rust Tauri shell.",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "dashboard-tauri"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspace=dashboard-tauri",
+    "bundle:check": "npm run bundle:check --workspace=dashboard-tauri"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.2"
+  }
+}

@@ -1,25 +1,24 @@
 {
   "name": "dashboard-tauri",
   "version": "0.1.0",
-  "description": "",
   "type": "module",
+  "description": "Tauri + Solid + TypeScript dashboard for the Living World sim.",
+  "license": "MIT",
   "scripts": {
-    "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "serve": "vite preview",
+    "preview": "vite preview",
     "tauri": "tauri",
+    "typecheck": "tsc --noEmit",
     "bundle:check": "node scripts/check-bundle-size.mjs"
   },
-  "license": "MIT",
   "dependencies": {
     "solid-js": "^1.9.3",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
-    "@living-world/sim-core": "file:../packages/sim-core"
+    "@living-world/sim-core": "*"
   },
   "devDependencies": {
-    "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "vite-plugin-solid": "^2.11.0",
     "@tauri-apps/cli": "^2"

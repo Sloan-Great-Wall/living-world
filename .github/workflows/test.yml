@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: unit + invariants (no Ollama)
+  check:
+    name: make check (python + typescript)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -30,46 +30,21 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Install package + dev extras
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e '.[dev,llm]'
-
-      - name: Lint (ruff)
-        # Non-blocking for now — codebase predates CI; surface issues without
-        # gating merges. Promote to required check once warnings == 0.
-        run: ruff check living_world tests || true
-
-      - name: Run pytest
-        # Live Ollama tests auto-skip when localhost:11434 is unreachable
-        # (see tests/test_live_ollama.py top-of-file pytestmark).
-        # Smoke + invariants run rules-only and stay deterministic.
-        env:
-          PYTHONHASHSEED: "0"
-        run: pytest -x -q --tb=short
-
-  ts-sim-core:
-    name: TypeScript sim core (parity)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    defaults:
-      run:
-        working-directory: packages/sim-core
-
-    steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: packages/sim-core/package-lock.json
 
-      - name: Install
-        run: npm ci || npm install
+      - name: Install (Python + npm workspaces)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[dev]'
+          npm install
 
-      - name: Type-check
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
+      - name: make check
+        # Single gate: lint + types + tests + TS build + bundle budget.
+        # Exit code is the only signal CI needs — everything AI needs to
+        # triage a failure goes via stderr (file:line:kind taxonomy).
+        env:
+          PYTHONHASHSEED: "0"
+        run: make check

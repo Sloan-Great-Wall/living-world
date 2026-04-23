@@ -19,3 +19,13 @@ data/
 *.log
 .claude/
 __marimo__/
+
+# TypeScript / npm workspaces
+node_modules/
+dist/
+*.tsbuildinfo
+.vitest-cache/
+
+# Lint / type-check caches
+.ruff_cache/
+.basedpyright/

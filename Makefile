@@ -13,26 +13,40 @@
 #
 # Convention: every recipe must exit 0 on success, non-zero on any failure.
 # No `|| true` swallowing — that's how we keep AI loops trustworthy.
+#
+# Repo layout (Phase 1.5 monorepo):
+#   living_world/              Python sim
+#   tests/                     Python tests
+#   packages/sim-core/         TS: dice + social metrics (Python parity)
+#   dashboard-tauri/           TS: Solid UI + Tauri shell
+#   tsconfig.base.json         shared TS compiler options
+#   node_modules/              ONE tree (npm workspaces)
+#   package.json               root workspace manifest
 
 PY      := .venv/bin/python
 PYTEST  := $(PY) -m pytest
 RUFF    := $(PY) -m ruff
 PYRIGHT := .venv/bin/basedpyright
 
-# `cd` per recipe so each line runs in the intended dir under make's
-# default `-c` shell. Avoids state leaking between targets.
-
-.PHONY: check fix py ts smoke clean help
+.PHONY: check fix py py-lint py-types py-tests ts ts-sim-core ts-dashboard ts-bundle smoke clean help install
 
 help:
 	@echo 'Living World — verification gates'
 	@echo ''
+	@echo '  make install — npm install (root workspace) + pip install -e .[dev]'
 	@echo '  make check   — full gate (lint + types + tests + build)'
 	@echo '  make py      — Python-only (ruff + basedpyright + pytest)'
 	@echo '  make ts      — TypeScript-only (tsc + vitest + bundle)'
 	@echo '  make smoke   — quick rule-only sim run'
 	@echo '  make fix     — auto-fix lint/format'
 	@echo '  make clean   — remove caches + dist'
+
+install:
+	@echo '── pip install -e .[dev] ──'
+	@$(PY) -m pip install -e '.[dev]' --quiet
+	@echo '── npm install (workspaces) ──'
+	@npm install --silent
+	@echo '✓ installed'
 
 check: py ts
 	@echo ''
@@ -57,24 +71,27 @@ py-tests:
 	@$(PYTEST) -x -q --tb=short
 
 # ── TypeScript gates ──
+#
+# All TS tooling runs from the repo root; npm workspaces routes each
+# command to the right package. No more `cd packages/... && npx ...`.
 
 ts: ts-sim-core ts-dashboard ts-bundle
 	@echo '✓ typescript gates ok'
 
 ts-sim-core:
 	@echo '── @living-world/sim-core: typecheck + parity ──'
-	@cd packages/sim-core && npx tsc --noEmit
-	@cd packages/sim-core && npx vitest run
+	@npm run typecheck --workspace=@living-world/sim-core
+	@npm run test      --workspace=@living-world/sim-core
 
 ts-dashboard:
 	@echo '── dashboard-tauri: typecheck + build ──'
-	@cd dashboard-tauri && npx tsc --noEmit
-	@cd dashboard-tauri && npm run build > /tmp/lw-build.log 2>&1 \
+	@npm run typecheck --workspace=dashboard-tauri
+	@npm run build     --workspace=dashboard-tauri > /tmp/lw-build.log 2>&1 \
 		|| (cat /tmp/lw-build.log; exit 1)
 
 ts-bundle:
 	@echo '── dashboard-tauri: bundle-size budget ──'
-	@cd dashboard-tauri && npm run bundle:check
+	@npm run bundle:check --workspace=dashboard-tauri
 
 # ── Convenience ──
 
@@ -89,8 +106,8 @@ fix:
 
 clean:
 	@rm -rf .pytest_cache .ruff_cache .basedpyright
-	@rm -rf packages/sim-core/node_modules dashboard-tauri/node_modules
-	@rm -rf packages/sim-core/dist dashboard-tauri/dist
+	@rm -rf node_modules packages/*/node_modules dashboard-tauri/node_modules
+	@rm -rf packages/*/dist dashboard-tauri/dist
 	@find . -name __pycache__ -type d -prune -exec rm -rf {} +
 	@find . -name '*.pyc' -delete
 	@echo '✓ cleaned'
