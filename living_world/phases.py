@@ -171,6 +171,106 @@ class EmergentPhase(Phase):
                     )
 
 
+class PerceptionPhase(Phase):
+    """Batched first-person reframe for ALL events realized this tick.
+
+    Replaces the per-event inline perception that used to live inside
+    _process_event. Deferring to here lets us gather all (event,
+    participant) pairs across storyteller / interactions / emergent
+    into ONE async batch — Ollama's NUM_PARALLEL is exploited
+    proportionally to total batch size, not just within one event.
+
+    Also writes the resulting subjective (or raw) memory entry per
+    participant. Ordering is unchanged from the user's perspective:
+    memory is queried only by NEXT tick's planning / dialogue.
+    """
+    name = "perception"
+    def run(self, engine, t, stats):
+        if engine.memory is None:
+            return
+        log = engine.tick_logger
+        events = [e for e in engine._tick_events if e.importance >= 0.1]
+        if not events:
+            return
+        use_subjective = engine.perception is not None
+        # Build one big task list across all events.
+        tasks: list[tuple] = []   # (event, agent)
+        for e in events:
+            if not (use_subjective and e.importance >= engine.perception_threshold):
+                continue
+            for aid in e.participants:
+                a = engine.world.get_agent(aid)
+                if a is not None:
+                    tasks.append((e, a))
+        # Single async batch: gather across all events × participants.
+        rewritten: dict[tuple[str, str], str] = {}
+        if tasks:
+            import asyncio
+            async def _gather_all():
+                return await asyncio.gather(*[
+                    engine.perception.reframe_async(a, e) for (e, a) in tasks
+                ])
+            results = asyncio.run(_gather_all())
+            for (e, a), text in zip(tasks, results):
+                rewritten[(e.event_id, a.agent_id)] = text
+        # Now write memory for every (event, participant) — subjective if
+        # we have a rewrite, otherwise raw best_rendering.
+        for e in events:
+            for aid in e.participants:
+                key = (e.event_id, aid)
+                doc = rewritten.get(key, e.best_rendering())
+                kind = "subjective" if key in rewritten else "raw"
+                engine.memory.remember(
+                    agent_id=aid, tick=t, doc=doc, kind=kind,
+                    importance=e.importance,
+                    metadata={"event_id": e.event_id, "kind": e.event_kind},
+                )
+                if log:
+                    log.memory_store(aid, kind, e.importance)
+
+
+class SelfUpdatePhase(Phase):
+    """Batched LLM-driven inner-state update for ALL high-importance
+    events' participants this tick. Same batching logic as
+    PerceptionPhase: one big gather() across all (event, participant)
+    pairs. Mutations are applied synchronously inside _apply_response,
+    so even with parallel LLM calls there's no agent-state race."""
+    name = "self_update"
+    def run(self, engine, t, stats):
+        if engine.self_update is None:
+            return
+        log = engine.tick_logger
+        threshold = engine.self_update_threshold
+        tasks: list[tuple] = []
+        for e in engine._tick_events:
+            if e.importance < threshold:
+                continue
+            for aid in e.participants:
+                a = engine.world.get_agent(aid)
+                if a is not None and a.is_alive():
+                    tasks.append((e, a))
+        if not tasks:
+            return
+        import asyncio
+        async def _gather_all():
+            return await asyncio.gather(*[
+                engine.self_update.apply_async(a, e) for (e, a) in tasks
+            ])
+        results = asyncio.run(_gather_all())
+        for (e, a), applied in zip(tasks, results):
+            if not applied:
+                continue
+            if log:
+                log.self_update(a.agent_id, applied)
+            refl = applied.get("reflection")
+            if refl and engine.memory is not None:
+                engine.memory.remember(
+                    agent_id=a.agent_id, tick=t, doc=refl,
+                    kind="reflection", importance=e.importance,
+                    metadata={"from_event": e.event_id},
+                )
+
+
 class WeeklyMaintenancePhase(Phase):
     """Demote inactive HFs + prune chronically dull promoted templates.
 
@@ -288,6 +388,12 @@ DEFAULT_PIPELINE: list[Phase] = [
     InteractionsPhase(),
     StorytellerPhase(),
     EmergentPhase(),
+    # ── Deferred per-event LLM batches (split out of _process_event) ──
+    # Run AFTER all event-producing phases so they batch ALL events'
+    # participants in one async gather() — proportional speedup vs
+    # the old per-event blocking pattern.
+    PerceptionPhase(),
+    SelfUpdatePhase(),
     WeeklyMaintenancePhase(),
     ChroniclerPhase(),
     WeeklyPlanPhase(),

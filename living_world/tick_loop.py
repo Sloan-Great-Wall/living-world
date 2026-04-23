@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
+from living_world.core.event import LegendEvent
 from living_world.core.world import World
 from living_world.memory.memory_store import AgentMemoryStore
 from living_world.persistence import Repository
@@ -101,6 +102,10 @@ class TickEngine:
         self.pipeline = list(DEFAULT_PIPELINE)
         # Per-phase latency history for telemetry / lw smoke perf table
         self.phase_latency: dict[str, list[float]] = {}
+        # Events realized in current tick — populated by _process_event,
+        # consumed by deferred PerceptionPhase + SelfUpdatePhase. Cleared
+        # at start of each step().
+        self._tick_events: list[LegendEvent] = []
 
         # one storyteller per tile, using its primary pack's storyteller config
         self.storytellers: dict[str, TileStoryteller] = {}
@@ -156,49 +161,6 @@ class TickEngine:
             for agent_id in promoted:
                 log.promotion(agent_id, f"observed {event.event_kind}")
 
-        # Memory — store the event in each participant's memory stream.
-        # When subjective perception is available AND the event matters, the
-        # LLM rewrites the memory from each agent's POV before storing.
-        # Otherwise we store the objective best_rendering.
-        if self.memory is not None and event.importance >= 0.1:
-            use_subjective = (
-                self.perception is not None
-                and event.importance >= self.perception_threshold
-            )
-            # ── PARALLEL POV reframe ──
-            # All participants' first-person rewrites are independent;
-            # asyncio.gather them so a 4-participant event takes ~1 LLM
-            # round-trip instead of 4. Big win at OLLAMA_NUM_PARALLEL≥2.
-            participant_agents = [
-                self.world.get_agent(aid) for aid in event.participants
-            ]
-            docs: dict[str, str] = {}
-            if use_subjective:
-                import asyncio
-                alive_agents = [a for a in participant_agents if a is not None]
-                if alive_agents:
-                    async def _gather_perception():
-                        return await asyncio.gather(*[
-                            self.perception.reframe_async(a, event)
-                            for a in alive_agents
-                        ])
-                    rewritten = asyncio.run(_gather_perception())
-                    docs = dict(zip([a.agent_id for a in alive_agents], rewritten))
-            for aid in event.participants:
-                doc = docs.get(aid, event.best_rendering())
-                self.memory.remember(
-                    agent_id=aid, tick=t,
-                    doc=doc,
-                    kind="subjective" if (use_subjective and aid in docs) else "raw",
-                    importance=event.importance,
-                    metadata={"event_id": event.event_id, "kind": event.event_kind},
-                )
-                if log:
-                    log.memory_store(
-                        aid, "subjective" if (use_subjective and aid in docs) else "raw",
-                        event.importance,
-                    )
-
         # ── CONSEQUENCES: stat changes + rare description mutations ──
         # No recursion — changes persist on agents, next tick reacts naturally.
         for reaction in self.consequences.apply(event):
@@ -208,51 +170,17 @@ class TickEngine:
             if reaction.importance >= 0.6:
                 stats.spotlight_candidates += 1
             self.hf_registry.observe_event(reaction)
+            self._tick_events.append(reaction)
             if log:
                 changes = ", ".join(f"{k}:{v}" for d in reaction.stat_changes.values() for k, v in d.items())
                 for aid in reaction.participants:
                     log.consequence(reaction.event_kind, aid, changes or "mutation")
 
-        # ── AgentSelfUpdate: LLM speaks as participant, reports inner shift ──
-        # Replaces the rigidness of pre-authored stat ripples for important
-        # events. For each participant, the LLM emits a structured delta:
-        # attribute changes, needs, emotions, possibly a new goal, beliefs.
-        # The validator clamps everything before applying.
-        if (
-            self.self_update is not None
-            and event.importance >= self.self_update_threshold
-        ):
-            import asyncio
-            # Collect alive participants to update concurrently
-            update_targets = []
-            for aid in event.participants:
-                agent = self.world.get_agent(aid)
-                if agent is not None and agent.is_alive():
-                    update_targets.append(agent)
-            if update_targets:
-                # ── PARALLEL self-update ──
-                # Each participant's inner-state update is independent;
-                # gather them so 4-participant events still cost ~1
-                # round-trip. asyncio.run() requires a coroutine (not a
-                # Future), so we wrap gather in an async helper.
-                async def _gather_updates():
-                    return await asyncio.gather(*[
-                        self.self_update.apply_async(agent, event)
-                        for agent in update_targets
-                    ])
-                results = asyncio.run(_gather_updates())
-                for agent, applied in zip(update_targets, results):
-                    if not applied:
-                        continue
-                    if log:
-                        log.self_update(agent.agent_id, applied)
-                    refl = applied.get("reflection")
-                    if refl and self.memory is not None:
-                        self.memory.remember(
-                            agent_id=agent.agent_id, tick=t, doc=refl,
-                            kind="reflection", importance=event.importance,
-                            metadata={"from_event": event.event_id},
-                        )
+        # Track this event for batched perception + self_update at end of tick.
+        # See PerceptionPhase / SelfUpdatePhase in phases.py — deferring lets
+        # us gather() ALL events' participants in one async batch instead of
+        # blocking per-event.
+        self._tick_events.append(event)
 
         # ── Dialogue loop: A→B reaction mutates affinity + beliefs ──
         # For Tier-3 events with exactly two participants, ask the LLM to
@@ -344,6 +272,8 @@ class TickEngine:
         t = self.world.current_tick
         stats = TickStats(tick=t)
         log = self.tick_logger
+        # Reset per-tick event accumulator (consumed by deferred phases).
+        self._tick_events = []
 
         if log:
             log.tick_start(t)

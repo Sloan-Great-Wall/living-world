@@ -2,74 +2,45 @@ llm:
   tier2_provider: ollama
   tier3_provider: ollama
   ollama_base_url: http://localhost:11434
-  # Tier 2 = agent-layer (frequent decisions, structured JSON output).
-  #   llama3.2:3b is small/fast (2GB) and reliable with format=json.
-  # Tier 3 = narrative-layer (literary prose, chapters, big rewrites).
-  #   gemma4:e4b stays — better prose register than the small model.
   ollama_tier2_model: llama3.2:3b
-  ollama_tier3_model: gemma4:e4b
+  ollama_tier3_model: gemma3:4b
   ollama_timeout_seconds: 60.0
   openai_base_url: null
   openai_api_key: null
-
-  # Narrative
   dynamic_dialogue_enabled: true
-
-  # Movement: HF agents now LLM-thought 60% of moves (was 30%)
   llm_movement_enabled: true
   llm_movement_hf_only: true
   llm_movement_chance: 0.6
-
-  # Conscious veto/adjust: more events get LLM review (lower threshold,
-  # higher activation chance) — closer to System 2 deliberating on social
-  # situations, not just emergencies.
   conscious_override_enabled: true
   conscious_override_threshold: 0.35
   conscious_override_chance: 0.7
-
-  # Decision-layer LLM features
   goal_driven_movement_bonus: 1.4
   weekly_planning_enabled: true
   weekly_planning_hf_only: true
   goal_aligned_event_bonus: 1.5
-
-  # A→B reaction loop — mutates affinity + beliefs from dialogue content
   conversation_loop_enabled: true
-
-  # 说书人 — periodic chapter summaries (descriptive only)
   chronicler_enabled: true
   chronicle_every_ticks: 14
-
-  # LLM invents novel events on hot tiles
   emergent_events_enabled: true
   emergent_max_per_tick: 3
-
-  # Subjective perception: each agent's memory rewritten from their POV
   subjective_perception_enabled: true
   subjective_perception_threshold: 0.5
-
-  # AgentSelfUpdate: LLM mutates participant's full inner state on big events
   self_update_enabled: true
   self_update_threshold: 0.5
-
 budget:
   tier3_tokens_per_day: 200000
-
 importance:
   tier3_threshold: 0.65
-
 historical_figures:
   spotlight_threshold: 0.6
   notable_threshold: 0.3
   notable_count_for_promotion: 3
   strong_relationship_affinity: 70
   inactivity_days_for_demotion: 30
-
 storyteller:
   force_personality: ''
   max_events_per_day_override: null
   tension_target_override: null
-
 simulation:
   default_packs:
   - scp
@@ -78,21 +49,17 @@ simulation:
   default_days: 30
   default_seed: 42
   packs_dir: world_packs
-
 memory:
   enabled: true
   embedder: ollama
   ollama_embed_model: nomic-embed-text
   reflect_every_ticks: 7
   recall_top_k: 5
-
 display:
   locale: en
   translate_generated: false
-
 persistence:
-  snapshot_every_ticks: 7   # aligned with weekly maintenance cadence
-
+  snapshot_every_ticks: 7
 dashboard:
   host: localhost
   port: 8501
