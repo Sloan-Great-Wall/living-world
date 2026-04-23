@@ -49,6 +49,14 @@ class NarratorStats:
 _BAD_PREFIXES = (
     "Okay,", "Sure,", "Here is", "Here's", "Let me", "Narrative:",
     "Let's break", "Breaking down", "Analysis:", "Explanation:",
+    "[ollama-error",          # OllamaClient graceful-failure marker
+)
+_BAD_SUBSTRINGS = (
+    "Rewrite the following",   # narrator's own prompt template echo
+    "Output ONLY the narrative",
+    "No analysis, no headers",
+    "Original:",
+    "World:",
 )
 
 
@@ -57,6 +65,9 @@ def _clean(text: str, fallback: str) -> str:
     text = (text or "").strip()
     for p in _BAD_PREFIXES:
         if text.startswith(p):
+            return fallback
+    for sub in _BAD_SUBSTRINGS:
+        if sub in text:
             return fallback
     if len(text) < 15 or len(text) > 800:
         return fallback

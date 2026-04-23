@@ -68,9 +68,14 @@ class OllamaClient(LLMClient):
             r.raise_for_status()
             data = r.json()
         except Exception as exc:
-            # graceful fallback so a dropped Ollama doesn't crash the sim
+            # Graceful fallback: do NOT echo the prompt back. Earlier
+            # behavior pasted prompt[:120] into the response text, which
+            # leaked into event narratives when consumers forgot to
+            # check for the [ollama-error:] marker. Now we return a
+            # short, prompt-free sentinel that downstream cleaners can
+            # detect and consumers can branch on.
             return LLMResponse(
-                text=f"[ollama-error: {exc.__class__.__name__}] {prompt[:120]}",
+                text=f"[ollama-error: {exc.__class__.__name__}]",
                 model=self.model,
                 latency_ms=(time.time() - t0) * 1000,
             )

@@ -136,6 +136,98 @@ def export_chronicle(
 
 
 @app.command()
+def smoke(
+    packs: str = typer.Option("scp,liaozhai,cthulhu",
+                                help="Comma-separated pack ids."),
+    ticks: int = typer.Option(8, help="Days to simulate."),
+    seed: int = typer.Option(42),
+    show_events: bool = typer.Option(True,
+                                      help="Stream events to terminal as they happen."),
+    fail_on_warn: bool = typer.Option(False,
+                                       help="Treat warning-severity invariants as failure."),
+) -> None:
+    """End-to-end smoke test: bootstrap, run N ticks, check invariants.
+
+    This is the primary "did the simulator regress?" command. Pair it
+    with `lw test` (unit tests) for full coverage:
+      - `lw test`  → ~74 unit + property tests, fast (<2s)
+      - `lw smoke` → real engine run, streams story to terminal,
+                     asserts invariants on the resulting world
+
+    Exit code 0 = all invariants passed; non-zero = at least one
+    failed (or warned, with --fail-on-warn). Suitable for CI.
+    """
+    from living_world.invariants import check_all, summary
+
+    pack_ids = [p.strip() for p in packs.split(",") if p.strip()]
+    console.rule(f"Smoke test · {ticks} ticks · {pack_ids}")
+
+    settings = load_settings()
+    world, loaded = bootstrap_world(PACKS_DIR, pack_ids)
+    engine = make_engine(world, loaded, settings, seed)
+
+    # Probe Ollama; warn if down (sim still runs on rules)
+    if settings.llm.tier2_provider == "ollama":
+        probe = OllamaClient(model=settings.llm.ollama_tier2_model,
+                              base_url=settings.llm.ollama_base_url)
+        if not probe.available():
+            console.log("[yellow]Ollama unreachable — running rules-only.[/]")
+
+    # Stream events as they appear
+    last_event_count = 0
+    for i in range(ticks):
+        engine.run(1)
+        if show_events:
+            new_events = world.events_since(world.current_tick)
+            for e in new_events:
+                tier_glyph = "●●●" if e.tier_used >= 3 else ("●●" if e.tier_used == 2 else "●")
+                tier_color = "magenta" if e.tier_used >= 3 else ("yellow" if e.tier_used == 2 else "dim")
+                em = " emergent" if e.is_emergent else ""
+                console.print(
+                    f"  [{tier_color}]{tier_glyph}[/] [dim]d{e.tick:03d}[/] "
+                    f"[cyan]{e.pack_id}[/] [bold]{e.event_kind}[/]"
+                    f"[dim]{em}[/] [{e.outcome}]"
+                )
+                console.print(f"      [dim]{e.best_rendering()[:200]}[/]")
+            last_event_count = world.event_count()
+
+    # ── Invariants ──
+    console.rule("Invariants")
+    results = check_all(world, engine)
+    table = Table(show_header=True, header_style="bold")
+    table.add_column("", width=3)
+    table.add_column("invariant", style="cyan")
+    table.add_column("detail", style="white")
+    for r in results:
+        table.add_row(r.emoji, r.name, r.detail)
+    console.print(table)
+
+    passed, warned, failed = summary(results)
+    color = "green" if failed == 0 else "red"
+    console.print(
+        f"\n[{color}]{passed} passed · {warned} warned · {failed} failed[/]"
+    )
+
+    # ── Run summary ──
+    from living_world.queries import diversity_summary, event_kind_distribution
+    ds = diversity_summary(world)
+    deaths = sum(1 for a in world.all_agents() if not a.is_alive())
+    console.rule("Run summary")
+    console.print(f"  events       [bold]{ds['total']}[/]   "
+                   f"unique kinds [bold]{ds['unique']}[/]   "
+                   f"top {ds['top_kind']} ({ds['top_pct']:.1f}%)")
+    console.print(f"  chapters     [bold]{len(world.chapters)}[/]   "
+                   f"deaths       [bold]{deaths}[/]   "
+                   f"alive [bold]{ds['total'] and sum(1 for _ in world.living_agents())}[/]")
+    top = event_kind_distribution(world, top_k=5)
+    console.print("  top kinds:   " + ", ".join(f"{k}×{n}" for k, n in top))
+
+    # Exit code for CI
+    if failed > 0 or (fail_on_warn and warned > 0):
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def serve(
     port: int = typer.Option(8000, help="REST API port."),
     host: str = typer.Option("127.0.0.1"),
