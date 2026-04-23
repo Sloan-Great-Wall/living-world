@@ -29,3 +29,6 @@ dist/
 # Lint / type-check caches
 .ruff_cache/
 .basedpyright/
+
+# uv cache (lockfile `uv.lock` IS committed — reproducibility)
+.uv-cache/

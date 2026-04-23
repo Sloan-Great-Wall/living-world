@@ -1,99 +1,44 @@
 /**
- * API contract — TypeScript is the source of truth.
+ * API types — friendly aliases over the auto-generated OpenAPI surface.
  *
- * The Python FastAPI backend (living_world/web/server.py) serves JSON
- * matching these types. When sim core gets ported to TypeScript, this
- * file stays the same; only the implementation changes.
+ * Source of truth: `living_world/web/schemas.py` (Pydantic).
+ * Pipeline:        Python → api-schema/openapi.json → api.generated.ts → here.
  *
- * Rule: ALL keys camelCase. Python pydantic uses alias_generator to
- * emit camelCase despite its snake_case field names internally.
+ * Run `make schema` to refresh after any Python schema change. `tsc --noEmit`
+ * will then red-line every consumer that no longer matches.
+ *
+ * DO NOT add new fields here — add them in schemas.py and regenerate.
+ * This file ONLY contains friendly re-exports + small helper types that
+ * have no Python counterpart.
  */
+import type { components } from "./api.generated";
 
-export interface WorldSnapshot {
-  loaded: boolean;
-  tick: number;
-  packs: string[];
-  agentsAlive: number;
-  agentsTotal: number;
-  eventsTotal: number;
-  deaths: number;
-  chapters: number;
-  tiles: number;
-  diversity: DiversitySummary | null;
-  modelTier2: string;
-  modelTier3: string;
-}
+type Schemas = components["schemas"];
 
-export interface DiversitySummary {
-  total: number;
-  unique: number;
-  top_kind: string | null;
-  top_pct: number;
-}
+// ── Domain models (mirrored from Python Pydantic) ────────────────────────
 
-export interface Agent {
-  id: string;
-  name: string;
-  pack: string;
-  alignment: string;
-  isHf: boolean;
-  alive: boolean;
-  tile: string;
-  x: number;
-  y: number;
-  tags: string[];
-  // Only present on GET /api/agent/{id}
-  persona?: string;
-  goal?: string | null;
-  needs?: Record<string, number>;
-  emotions?: Record<string, number>;
-  attributes?: Record<string, number | string>;
-  beliefs?: Record<string, string>;
-  motivations?: string[] | null;
-  weeklyPlan?: Record<string, string[]> | null;
-  relationships?: Relationship[];
-  recentEvents?: WorldEvent[];
-}
+export type Agent              = Schemas["Agent"];
+export type Relationship       = Schemas["Relationship"];
+export type WorldEvent         = Schemas["WorldEvent"];
+export type WorldSnapshot      = Schemas["WorldSnapshot"];
+export type DiversitySummary   = Schemas["DiversitySummary"];
+export type Tile               = Schemas["Tile"];
+export type Chapter            = Schemas["Chapter"];
+export type ChronicleMarkdown  = Schemas["ChronicleMarkdown"];
+export type FeatureStatus      = Schemas["FeatureStatus"];
+export type EventTemplateRow   = Schemas["EventTemplateRow"];
+export type PersonaRow         = Schemas["PersonaRow"];
+export type EventKindCount     = Schemas["EventKindCount"];
+export type SocialGraph        = Schemas["SocialGraph"];
+export type SocialAgent        = Schemas["SocialAgent"];
+export type SocialRelationship = Schemas["SocialRelationship"];
+export type Health             = Schemas["Health"];
+export type Ok                 = Schemas["Ok"];
 
-export interface Relationship {
-  target: string;
-  kind: string;
-  affinity: number;
-}
+// Request bodies
+export type BootstrapBody      = Schemas["BootstrapBody"];
+export type TickBody           = Schemas["TickBody"];
 
-export interface WorldEvent {
-  id: string;
-  tick: number;
-  pack: string;
-  tile: string;
-  kind: string;
-  outcome: "success" | "failure" | "neutral";
-  importance: number;
-  tier: number;
-  isEmergent: boolean;
-  participants: string[];
-  narrative: string;
-}
-
-export interface Tile {
-  id: string;
-  name: string;
-  pack: string;
-  type: string;
-  x: number;
-  y: number;
-}
-
-export interface FeatureStatus {
-  name: string;
-  on: boolean;
-  detail: string;
-}
-
-export interface Chapter {
-  tick: number;
-  pack_id: string;
-  title: string;
-  body: string;
-  event_ids: string[];
-}
+// ── Friendly outcome literal (the OpenAPI enum erases to bare string;
+//    keep a tighter type for switch() exhaustiveness on the UI side).
+export type Outcome = "success" | "failure" | "neutral";

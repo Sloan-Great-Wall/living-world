@@ -1,0 +1,1331 @@
+{
+  "components": {
+    "schemas": {
+      "Agent": {
+        "properties": {
+          "alignment": {
+            "title": "Alignment",
+            "type": "string"
+          },
+          "alive": {
+            "title": "Alive",
+            "type": "boolean"
+          },
+          "attributes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "beliefs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Beliefs"
+          },
+          "emotions": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emotions"
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isHf": {
+            "title": "Ishf",
+            "type": "boolean"
+          },
+          "motivations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Motivations"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "needs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Needs"
+          },
+          "pack": {
+            "title": "Pack",
+            "type": "string"
+          },
+          "persona": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona"
+          },
+          "recentEvents": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorldEvent"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recentevents"
+          },
+          "relationships": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Relationship"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationships"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "tile": {
+            "title": "Tile",
+            "type": "string"
+          },
+          "weeklyPlan": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weeklyplan"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "pack",
+          "alignment",
+          "isHf",
+          "alive",
+          "tile",
+          "x",
+          "y",
+          "tags"
+        ],
+        "title": "Agent",
+        "type": "object"
+      },
+      "BootstrapBody": {
+        "properties": {
+          "packs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Packs",
+            "type": "array"
+          },
+          "seed": {
+            "default": 42,
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "packs"
+        ],
+        "title": "BootstrapBody",
+        "type": "object"
+      },
+      "Chapter": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "event_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Event Ids",
+            "type": "array"
+          },
+          "pack_id": {
+            "title": "Pack Id",
+            "type": "string"
+          },
+          "tick": {
+            "title": "Tick",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tick",
+          "pack_id",
+          "title",
+          "body",
+          "event_ids"
+        ],
+        "title": "Chapter",
+        "type": "object"
+      },
+      "ChronicleMarkdown": {
+        "properties": {
+          "markdown": {
+            "title": "Markdown",
+            "type": "string"
+          }
+        },
+        "required": [
+          "markdown"
+        ],
+        "title": "ChronicleMarkdown",
+        "type": "object"
+      },
+      "DiversitySummary": {
+        "properties": {
+          "top_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Kind"
+          },
+          "top_pct": {
+            "title": "Top Pct",
+            "type": "number"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unique": {
+            "title": "Unique",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "unique",
+          "top_pct"
+        ],
+        "title": "DiversitySummary",
+        "type": "object"
+      },
+      "EventKindCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "count"
+        ],
+        "title": "EventKindCount",
+        "type": "object"
+      },
+      "EventTemplateRow": {
+        "properties": {
+          "baseImportance": {
+            "title": "Baseimportance",
+            "type": "number"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "eventKind": {
+            "title": "Eventkind",
+            "type": "string"
+          },
+          "pack": {
+            "title": "Pack",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pack",
+          "eventKind",
+          "description",
+          "baseImportance",
+          "source"
+        ],
+        "title": "EventTemplateRow",
+        "type": "object"
+      },
+      "FeatureStatus": {
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "on": {
+            "title": "On",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "on",
+          "detail"
+        ],
+        "title": "FeatureStatus",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "loaded": {
+            "title": "Loaded",
+            "type": "boolean"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "loaded"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Ok": {
+        "properties": {
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "title": "Ok",
+        "type": "object"
+      },
+      "PersonaRow": {
+        "properties": {
+          "alignment": {
+            "title": "Alignment",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "isHf": {
+            "title": "Ishf",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pack": {
+            "title": "Pack",
+            "type": "string"
+          },
+          "persona": {
+            "title": "Persona",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "pack",
+          "alignment",
+          "isHf",
+          "tags",
+          "persona"
+        ],
+        "title": "PersonaRow",
+        "type": "object"
+      },
+      "Relationship": {
+        "properties": {
+          "affinity": {
+            "title": "Affinity",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "kind",
+          "affinity"
+        ],
+        "title": "Relationship",
+        "type": "object"
+      },
+      "SocialAgent": {
+        "properties": {
+          "agentId": {
+            "title": "Agentid",
+            "type": "string"
+          },
+          "alive": {
+            "title": "Alive",
+            "type": "boolean"
+          },
+          "packId": {
+            "title": "Packid",
+            "type": "string"
+          },
+          "relationships": {
+            "items": {
+              "$ref": "#/components/schemas/SocialRelationship"
+            },
+            "title": "Relationships",
+            "type": "array"
+          }
+        },
+        "required": [
+          "agentId",
+          "packId",
+          "alive",
+          "relationships"
+        ],
+        "title": "SocialAgent",
+        "type": "object"
+      },
+      "SocialGraph": {
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/SocialAgent"
+            },
+            "title": "Agents",
+            "type": "array"
+          }
+        },
+        "required": [
+          "agents"
+        ],
+        "title": "SocialGraph",
+        "type": "object"
+      },
+      "SocialRelationship": {
+        "properties": {
+          "affinity": {
+            "title": "Affinity",
+            "type": "integer"
+          },
+          "targetId": {
+            "title": "Targetid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetId",
+          "affinity"
+        ],
+        "title": "SocialRelationship",
+        "type": "object"
+      },
+      "TickBody": {
+        "properties": {
+          "n": {
+            "default": 1,
+            "title": "N",
+            "type": "integer"
+          }
+        },
+        "title": "TickBody",
+        "type": "object"
+      },
+      "Tile": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pack": {
+            "title": "Pack",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "x": {
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "pack",
+          "type",
+          "x",
+          "y"
+        ],
+        "title": "Tile",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WorldEvent": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "importance": {
+            "title": "Importance",
+            "type": "number"
+          },
+          "isEmergent": {
+            "title": "Isemergent",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "narrative": {
+            "title": "Narrative",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "success",
+              "failure",
+              "neutral"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "pack": {
+            "title": "Pack",
+            "type": "string"
+          },
+          "participants": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Participants",
+            "type": "array"
+          },
+          "tick": {
+            "title": "Tick",
+            "type": "integer"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "integer"
+          },
+          "tile": {
+            "title": "Tile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tick",
+          "pack",
+          "tile",
+          "kind",
+          "outcome",
+          "importance",
+          "tier",
+          "isEmergent",
+          "participants",
+          "narrative"
+        ],
+        "title": "WorldEvent",
+        "type": "object"
+      },
+      "WorldSnapshot": {
+        "properties": {
+          "agentsAlive": {
+            "title": "Agentsalive",
+            "type": "integer"
+          },
+          "agentsTotal": {
+            "title": "Agentstotal",
+            "type": "integer"
+          },
+          "chapters": {
+            "title": "Chapters",
+            "type": "integer"
+          },
+          "deaths": {
+            "title": "Deaths",
+            "type": "integer"
+          },
+          "diversity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DiversitySummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eventsTotal": {
+            "title": "Eventstotal",
+            "type": "integer"
+          },
+          "loaded": {
+            "title": "Loaded",
+            "type": "boolean"
+          },
+          "modelTier2": {
+            "title": "Modeltier2",
+            "type": "string"
+          },
+          "modelTier3": {
+            "title": "Modeltier3",
+            "type": "string"
+          },
+          "packs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Packs",
+            "type": "array"
+          },
+          "tick": {
+            "title": "Tick",
+            "type": "integer"
+          },
+          "tiles": {
+            "title": "Tiles",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "loaded",
+          "tick",
+          "packs",
+          "agentsAlive",
+          "agentsTotal",
+          "eventsTotal",
+          "deaths",
+          "chapters",
+          "tiles",
+          "modelTier2",
+          "modelTier3"
+        ],
+        "title": "WorldSnapshot",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Living World API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/agent/{agent_id}": {
+      "get": {
+        "operationId": "agent_api_agent__agent_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "agent_id",
+            "required": true,
+            "schema": {
+              "title": "Agent Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Agent"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Agent"
+      }
+    },
+    "/api/agents": {
+      "get": {
+        "operationId": "agents_api_agents_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Agent"
+                  },
+                  "title": "Response Agents Api Agents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Agents"
+      }
+    },
+    "/api/bootstrap": {
+      "post": {
+        "operationId": "bootstrap_api_bootstrap_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bootstrap"
+      }
+    },
+    "/api/chronicle": {
+      "get": {
+        "operationId": "chronicle_api_chronicle_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Chapter"
+                  },
+                  "title": "Response Chronicle Api Chronicle Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Chronicle"
+      }
+    },
+    "/api/chronicle.md": {
+      "get": {
+        "operationId": "chronicle_md_api_chronicle_md_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChronicleMarkdown"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Chronicle Md"
+      }
+    },
+    "/api/event_kinds": {
+      "get": {
+        "operationId": "event_kinds_api_event_kinds_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "top_k",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "title": "Top K",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventKindCount"
+                  },
+                  "title": "Response Event Kinds Api Event Kinds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Event Kinds"
+      }
+    },
+    "/api/events": {
+      "get": {
+        "operationId": "events_api_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Since",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 80,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorldEvent"
+                  },
+                  "title": "Response Events Api Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Events"
+      }
+    },
+    "/api/feature_status": {
+      "get": {
+        "operationId": "features_api_feature_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureStatus"
+                  },
+                  "title": "Response Features Api Feature Status Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Features"
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/api/packs_available": {
+      "get": {
+        "operationId": "packs_available_api_packs_available_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Packs Available Api Packs Available Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Packs Available"
+      }
+    },
+    "/api/personas": {
+      "get": {
+        "description": "Expose loaded YAML personas per pack — for Library 'Characters' tab.\n\nThese are the AUTHORED set, not just the spawned ones. Useful when\nyou want to see \"who could appear\" vs \"who's currently in the run\".",
+        "operationId": "personas_api_personas_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonaRow"
+                  },
+                  "title": "Response Personas Api Personas Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Personas"
+      }
+    },
+    "/api/reset": {
+      "post": {
+        "description": "Drop the loaded world. The frontend should then re-call\n/api/bootstrap with the desired packs.",
+        "operationId": "reset_api_reset_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Reset"
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "description": "Settings shape is deep + dynamic — exposed as open dict for now.\nTyping it is a follow-up (one Pydantic model per section).",
+        "operationId": "settings_get_api_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Settings Get Api Settings Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Settings Get"
+      },
+      "post": {
+        "description": "Patch the live settings + persist to settings.yaml.\n\nAccepts a partial dict — only top-level sections present in the\npayload are merged. Returns the merged settings dict.\n\nNOTE: Most settings only take effect on next bootstrap (engine\nis built from settings at bootstrap time). Caller should\nprompt the user to Reset → Simulate again after important\nchanges (model swap, packs, feature flags).",
+        "operationId": "settings_set_api_settings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Payload",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Settings Set Api Settings Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Settings Set"
+      }
+    },
+    "/api/social_graph": {
+      "get": {
+        "description": "Lightweight projection for client-side social-metrics compute.\n\nReturns just (agentId, packId, alive, relationships) — exactly\nwhat `@living-world/sim-core` `computeSocialMetrics` consumes.\nKeeping the heavy computation client-side proves the TS port is\na real consumer (not just an isomorphic re-implementation\nsitting unused). Server stays a thin data tap.",
+        "operationId": "social_graph_api_social_graph_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialGraph"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Social Graph"
+      }
+    },
+    "/api/templates": {
+      "get": {
+        "description": "Expose loaded event TEMPLATES per pack — for Library 'Stories' tab.",
+        "operationId": "templates_api_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EventTemplateRow"
+                  },
+                  "title": "Response Templates Api Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Templates"
+      }
+    },
+    "/api/tick": {
+      "post": {
+        "operationId": "tick_api_tick_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TickBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tick"
+      }
+    },
+    "/api/tiles": {
+      "get": {
+        "operationId": "tiles_api_tiles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Tile"
+                  },
+                  "title": "Response Tiles Api Tiles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Tiles"
+      }
+    },
+    "/api/world": {
+      "get": {
+        "operationId": "world_api_world_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "World"
+      }
+    }
+  }
+}

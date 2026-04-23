@@ -1,19 +1,34 @@
 """FastAPI sim API for the Tauri dashboard.
 
+Every route declares a `response_model` pointing at `living_world.web.schemas`.
+That schema is the SINGLE source of truth for the cross-layer contract:
+
+    Python Pydantic ─► OpenAPI JSON ─► openapi-ts ─► TS types
+
+Run `make schema` to regenerate both `api-schema/openapi.json` and the
+TS types under `dashboard-tauri/src/types/api.generated.ts`. Any field
+rename on this side will red-line the dashboard at `tsc --noEmit` time.
+
 ENDPOINTS
 ---------
-GET  /api/world              snapshot for top-bar stats
+GET  /api/world              world snapshot / top-bar stats
 GET  /api/feature_status     which LLM modules are wired
 GET  /api/agents             agent list (lightweight)
 GET  /api/agent/{id}         full agent detail
+GET  /api/tiles              tile list
 GET  /api/events             recent events
 GET  /api/chronicle          chapter list
-GET  /api/social             social network metrics
+GET  /api/chronicle.md       chronicle rendered as Markdown
 GET  /api/event_kinds        event-kind frequency
+GET  /api/social_graph       thin projection for client-side sim-core
 GET  /api/settings           current settings dict
+POST /api/settings           patch settings
 GET  /api/packs_available    which packs the user can load
+GET  /api/templates          authored event templates
+GET  /api/personas           authored personas
 POST /api/bootstrap          create a new world  body: {packs:[...], seed:int}
 POST /api/tick               advance N ticks    body: {n:int}
+POST /api/reset              drop the loaded world
 
 Single shared engine instance (Stage A single-user model). Re-bootstrap
 discards the previous world.
@@ -25,7 +40,6 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
 from living_world import PACKS_DIR
 from living_world.config import load_settings
@@ -36,15 +50,27 @@ from living_world.queries import (
     export_chronicle_markdown,
     feature_status,
 )
-
-
-class BootstrapBody(BaseModel):
-    packs: list[str]
-    seed: int = 42
-
-
-class TickBody(BaseModel):
-    n: int = 1
+from living_world.web.schemas import (
+    Agent,
+    BootstrapBody,
+    Chapter,
+    ChronicleMarkdown,
+    DiversitySummary,
+    EventKindCount,
+    EventTemplateRow,
+    FeatureStatus,
+    Health,
+    Ok,
+    PersonaRow,
+    Relationship,
+    SocialAgent,
+    SocialGraph,
+    SocialRelationship,
+    TickBody,
+    Tile,
+    WorldEvent,
+    WorldSnapshot,
+)
 
 
 class _State:
@@ -57,17 +83,46 @@ class _State:
 STATE = _State()
 
 
-def _need_engine():
+def _need_engine() -> None:
     if STATE.engine is None:
         raise HTTPException(409, "No world loaded. POST /api/bootstrap first.")
 
 
-# ── camelCase by API hygiene rule (KNOWN_ISSUES TS-port plan).
-# Every key returned to the frontend is camelCase so the eventual
-# TS-sim port produces identical JSON shape — zero-change UI migration.
+# ── Typed builders (operate on sim objects, return Pydantic models) ─────────
+# These replace the old _agent_dict / _event_dict / _tile_dict helpers that
+# returned raw dicts. Shape is now enforced at runtime by Pydantic AND at
+# compile time by openapi-ts in the dashboard. See schemas.py for the
+# camelCase convention rationale.
 
 
-def _agent_dict(a, full: bool = False) -> dict:
+def _build_event(e: Any) -> WorldEvent:
+    return WorldEvent(
+        id=e.event_id,
+        tick=e.tick,
+        pack=e.pack_id,
+        tile=e.tile_id,
+        kind=e.event_kind,
+        outcome=e.outcome,
+        importance=e.importance,
+        tier=e.tier_used,
+        isEmergent=e.is_emergent,
+        participants=list(e.participants),
+        narrative=e.best_rendering(),
+    )
+
+
+def _build_tile(t: Any) -> Tile:
+    return Tile(
+        id=t.tile_id,
+        name=t.display_name,
+        pack=t.primary_pack,
+        type=t.tile_type,
+        x=float(getattr(t, "x", 0.0)),
+        y=float(getattr(t, "y", 0.0)),
+    )
+
+
+def _build_agent(a: Any, *, full: bool = False) -> Agent:
     base = {
         "id": a.agent_id,
         "name": a.display_name,
@@ -81,7 +136,7 @@ def _agent_dict(a, full: bool = False) -> dict:
         "tags": sorted(a.tags),
     }
     if not full:
-        return base
+        return Agent(**base)
     base.update(
         {
             "persona": (a.persona_card or "").strip(),
@@ -93,72 +148,49 @@ def _agent_dict(a, full: bool = False) -> dict:
             "motivations": a.get_motivations(),
             "weeklyPlan": a.get_weekly_plan(),
             "relationships": [
-                {"target": r.target_id, "kind": r.kind, "affinity": r.affinity}
+                Relationship(target=r.target_id, kind=r.kind, affinity=r.affinity)
                 for r in sorted(a.relationships.values(), key=lambda r: -abs(r.affinity))[:10]
             ],
         }
     )
-    return base
+    return Agent(**base)
 
 
-def _event_dict(e) -> dict:
-    return {
-        "id": e.event_id,
-        "tick": e.tick,
-        "pack": e.pack_id,
-        "tile": e.tile_id,
-        "kind": e.event_kind,
-        "outcome": e.outcome,
-        "importance": e.importance,
-        "tier": e.tier_used,
-        "isEmergent": e.is_emergent,
-        "participants": e.participants,
-        "narrative": e.best_rendering(),
-    }
-
-
-def _world_snapshot() -> dict:
+def _build_world_snapshot() -> WorldSnapshot:
     if STATE.world is None:
-        return {
-            "loaded": False,
-            "tick": 0,
-            "packs": [],
-            "agentsAlive": 0,
-            "agentsTotal": 0,
-            "eventsTotal": 0,
-            "deaths": 0,
-            "chapters": 0,
-            "tiles": 0,
-            "diversity": None,
-            "modelTier2": STATE.settings.llm.ollama_tier2_model,
-            "modelTier3": STATE.settings.llm.ollama_tier3_model,
-        }
+        return WorldSnapshot(
+            loaded=False,
+            tick=0,
+            packs=[],
+            agentsAlive=0,
+            agentsTotal=0,
+            eventsTotal=0,
+            deaths=0,
+            chapters=0,
+            tiles=0,
+            diversity=None,
+            modelTier2=STATE.settings.llm.ollama_tier2_model,
+            modelTier3=STATE.settings.llm.ollama_tier3_model,
+        )
     w = STATE.world
-    return {
-        "loaded": True,
-        "tick": w.current_tick,
-        "packs": STATE.loaded_packs,
-        "agentsAlive": sum(1 for _ in w.living_agents()),
-        "agentsTotal": sum(1 for _ in w.all_agents()),
-        "eventsTotal": w.event_count(),
-        "deaths": sum(1 for a in w.all_agents() if not a.is_alive()),
-        "chapters": len(w.chapters),
-        "tiles": sum(1 for _ in w.all_tiles()),
-        "diversity": diversity_summary(w),
-        "modelTier2": STATE.settings.llm.ollama_tier2_model,
-        "modelTier3": STATE.settings.llm.ollama_tier3_model,
-    }
+    div = diversity_summary(w)
+    return WorldSnapshot(
+        loaded=True,
+        tick=w.current_tick,
+        packs=STATE.loaded_packs,
+        agentsAlive=sum(1 for _ in w.living_agents()),
+        agentsTotal=sum(1 for _ in w.all_agents()),
+        eventsTotal=w.event_count(),
+        deaths=sum(1 for a in w.all_agents() if not a.is_alive()),
+        chapters=len(w.chapters),
+        tiles=sum(1 for _ in w.all_tiles()),
+        diversity=DiversitySummary(**div) if div else None,
+        modelTier2=STATE.settings.llm.ollama_tier2_model,
+        modelTier3=STATE.settings.llm.ollama_tier3_model,
+    )
 
 
-def _tile_dict(t) -> dict:
-    return {
-        "id": t.tile_id,
-        "name": t.display_name,
-        "pack": t.primary_pack,
-        "type": t.tile_type,
-        "x": getattr(t, "x", 0.0),
-        "y": getattr(t, "y", 0.0),
-    }
+# ── App ────────────────────────────────────────────────────────────────────
 
 
 def create_app() -> FastAPI:
@@ -171,61 +203,60 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    @app.post("/api/bootstrap")
-    def bootstrap(payload: BootstrapBody):
+    @app.post("/api/bootstrap", response_model=WorldSnapshot)
+    def bootstrap(payload: BootstrapBody) -> WorldSnapshot:
         if not payload.packs:
             raise HTTPException(400, "packs cannot be empty")
         world, loaded = bootstrap_world(PACKS_DIR, payload.packs)
         STATE.world = world
         STATE.engine = make_engine(world, loaded, STATE.settings, payload.seed)
         STATE.loaded_packs = payload.packs
-        return _world_snapshot()
+        return _build_world_snapshot()
 
-    @app.post("/api/tick")
-    def tick(payload: TickBody):
+    @app.post("/api/tick", response_model=WorldSnapshot)
+    def tick(payload: TickBody) -> WorldSnapshot:
         _need_engine()
         if payload.n < 1 or payload.n > 100:
             raise HTTPException(400, "n must be 1..100")
         STATE.engine.run(payload.n)
-        return _world_snapshot()
+        return _build_world_snapshot()
 
-    @app.get("/api/world")
-    def world():
-        return _world_snapshot()
+    @app.get("/api/world", response_model=WorldSnapshot)
+    def world() -> WorldSnapshot:
+        return _build_world_snapshot()
 
-    @app.get("/api/feature_status")
-    def features():
+    @app.get("/api/feature_status", response_model=list[FeatureStatus])
+    def features() -> list[FeatureStatus]:
         _need_engine()
         return [
-            {"name": fs.name, "on": fs.on, "detail": fs.detail}
+            FeatureStatus(name=fs.name, on=fs.on, detail=fs.detail)
             for fs in feature_status(STATE.engine)
         ]
 
-    @app.get("/api/agents")
-    def agents():
+    @app.get("/api/agents", response_model=list[Agent])
+    def agents() -> list[Agent]:
         _need_engine()
-        return [_agent_dict(a) for a in STATE.world.all_agents()]
+        return [_build_agent(a) for a in STATE.world.all_agents()]
 
-    @app.get("/api/agent/{agent_id}")
-    def agent(agent_id: str):
+    @app.get("/api/agent/{agent_id}", response_model=Agent)
+    def agent(agent_id: str) -> Agent:
         _need_engine()
         a = STATE.world.get_agent(agent_id)
         if a is None:
             raise HTTPException(404, f"unknown agent {agent_id}")
-        out = _agent_dict(a, full=True)
-        # camelCase by API hygiene rule (KNOWN_ISSUES TS-port plan)
-        out["recentEvents"] = [
-            _event_dict(e) for e in STATE.world.events_since(1) if agent_id in e.participants
+        out = _build_agent(a, full=True)
+        out.recentEvents = [
+            _build_event(e) for e in STATE.world.events_since(1) if agent_id in e.participants
         ][-15:]
         return out
 
-    @app.get("/api/tiles")
-    def tiles():
+    @app.get("/api/tiles", response_model=list[Tile])
+    def tiles() -> list[Tile]:
         _need_engine()
-        return [_tile_dict(t) for t in STATE.world.all_tiles()]
+        return [_build_tile(t) for t in STATE.world.all_tiles()]
 
-    @app.get("/api/social_graph")
-    def social_graph():
+    @app.get("/api/social_graph", response_model=SocialGraph)
+    def social_graph() -> SocialGraph:
         """Lightweight projection for client-side social-metrics compute.
 
         Returns just (agentId, packId, alive, relationships) — exactly
@@ -235,48 +266,52 @@ def create_app() -> FastAPI:
         sitting unused). Server stays a thin data tap.
         """
         _need_engine()
-        agents_payload = []
-        for a in STATE.world.all_agents():
-            agents_payload.append(
-                {
-                    "agentId": a.agent_id,
-                    "packId": a.pack_id,
-                    "alive": a.is_alive(),
-                    "relationships": [
-                        {"targetId": r.target_id, "affinity": int(r.affinity)}
+        return SocialGraph(
+            agents=[
+                SocialAgent(
+                    agentId=a.agent_id,
+                    packId=a.pack_id,
+                    alive=a.is_alive(),
+                    relationships=[
+                        SocialRelationship(targetId=r.target_id, affinity=int(r.affinity))
                         for r in a.relationships.values()
                     ],
-                }
-            )
-        return {"agents": agents_payload}
+                )
+                for a in STATE.world.all_agents()
+            ]
+        )
 
-    @app.get("/api/events")
-    def events(since: int = 1, limit: int = 80):
+    @app.get("/api/events", response_model=list[WorldEvent])
+    def events(since: int = 1, limit: int = 80) -> list[WorldEvent]:
         _need_engine()
         evts = STATE.world.events_since(since)
-        return [_event_dict(e) for e in evts[-limit:]]
+        return [_build_event(e) for e in evts[-limit:]]
 
-    @app.get("/api/chronicle")
-    def chronicle():
+    @app.get("/api/chronicle", response_model=list[Chapter])
+    def chronicle() -> list[Chapter]:
         _need_engine()
-        return STATE.world.chapters
+        # world.chapters is already a list[dict] with the right shape.
+        return [Chapter(**c) for c in STATE.world.chapters]
 
-    @app.get("/api/chronicle.md")
-    def chronicle_md():
+    @app.get("/api/chronicle.md", response_model=ChronicleMarkdown)
+    def chronicle_md() -> ChronicleMarkdown:
         _need_engine()
-        return {"markdown": export_chronicle_markdown(STATE.world)}
+        return ChronicleMarkdown(markdown=export_chronicle_markdown(STATE.world))
 
-    @app.get("/api/event_kinds")
-    def event_kinds(top_k: int = 10):
+    @app.get("/api/event_kinds", response_model=list[EventKindCount])
+    def event_kinds(top_k: int = 10) -> list[EventKindCount]:
         _need_engine()
-        return event_kind_distribution(STATE.world, top_k=top_k)
+        rows = event_kind_distribution(STATE.world, top_k=top_k)
+        return [EventKindCount(kind=k, count=c) for k, c in rows]
 
     @app.get("/api/settings")
-    def settings_get():
+    def settings_get() -> dict[str, Any]:
+        """Settings shape is deep + dynamic — exposed as open dict for now.
+        Typing it is a follow-up (one Pydantic model per section)."""
         return STATE.settings.model_dump()
 
     @app.post("/api/settings")
-    def settings_set(payload: dict):
+    def settings_set(payload: dict) -> dict[str, Any]:
         """Patch the live settings + persist to settings.yaml.
 
         Accepts a partial dict — only top-level sections present in the
@@ -303,67 +338,67 @@ def create_app() -> FastAPI:
         save_settings(new_settings)
         return STATE.settings.model_dump()
 
-    @app.post("/api/reset")
-    def reset():
+    @app.post("/api/reset", response_model=Ok)
+    def reset() -> Ok:
         """Drop the loaded world. The frontend should then re-call
         /api/bootstrap with the desired packs."""
         STATE.world = None
         STATE.engine = None
         STATE.loaded_packs = []
-        return {"ok": True}
+        return Ok()
 
-    @app.get("/api/packs_available")
-    def packs_available():
+    @app.get("/api/packs_available", response_model=list[str])
+    def packs_available() -> list[str]:
         return sorted(
             p.name for p in PACKS_DIR.iterdir() if p.is_dir() and (p / "pack.yaml").exists()
         )
 
-    @app.get("/api/templates")
-    def templates():
+    @app.get("/api/templates", response_model=list[EventTemplateRow])
+    def templates() -> list[EventTemplateRow]:
         """Expose loaded event TEMPLATES per pack — for Library 'Stories' tab."""
         _need_engine()
-        out: list[dict] = []
+        out: list[EventTemplateRow] = []
         for pack_id, pack in STATE.engine.packs.items():
             for kind, t in pack.events.items():
                 out.append(
-                    {
-                        "pack": pack_id,
-                        "eventKind": kind,
-                        "description": getattr(t, "description", "") or "",
-                        "baseImportance": getattr(t, "base_importance", 0.0),
-                        "source": getattr(t, "source", "yaml"),
-                    }
+                    EventTemplateRow(
+                        pack=pack_id,
+                        eventKind=kind,
+                        description=getattr(t, "description", "") or "",
+                        baseImportance=getattr(t, "base_importance", 0.0),
+                        source=getattr(t, "source", "yaml"),
+                    )
                 )
-        out.sort(key=lambda r: (r["pack"], -r["baseImportance"]))
+        out.sort(key=lambda r: (r.pack, -r.baseImportance))
         return out
 
-    @app.get("/api/personas")
-    def personas():
+    @app.get("/api/personas", response_model=list[PersonaRow])
+    def personas() -> list[PersonaRow]:
         """Expose loaded YAML personas per pack — for Library 'Characters' tab.
 
         These are the AUTHORED set, not just the spawned ones. Useful when
         you want to see "who could appear" vs "who's currently in the run".
         """
         _need_engine()
-        out: list[dict] = []
+        out: list[PersonaRow] = []
         for pack_id, pack in STATE.engine.packs.items():
             for p in pack.personas:
                 out.append(
-                    {
-                        "id": p.agent_id,
-                        "name": p.display_name,
-                        "pack": pack_id,
-                        "alignment": getattr(p, "alignment", "neutral"),
-                        "isHf": getattr(p, "is_historical_figure", False),
-                        "tags": sorted(getattr(p, "tags", set())),
-                        "persona": (getattr(p, "persona_card", "") or "").strip(),
-                    }
+                    PersonaRow(
+                        id=p.agent_id,
+                        name=p.display_name,
+                        pack=pack_id,
+                        alignment=getattr(p, "alignment", "neutral"),
+                        isHf=getattr(p, "is_historical_figure", False),
+                        tags=sorted(getattr(p, "tags", set())),
+                        persona=(getattr(p, "persona_card", "") or "").strip(),
+                    )
                 )
         return out
 
-    @app.get("/api/health")
-    def health():
-        return {"ok": True, "loaded": STATE.world is not None}
+    @app.get("/api/health", response_model=Health)
+    def health() -> Health:
+        return Health(ok=True, loaded=STATE.world is not None)
 
     return app
 

@@ -27,23 +27,33 @@ PY      := .venv/bin/python
 PYTEST  := $(PY) -m pytest
 RUFF    := $(PY) -m ruff
 PYRIGHT := .venv/bin/basedpyright
+# uv is ~15× faster than pip for resolve + install; installed INTO the venv
+# so no system-level dep. Falls back to pip if uv missing (first-time bootstrap).
+UV      := .venv/bin/uv
 
-.PHONY: check fix py py-lint py-types py-tests ts ts-sim-core ts-dashboard ts-bundle smoke clean help install
+.PHONY: check fix py py-lint py-types py-tests ts ts-sim-core ts-dashboard ts-bundle ts-schema smoke clean help install schema schema-check
 
 help:
 	@echo 'Living World — verification gates'
 	@echo ''
 	@echo '  make install — npm install (root workspace) + pip install -e .[dev]'
-	@echo '  make check   — full gate (lint + types + tests + build)'
+	@echo '  make check   — full gate (schema-check + lint + types + tests + build)'
 	@echo '  make py      — Python-only (ruff + basedpyright + pytest)'
-	@echo '  make ts      — TypeScript-only (tsc + vitest + bundle)'
+	@echo '  make ts      — TypeScript-only (schema-check + tsc + vitest + bundle)'
+	@echo '  make schema  — regenerate OpenAPI + TS types (commits required after)'
 	@echo '  make smoke   — quick rule-only sim run'
 	@echo '  make fix     — auto-fix lint/format'
 	@echo '  make clean   — remove caches + dist'
 
 install:
-	@echo '── pip install -e .[dev] ──'
-	@$(PY) -m pip install -e '.[dev]' --quiet
+	@# Use uv if available (30× faster resolve); fall back to pip otherwise.
+	@if [ -x $(UV) ]; then \
+		echo '── uv pip install -e .[dev] ──'; \
+		$(UV) pip install -e '.[dev]' --quiet; \
+	else \
+		echo '── pip install -e .[dev] (uv not installed; run `pip install uv` to go faster) ──'; \
+		$(PY) -m pip install -e '.[dev]' --quiet; \
+	fi
 	@echo '── npm install (workspaces) ──'
 	@npm install --silent
 	@echo '✓ installed'
@@ -70,13 +80,44 @@ py-tests:
 	@echo '── pytest (unit + invariants + smoke; live LLM auto-skipped) ──'
 	@$(PYTEST) -x -q --tb=short
 
+# ── Cross-layer schema (Python Pydantic ─► TS types) ──
+#
+# `make schema`        — regenerate api-schema/openapi.json + api.generated.ts.
+#                        Run after editing living_world/web/schemas.py; commit
+#                        both files in the same change so reviewers see them.
+# `make schema-check`  — verify the committed files match the live Python; CI
+#                        gate. Drift means schemas changed without regen.
+
+schema:
+	@echo '── dump OpenAPI from FastAPI ──'
+	@$(PY) scripts/dump_openapi.py
+	@echo '── openapi-typescript ─► api.generated.ts ──'
+	@npm run schema:gen --workspace=dashboard-tauri --silent
+	@echo '✓ schema regenerated'
+
+schema-check:
+	@echo '── schema drift check ──'
+	@$(PY) scripts/dump_openapi.py > /dev/null
+	@if ! git diff --quiet -- api-schema/openapi.json; then \
+		echo '✗ api-schema/openapi.json is stale — run `make schema` and commit'; \
+		git --no-pager diff --stat api-schema/openapi.json; \
+		exit 1; \
+	fi
+	@npm run schema:gen --workspace=dashboard-tauri --silent
+	@if ! git diff --quiet -- dashboard-tauri/src/types/api.generated.ts; then \
+		echo '✗ api.generated.ts is stale — run `make schema` and commit'; \
+		exit 1; \
+	fi
+
 # ── TypeScript gates ──
 #
 # All TS tooling runs from the repo root; npm workspaces routes each
 # command to the right package. No more `cd packages/... && npx ...`.
 
-ts: ts-sim-core ts-dashboard ts-bundle
+ts: ts-schema ts-sim-core ts-dashboard ts-bundle
 	@echo '✓ typescript gates ok'
+
+ts-schema: schema-check
 
 ts-sim-core:
 	@echo '── @living-world/sim-core: typecheck + parity ──'
