@@ -132,17 +132,31 @@ class StorytellerPhase(Phase):
 
 
 class EmergentPhase(Phase):
-    """LLM invents novel events on hot tiles + curator promotes hits."""
+    """LLM invents novel events on hot tiles + curator promotes hits.
+
+    Honors the same-kind-per-tick cap that EventResolver enforces for
+    storyteller-proposed events, by checking + bumping resolver's
+    counter directly. Otherwise emergent could re-propose the same
+    novel kind 2-3 times across hot tiles in one tick.
+    """
     name = "emergent"
     def run(self, engine, t, stats):
         if engine.emergent_proposer is None:
             return
         log = engine.tick_logger
+        cap = getattr(engine.resolver, "SAME_KIND_PER_TICK_CAP", None)
+        kind_count = engine.resolver._kind_tick_count if cap is not None else None
         hot = _rule_hot_tiles(engine.world, limit=engine.emergent_max_per_tick)
         for tile in hot:
             event = engine.emergent_proposer.propose(tile, engine.world)
             if event is None:
                 continue
+            # Same-kind dedup across emergent + storyteller events.
+            if kind_count is not None:
+                key = (t, event.event_kind)
+                if kind_count.get(key, 0) >= cap:
+                    continue
+                kind_count[key] = kind_count.get(key, 0) + 1
             if log:
                 log.emergent_event(
                     event.event_kind, event.tile_id, event.participants,

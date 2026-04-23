@@ -384,6 +384,63 @@ def test_resolver_world_wide_same_kind_dedup_per_tick():
     assert e3 is not None
 
 
+def test_emergent_phase_honors_same_kind_per_tick_cap(monkeypatch):
+    """Regression: v3 6-tick run had d4/cult-activity-discovery×2 because
+    EmergentPhase bypassed EventResolver's SAME_KIND_PER_TICK_CAP. Now
+    it consults + bumps the resolver counter directly."""
+    from living_world.core.event import LegendEvent
+    from living_world import phases as phases_mod
+
+    fired_count = {"v": 0}
+    class StubProposer:
+        def propose(self, tile, world):
+            fired_count["v"] += 1
+            return LegendEvent(
+                event_id=f"e{fired_count['v']}", tick=world.current_tick,
+                pack_id="scp", tile_id=tile.tile_id,
+                event_kind="dup-kind", participants=[],
+                outcome="neutral", template_rendering="...", importance=0.5,
+                is_emergent=True,
+            )
+
+    class StubResolver:
+        SAME_KIND_PER_TICK_CAP = 1
+        def __init__(self):
+            self._kind_tick_count: dict = {}
+
+    class StubLog:
+        def emergent_event(self, *a, **kw): pass
+        def template_promoted(self, *a, **kw): pass
+
+    processed: list[str] = []
+    class StubEngine:
+        emergent_proposer = StubProposer()
+        emergent_max_per_tick = 5
+        resolver = StubResolver()
+        packs: dict = {}
+        tick_logger = StubLog()
+        def _process_event(self, e, stats):
+            processed.append(e.event_id)
+
+    w = World()
+    t1 = Tile(tile_id="t1", display_name="T1", primary_pack="scp", tile_type="hall")
+    t2 = Tile(tile_id="t2", display_name="T2", primary_pack="scp", tile_type="hall")
+    w.add_tile(t1); w.add_tile(t2)
+    w.current_tick = 5
+
+    # Bypass heat scoring — tell EmergentPhase both tiles are hot.
+    monkeypatch.setattr(phases_mod, "_rule_hot_tiles", lambda world, limit: [t1, t2])
+
+    eng = StubEngine()
+    eng.world = w
+    phases_mod.EmergentPhase().run(eng, 5, type("S", (), {"reactions": 0})())
+
+    assert len(processed) == 1, (
+        f"only 1 event of kind 'dup-kind' should be processed in tick 5; "
+        f"got {len(processed)}: {processed}"
+    )
+
+
 def test_emergent_pair_cooldown_blocks_repeat_cast():
     """The Strelnikov+O5-03 fixation bug: same agent set should not be
     proposed by emergent again within PAIR_COOLDOWN_TICKS days."""
