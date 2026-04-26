@@ -263,71 +263,6 @@
         "title": "Chapter",
         "type": "object"
       },
-      "ChronicleMarkdown": {
-        "properties": {
-          "markdown": {
-            "title": "Markdown",
-            "type": "string"
-          }
-        },
-        "required": [
-          "markdown"
-        ],
-        "title": "ChronicleMarkdown",
-        "type": "object"
-      },
-      "DiversitySummary": {
-        "properties": {
-          "top_kind": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Top Kind"
-          },
-          "top_pct": {
-            "title": "Top Pct",
-            "type": "number"
-          },
-          "total": {
-            "title": "Total",
-            "type": "integer"
-          },
-          "unique": {
-            "title": "Unique",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "total",
-          "unique",
-          "top_pct"
-        ],
-        "title": "DiversitySummary",
-        "type": "object"
-      },
-      "EventKindCount": {
-        "properties": {
-          "count": {
-            "title": "Count",
-            "type": "integer"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "count"
-        ],
-        "title": "EventKindCount",
-        "type": "object"
-      },
       "EventTemplateRow": {
         "properties": {
           "baseImportance": {
@@ -721,6 +656,7 @@
         "type": "object"
       },
       "WorldSnapshot": {
+        "description": "Top-bar / hero stats for the dashboard.\n\nDiversity used to live here as a server-computed nested object;\nafter the 2026-04-26 simplification audit the dashboard computes\nit client-side from /api/events via\n`@living-world/sim-core` `diversitySummary()`. Removed to keep the\nwire format minimal.",
         "properties": {
           "agentsAlive": {
             "title": "Agentsalive",
@@ -737,16 +673,6 @@
           "deaths": {
             "title": "Deaths",
             "type": "integer"
-          },
-          "diversity": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/DiversitySummary"
-              },
-              {
-                "type": "null"
-              }
-            ]
           },
           "eventsTotal": {
             "title": "Eventstotal",
@@ -923,68 +849,6 @@
           }
         },
         "summary": "Chronicle"
-      }
-    },
-    "/api/chronicle.md": {
-      "get": {
-        "operationId": "chronicle_md_api_chronicle_md_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChronicleMarkdown"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Chronicle Md"
-      }
-    },
-    "/api/event_kinds": {
-      "get": {
-        "operationId": "event_kinds_api_event_kinds_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "top_k",
-            "required": false,
-            "schema": {
-              "default": 10,
-              "title": "Top K",
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/EventKindCount"
-                  },
-                  "title": "Response Event Kinds Api Event Kinds Get",
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Event Kinds"
       }
     },
     "/api/events": {

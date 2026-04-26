@@ -21,19 +21,22 @@ export type Agent              = Schemas["Agent"];
 export type Relationship       = Schemas["Relationship"];
 export type WorldEvent         = Schemas["WorldEvent"];
 export type WorldSnapshot      = Schemas["WorldSnapshot"];
-export type DiversitySummary   = Schemas["DiversitySummary"];
 export type Tile               = Schemas["Tile"];
 export type Chapter            = Schemas["Chapter"];
-export type ChronicleMarkdown  = Schemas["ChronicleMarkdown"];
 export type FeatureStatus      = Schemas["FeatureStatus"];
 export type EventTemplateRow   = Schemas["EventTemplateRow"];
 export type PersonaRow         = Schemas["PersonaRow"];
-export type EventKindCount     = Schemas["EventKindCount"];
 export type SocialGraph        = Schemas["SocialGraph"];
 export type SocialAgent        = Schemas["SocialAgent"];
 export type SocialRelationship = Schemas["SocialRelationship"];
 export type Health             = Schemas["Health"];
 export type Ok                 = Schemas["Ok"];
+
+// Diversity / event-kinds / chronicle.md were removed from the wire
+// format in 2026-04-26. The dashboard computes them client-side via
+// `@living-world/sim-core` (diversitySummary / eventKindDistribution /
+// exportChronicleMarkdown). Re-export the TS-side type for convenience:
+export type { DiversitySummary } from "@living-world/sim-core";
 
 // Request bodies
 export type BootstrapBody      = Schemas["BootstrapBody"];

@@ -18,8 +18,6 @@ GET  /api/agent/{id}         full agent detail
 GET  /api/tiles              tile list
 GET  /api/events             recent events
 GET  /api/chronicle          chapter list
-GET  /api/chronicle.md       chronicle rendered as Markdown
-GET  /api/event_kinds        event-kind frequency
 GET  /api/social_graph       thin projection for client-side sim-core
 GET  /api/settings           current settings dict
 POST /api/settings           patch settings
@@ -29,6 +27,10 @@ GET  /api/personas           authored personas
 POST /api/bootstrap          create a new world  body: {packs:[...], seed:int}
 POST /api/tick               advance N ticks    body: {n:int}
 POST /api/reset              drop the loaded world
+
+Aggregations the dashboard used to fetch (event_kinds, chronicle.md,
+WorldSnapshot.diversity) are now computed client-side via
+@living-world/sim-core. The server stays a thin data tap.
 
 Single shared engine instance (Stage A single-user model). Re-bootstrap
 discards the previous world.
@@ -44,19 +46,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from living_world import PACKS_DIR
 from living_world.config import load_settings
 from living_world.factory import bootstrap_world, make_engine
-from living_world.queries import (
-    diversity_summary,
-    event_kind_distribution,
-    export_chronicle_markdown,
-    feature_status,
-)
+from living_world.queries import feature_status
 from living_world.web.schemas import (
     Agent,
     BootstrapBody,
     Chapter,
-    ChronicleMarkdown,
-    DiversitySummary,
-    EventKindCount,
     EventTemplateRow,
     FeatureStatus,
     Health,
@@ -168,12 +162,10 @@ def _build_world_snapshot() -> WorldSnapshot:
             deaths=0,
             chapters=0,
             tiles=0,
-            diversity=None,
             modelTier2=STATE.settings.llm.ollama_tier2_model,
             modelTier3=STATE.settings.llm.ollama_tier3_model,
         )
     w = STATE.world
-    div = diversity_summary(w)
     return WorldSnapshot(
         loaded=True,
         tick=w.current_tick,
@@ -184,7 +176,6 @@ def _build_world_snapshot() -> WorldSnapshot:
         deaths=sum(1 for a in w.all_agents() if not a.is_alive()),
         chapters=len(w.chapters),
         tiles=sum(1 for _ in w.all_tiles()),
-        diversity=DiversitySummary(**div) if div else None,
         modelTier2=STATE.settings.llm.ollama_tier2_model,
         modelTier3=STATE.settings.llm.ollama_tier3_model,
     )
@@ -293,16 +284,12 @@ def create_app() -> FastAPI:
         # world.chapters is already a list[dict] with the right shape.
         return [Chapter(**c) for c in STATE.world.chapters]
 
-    @app.get("/api/chronicle.md", response_model=ChronicleMarkdown)
-    def chronicle_md() -> ChronicleMarkdown:
-        _need_engine()
-        return ChronicleMarkdown(markdown=export_chronicle_markdown(STATE.world))
-
-    @app.get("/api/event_kinds", response_model=list[EventKindCount])
-    def event_kinds(top_k: int = 10) -> list[EventKindCount]:
-        _need_engine()
-        rows = event_kind_distribution(STATE.world, top_k=top_k)
-        return [EventKindCount(kind=k, count=c) for k, c in rows]
+    # NOTE: /api/event_kinds and /api/chronicle.md were removed in the
+    # 2026-04-26 simplification audit. The dashboard now computes both
+    # client-side via @living-world/sim-core (eventKindDistribution +
+    # exportChronicleMarkdown) from a single /api/events + /api/chronicle
+    # fetch — saving two HTTP routes + two Pydantic models. Server stays
+    # a thin data tap; aggregation lives where the user is.
 
     @app.get("/api/settings")
     def settings_get() -> dict[str, Any]:

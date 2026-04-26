@@ -16,7 +16,7 @@ import type { Agent, Chapter, Tile, WorldEvent, WorldSnapshot } from "../types/a
 
 const EMPTY_SNAP: WorldSnapshot = {
   loaded: false, tick: 0, packs: [], agentsAlive: 0, agentsTotal: 0,
-  eventsTotal: 0, deaths: 0, chapters: 0, tiles: 0, diversity: null,
+  eventsTotal: 0, deaths: 0, chapters: 0, tiles: 0,
   modelTier2: "—", modelTier3: "—",
 };
 

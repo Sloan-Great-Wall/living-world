@@ -32,7 +32,6 @@ dev = [
 ]
 
 [project.scripts]
-world-sim = "living_world.cli:app"
 lw = "living_world.cli:app"
 
 [build-system]

@@ -72,40 +72,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/chronicle.md": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Chronicle Md */
-        get: operations["chronicle_md_api_chronicle_md_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/event_kinds": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Event Kinds */
-        get: operations["event_kinds_api_event_kinds_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -428,29 +394,6 @@ export interface components {
             /** Title */
             title: string;
         };
-        /** ChronicleMarkdown */
-        ChronicleMarkdown: {
-            /** Markdown */
-            markdown: string;
-        };
-        /** DiversitySummary */
-        DiversitySummary: {
-            /** Top Kind */
-            top_kind?: string | null;
-            /** Top Pct */
-            top_pct: number;
-            /** Total */
-            total: number;
-            /** Unique */
-            unique: number;
-        };
-        /** EventKindCount */
-        EventKindCount: {
-            /** Count */
-            count: number;
-            /** Kind */
-            kind: string;
-        };
         /** EventTemplateRow */
         EventTemplateRow: {
             /** Baseimportance */
@@ -606,7 +549,16 @@ export interface components {
             /** Tile */
             tile: string;
         };
-        /** WorldSnapshot */
+        /**
+         * WorldSnapshot
+         * @description Top-bar / hero stats for the dashboard.
+         *
+         *     Diversity used to live here as a server-computed nested object;
+         *     after the 2026-04-26 simplification audit the dashboard computes
+         *     it client-side from /api/events via
+         *     `@living-world/sim-core` `diversitySummary()`. Removed to keep the
+         *     wire format minimal.
+         */
         WorldSnapshot: {
             /** Agentsalive */
             agentsAlive: number;
@@ -616,7 +568,6 @@ export interface components {
             chapters: number;
             /** Deaths */
             deaths: number;
-            diversity?: components["schemas"]["DiversitySummary"] | null;
             /** Eventstotal */
             eventsTotal: number;
             /** Loaded */
@@ -741,57 +692,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Chapter"][];
-                };
-            };
-        };
-    };
-    chronicle_md_api_chronicle_md_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChronicleMarkdown"];
-                };
-            };
-        };
-    };
-    event_kinds_api_event_kinds_get: {
-        parameters: {
-            query?: {
-                top_k?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EventKindCount"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

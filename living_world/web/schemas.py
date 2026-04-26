@@ -30,14 +30,16 @@ from pydantic import BaseModel, Field
 # ── Top-bar ────────────────────────────────────────────────────────────────
 
 
-class DiversitySummary(BaseModel):
-    total: int
-    unique: int
-    top_kind: str | None = None
-    top_pct: float
-
-
 class WorldSnapshot(BaseModel):
+    """Top-bar / hero stats for the dashboard.
+
+    Diversity used to live here as a server-computed nested object;
+    after the 2026-04-26 simplification audit the dashboard computes
+    it client-side from /api/events via
+    `@living-world/sim-core` `diversitySummary()`. Removed to keep the
+    wire format minimal.
+    """
+
     loaded: bool
     tick: int
     packs: list[str]
@@ -47,7 +49,6 @@ class WorldSnapshot(BaseModel):
     deaths: int
     chapters: int
     tiles: int
-    diversity: DiversitySummary | None = None
     modelTier2: str
     modelTier3: str
 
@@ -148,10 +149,6 @@ class Chapter(BaseModel):
     model_config = {"populate_by_name": True}
 
 
-class ChronicleMarkdown(BaseModel):
-    markdown: str
-
-
 # ── Feature flags / status ─────────────────────────────────────────────────
 
 
@@ -204,11 +201,7 @@ class Health(BaseModel):
     loaded: bool
 
 
-# ── Events distribution (event_kinds endpoint) ─────────────────────────────
-# The Python helper returns list[tuple[str, int]] — tuples are lossy in
-# OpenAPI, wrap them properly here.
-
-
-class EventKindCount(BaseModel):
-    kind: str
-    count: int
+# Note: EventKindCount + ChronicleMarkdown were removed in the 2026-04-26
+# simplification audit. The corresponding /api/event_kinds and
+# /api/chronicle.md endpoints went too — both are now computed client-side
+# in @living-world/sim-core (eventKindDistribution, exportChronicleMarkdown).

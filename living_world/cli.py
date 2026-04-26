@@ -1,8 +1,8 @@
-"""CLI: `world-sim run|digest|list-packs|dashboard`.
+"""CLI: `lw run|digest|list-packs|smoke|test|serve|export-chronicle|social`.
 
-Thin wrapper around `factory.py` — same engine construction as the dashboard
-so advanced features (dialogue, conscience, planner, etc.) light up automatically
-when settings.yaml has them enabled.
+Thin wrapper around `factory.py` — same engine construction the FastAPI
+server uses, so advanced features (dialogue, conscience, planner, etc.)
+light up automatically when settings.yaml has them enabled.
 """
 
 from __future__ import annotations

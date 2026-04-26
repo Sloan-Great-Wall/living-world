@@ -36,8 +36,10 @@ export const api = {
   events:       (since = 1, limit = 80) =>
                  j<WorldEvent[]>(`/api/events?since=${since}&limit=${limit}`),
   chronicle:    () => j<Chapter[]>("/api/chronicle"),
-  chronicleMd:  () => j<{ markdown: string }>("/api/chronicle.md"),
-  eventKinds:   (topK = 10) => j<[string, number][]>(`/api/event_kinds?top_k=${topK}`),
+  // Removed in 2026-04-26 simplification audit:
+  //   chronicleMd / eventKinds  → compute client-side via
+  //   @living-world/sim-core (exportChronicleMarkdown / eventKindDistribution)
+  //   from /api/chronicle + /api/events. Kills two HTTP routes.
   settings:     () => j<Record<string, unknown>>("/api/settings"),
   saveSettings: (patch: Record<string, unknown>) =>
                  j<Record<string, unknown>>("/api/settings", {

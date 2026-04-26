@@ -2,8 +2,9 @@
  * TopBar — single transparent horizontal strip floating over the map.
  * Brand on the left, live world stats inline, two buttons on the right.
  */
-import { Component, For, Show } from "solid-js";
-import { worldSnapshot, apiOnline } from "../stores/worldStore";
+import { Component, For, Show, createMemo } from "solid-js";
+import { diversitySummary } from "@living-world/sim-core";
+import { worldSnapshot, recentEvents, apiOnline } from "../stores/worldStore";
 
 type StatPillProps = { label: string; value: string | number };
 const StatPill: Component<StatPillProps> = (p) => (
@@ -20,6 +21,25 @@ type Props = {
 
 export const TopBar: Component<Props> = (props) => {
   const snap = worldSnapshot;
+  // Diversity used to come from the server in WorldSnapshot.diversity.
+  // After the 2026-04-26 simplification audit, we compute it client-side
+  // from the recent-events list — fewer fields on the wire, same UX.
+  const diversity = createMemo(() =>
+    diversitySummary(
+      recentEvents().map((e) => ({
+        eventId: e.id,
+        tick: e.tick,
+        packId: e.pack,
+        tileId: e.tile,
+        eventKind: e.kind,
+        outcome: e.outcome,
+        importance: e.importance,
+        tierUsed: e.tier,
+        isEmergent: e.isEmergent,
+        participants: e.participants,
+      })),
+    ),
+  );
 
   return (
     <header class="topbar">
@@ -50,15 +70,13 @@ export const TopBar: Component<Props> = (props) => {
             </span>
           </div>
 
-          <Show when={snap().diversity}>
-            {(d) => (
-              <div class="stat-pill" title="Top event kind + share">
-                <span class="stat-label">Top</span>
-                <span class="stat-val">
-                  {d()?.top_kind ?? "—"} {d() ? `(${d()!.top_pct.toFixed(1)}%)` : ""}
-                </span>
-              </div>
-            )}
+          <Show when={diversity().total > 0}>
+            <div class="stat-pill" title="Top event kind + share (computed client-side)">
+              <span class="stat-label">Top</span>
+              <span class="stat-val">
+                {diversity().top_kind ?? "—"} ({diversity().top_pct.toFixed(1)}%)
+              </span>
+            </div>
           </Show>
         </div>
       </div>
