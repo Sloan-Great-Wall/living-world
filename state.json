@@ -1,0 +1,207 @@
+{
+  "_note": "schema v3 — readiness-flow (no stages, no streams, tags instead). See $GDRIVE/Shared/ecosystem/STATUS.md for semantics.",
+  "_updated": "2026-04-26",
+  "mode": "supervised",
+  "_phases_completed": [
+    {"phase": "Stage A · MVP sim + UI",                        "commit": "(historical)"},
+    {"phase": "Phase 1 · AI-Native foundation",                "commit": "6c717c9"},
+    {"phase": "Phase 1.5 · monorepo consolidation",            "commit": "c11c826"},
+    {"phase": "Phase 2 · Pydantic→OpenAPI→TS + uv",            "commit": "04b0d9f"},
+    {"phase": "Phase 3 · sim-core port (queries/heat)",        "commit": "439469b"},
+    {"phase": "P0-P2 simplification audit cleanup",            "commit": "76e5deb"}
+  ],
+  "tasks": [
+    {
+      "id": "L-19",
+      "title": "EmergentEventProposer: SCP designations leaking into participants",
+      "status": "ready",
+      "tags": ["bug", "agents", "prompt"],
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "EmergentEventProposer.SYSTEM_PROMPT explicitly forbids SCP-XXX / anomalies / deities as participant IDs",
+        "Prompt includes one correct-usage in-context example showing SCP referenced inside `narrative` instead",
+        "validate_fail / calls ratio drops below 10% across a 12-tick smoke run with all three packs"
+      ],
+      "description": "30-tick validation found ~42% of emergent proposals rejected because the LLM put 'scp-035' into participants. SCPs are anomalies, not agents. Cheapest fix is prompt clarification + example; escalate to pseudo-agent records if rate stays high.",
+      "files": [
+        "living_world/agents/emergent.py"
+      ],
+      "effort": "5 min for prompt fix, up to 1 day for pseudo-agent option"
+    },
+    {
+      "id": "L-20",
+      "title": "Dashboard component tests (jsdom + vitest)",
+      "status": "ready",
+      "tags": ["test", "ui"],
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "@solidjs/testing-library + jsdom wired into the dashboard package",
+        "TopBar test asserts the diversity pill renders given a recentEvents list",
+        "SocialPanel test asserts components + isolated rows render given /api/social_graph payload",
+        "make check runs the new tests as part of ts-dashboard"
+      ],
+      "description": "After Phase 3, client-side compute paths (TopBar diversity, SocialPanel) work but have no automated render test. Closes the last coverage gap surfaced by the 2026-04-26 audit. API integration coverage already landed in tests/test_api_integration.py (19 tests).",
+      "files": [
+        "dashboard-tauri/test/TopBar.test.tsx",
+        "dashboard-tauri/test/SocialPanel.test.tsx"
+      ],
+      "effort": "half day"
+    },
+    {
+      "id": "L-04",
+      "title": "agents/__init__.py public facade",
+      "status": "ready",
+      "tags": ["maintenance", "import-hygiene"],
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "living_world/agents/__init__.py re-exports the 10 public agent classes",
+        "All consumer modules switched to `from living_world.agents import X` style"
+      ],
+      "description": "Renaming or splitting any agent module currently breaks every consumer. Populate the package facade with re-exports of: Narrator, AgentPlanner, AgentSelfUpdate, EmergentEventProposer, Chronicler, DialogueGenerator, ConsciousnessLayer, SubjectivePerception, LLMMoveAdvisor, MemoryReflector.",
+      "files": [
+        "living_world/agents/__init__.py"
+      ],
+      "effort": "10 min"
+    },
+    {
+      "id": "L-05",
+      "title": "In-repo design docs (architecture.md + ADRs)",
+      "status": "ready",
+      "tags": ["docs"],
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "docs/architecture.md describes the 3-layer T-shape (Python sim · Rust shell · TS UI) + 13-phase tick pipeline",
+        "docs/adr/ contains at least three ADRs: tier separation, conscience-as-system-2, chronicler non-interventionism",
+        "README.md links to docs/architecture.md and docs/HISTORY.md"
+      ],
+      "description": "Phase 3 audit confirmed the three-layer architecture is stable; document it before more contributors land. HISTORY.md exists already; this task fills in the architecture overview + key ADRs.",
+      "files": [
+        "docs/architecture.md",
+        "docs/adr/0001-tier-separation.md",
+        "docs/adr/0002-conscience-as-system-2.md",
+        "docs/adr/0003-chronicler-non-interventionism.md"
+      ],
+      "effort": "half day"
+    },
+    {
+      "id": "L-07",
+      "title": "Cross-pack bridge — migration event templates per pack",
+      "status": "ready",
+      "tags": ["feature", "content"],
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "Each loaded pack contributes one migration event template (e.g. scp:portal-anomaly, liaozhai:dream-passage, cthulhu:gate-of-yog-sothoth)",
+        "12-tick smoke run with 2+ packs produces at least one cross-pack interaction (agent from pack A appears in tile owned by pack B)",
+        "agent.pack_origin is preserved across migration so persona voice is anchored"
+      ],
+      "description": "Foundation already exists: when ≥2 packs are loaded, world.py creates a shared `liminal` tile any pack can place agents in. Missing: the migration event templates that move agents through it.",
+      "files": [
+        "world_packs/scp/events/cross_pack.yaml",
+        "world_packs/liaozhai/events/cross_pack.yaml",
+        "world_packs/cthulhu/events/cross_pack.yaml"
+      ],
+      "effort": "1-2 days"
+    },
+    {
+      "id": "L-08",
+      "title": "Player prompt injection MVP",
+      "status": "ready",
+      "tags": ["feature", "ui"],
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "POST /api/inject_event accepts {prompt: string} and produces an EventProposal at the next tick",
+        "Conscience layer still gets to APPROVE / ADJUST / VETO the player-injected proposal",
+        "Dashboard textbox in the bottom card with 'inject' button"
+      ],
+      "description": "Today the sim is autonomous-only. Add a single natural-language textbox the user can use to nudge the world. LLM converts intent → EventProposal, reuses ~80% of emergent.propose machinery. Power-user form path is a follow-up.",
+      "files": [
+        "living_world/web/server.py",
+        "living_world/agents/emergent.py",
+        "dashboard-tauri/src/components/BottomCard.tsx"
+      ],
+      "effort": "~2 days"
+    },
+    {
+      "id": "L-09",
+      "title": "Long-run resumability + timeline diff (deterministic seed-derive)",
+      "status": "ready",
+      "tags": ["feature", "infra", "ai-debug"],
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "Every random call site reads from derive_rng(seed, t, key) instead of self.rng",
+        "engine.run(N) from a snapshot + same seed = byte-identical state to a fresh N-tick run (assert in invariants test)",
+        "lw diff snapshotA snapshotB prints death deltas, chapter divergence, top-3 emergent kinds that differ"
+      ],
+      "description": "Today snapshots persist every 7 ticks but resume is not byte-deterministic. Replace global self.rng with pure functional derive_rng(seed, t, key). Cost is concentrated in finding + converting every self.rng.* call site (movement, resolver, interactions, storyteller).",
+      "files": [
+        "living_world/rules/movement.py",
+        "living_world/rules/resolver.py",
+        "living_world/rules/interactions.py",
+        "living_world/rules/storyteller.py"
+      ],
+      "effort": "~3 days"
+    },
+    {
+      "id": "L-12",
+      "title": "Multi-seed batch runs CLI + nightly diversity report",
+      "status": "ready",
+      "tags": ["feature", "qa"],
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "lw batch --seeds 10 --ticks 50 produces a JSON report with per-kind frequency across runs",
+        "report identifies cliché chapter titles (>=3/10 runs), universal vs rare event_kinds",
+        "agent-survival distribution recorded (variance proxy)"
+      ],
+      "description": "reports/diversity.py exists as a Marimo notebook but isn't wired into the CLI or CI. This task gives it a stable CLI surface so nightly CI can flag diversity regressions.",
+      "files": [
+        "living_world/cli.py",
+        "reports/diversity.py"
+      ],
+      "effort": "~half day"
+    },
+    {
+      "id": "L-17",
+      "title": "[Park, optional] Daily plan layer",
+      "status": "later",
+      "tags": ["feature", "agents", "optional"],
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "Planner emits day → hour → action plans in addition to weekly intentions"
+      ],
+      "description": "Park 2023 decomposes weekly into day/hour/action. Only worth doing once daily emergent gameplay gets richer. Marked optional.",
+      "files": [
+        "living_world/agents/planner.py"
+      ],
+      "effort": "~1 day"
+    },
+    {
+      "id": "L-18",
+      "title": "[AgentSociety, optional] Public goods / collective action events",
+      "status": "later",
+      "tags": ["feature", "events", "optional"],
+      "depends_on": ["L-07"],
+      "blocked_by": ["L-07"],
+      "acceptance_criteria": [
+        "Group decisions (vote, mutual defense, resource pooling) modelled as a new event_kind family"
+      ],
+      "description": "Only payoff once cross-pack bridge (#7) lands. Marked optional, blocked by L-07.",
+      "files": [],
+      "effort": "1-2 days"
+    }
+  ],
+  "_status_legend": {
+    "ready":   "may be picked up next; criteria + files are concrete",
+    "blocked": "waiting on a dep listed in blocked_by",
+    "later":   "deliberately deferred; revisit when noted trigger fires",
+    "active":  "someone is working on it right now"
+  }
+}

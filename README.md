@@ -1,12 +1,33 @@
 # living-world
 
+A no-player, auto-running virtual-world simulator. Three worldviews —
+**SCP Foundation**, **Cthulhu Mythos**, **Liaozhai** — run side by side,
+each a self-contained pack of characters, events, and locations.
+
+Agents move in 2D space, interact, form relationships, accumulate
+consequences, and die. Local LLMs (via Ollama) enhance narrative at
+high-importance moments. A Tauri + Solid + TypeScript dashboard renders
+a live map, social graph, and chronicle log.
+
 > `$GDRIVE` in this file = `~/Library/CloudStorage/GoogleDrive-kincc9999@gmail.com/My Drive` (macOS Google Drive mount path).
 
-A no-player, auto-running virtual world simulator. Three worldviews — **SCP Foundation**, **Cthulhu Mythos**, **Liaozhai** — run side-by-side, each a self-contained pack of characters, events, and locations.
+---
 
-Agents move in continuous 2D space, interact, form relationships, accumulate consequences, and die. Local LLMs (via Ollama) enhance narrative at high-importance moments. A Streamlit dashboard renders a live map and chronicle log.
+## Architecture (one-paragraph version)
 
-This repo contains the code, content packs, and tests. All design documents (architecture, roadmap, specs, ADRs) live in the shared vault at [`$GDRIVE/Living-World/design/`]($GDRIVE/Living-World/design/).
+Three layers, each in its strongest language:
+
+| Layer | Language | Job |
+|---|---|---|
+| **Sim core + LLM orchestration** | Python | tick engine · agents · Ollama |
+| **Desktop shell + IPC** | Rust + Tauri | window + future WASM compute slot |
+| **UI + client-side compute** | TypeScript + Solid | dashboard + sim-core mirrored functions |
+
+Cross-layer contract is compile-time strict:
+`Pydantic schemas → OpenAPI → openapi-typescript → tsc --noEmit`. Any
+field rename red-lines the consumer at build time. See
+[`docs/HISTORY.md`](docs/HISTORY.md) for how we got here, and
+[`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) for what's open.
 
 ---
 
@@ -15,73 +36,132 @@ This repo contains the code, content packs, and tests. All design documents (arc
 ```bash
 git clone https://github.com/Sloan-Great-Wall/living-world.git
 cd living-world
-./lw                   # creates venv, installs deps, launches dashboard
+make install                 # uv pip install -e .[dev]  +  npm install
 ```
 
-First run auto-installs dependencies. After that, `./lw` opens the dashboard at <http://localhost:8501>.
+`make install` uses `uv` if present (10× faster than pip) and falls
+back to pip otherwise. Both Python and npm workspaces install in one
+shot.
 
-Other commands:
+### Run the simulation
+
+There are three "complete simulation" entry points, in increasing
+fidelity:
 
 ```bash
-./lw dashboard         # default — launches the Streamlit UI
-./lw run               # CLI simulation (no UI)
-./lw digest            # CLI — print chronicle to terminal
-./lw list-packs        # show available world packs
-./lw test              # pytest suite
-./lw install           # reinstall deps
+# 1. Fastest — rules-only, no LLM, ~3 seconds, asserts 9 invariants
+make smoke
+
+# 2. CLI smoke run with whatever LLM stack is configured (real Ollama
+#    if up; rules-only otherwise). Streams events to terminal.
+lw smoke --ticks 8 --packs scp,liaozhai,cthulhu
+
+# 3. Full UI — Python sim + dashboard + live tick streaming
+ollama serve              &  # terminal A — start LLM daemon
+lw serve                  &  # terminal B — FastAPI sim API on :8000
+npm run tauri dev --workspace=dashboard-tauri  # terminal C — desktop UI
 ```
+
+Once the dashboard is up:
+- Click **Bootstrap** with the packs you want loaded
+- Hit **Tick** or **Play** to advance days
+- Open **📚 Library** for the codex / chronicle / **Social** graph
+  (Social tab runs entirely client-side via @living-world/sim-core)
+
+### Verify the whole repo
+
+```bash
+make check
+```
+
+Runs all gates — ruff format + lint, basedpyright strict, pytest (84
++ live Ollama if available), schema drift check, vitest (38 parity
+tests), dashboard typecheck + Vite build, bundle-size budget. Exit 0/1.
+Anything red here is a regression.
 
 ---
 
-## Using LLMs (optional)
+## Using LLMs
 
 ```bash
 brew install ollama
-ollama pull gemma3:4b   # 3 GB, runs on any 16 GB MacBook
+ollama pull llama3.2:3b   # tier 2, ~2 GB
+ollama pull gemma3:4b     # tier 3, ~3.3 GB
 ```
 
-Then in the dashboard Settings panel (or `settings.yaml`):
+Then in `settings.yaml`:
 
-- `tier2_provider: ollama`
-- `tier3_provider: ollama`
+```yaml
+llm:
+  tier2_provider: ollama
+  tier3_provider: ollama
+```
 
-Provider options are `"ollama"` and `"none"` (pure rules). If Ollama is unreachable, everything degrades gracefully to Tier 1 rule-based play.
+Provider options are `"ollama"` and `"none"`. If Ollama is unreachable,
+the sim degrades gracefully to Tier-1 rule-based play (typed
+`LLMError` taxonomy preserves the failure kind for debugging).
+
+---
+
+## CLI reference
+
+```
+lw smoke              run + invariants check; primary regression command
+lw run                CLI simulation (10 days, 3 packs by default)
+lw digest             章回体 digest grouped by pack
+lw export-chronicle   write chapters to Markdown
+lw test               pytest + smoke combined
+lw serve              FastAPI sim API for the Tauri dashboard
+lw social             social-network metrics over the affinity graph
+lw list-packs         show available packs
+```
+
+`make smoke` and `lw smoke` differ by scope: `make smoke` is rules-only
+(deterministic, fast); `lw smoke` is whatever your `settings.yaml`
+configures (real Ollama if up).
 
 ---
 
 ## Adding a world pack
 
-World content is data, not code. Each pack is a self-contained folder under `world_packs/` with `pack.yaml`, personas, events, and tiles (all YAML). Optional Chinese display overlays live under `locale/zh/`.
-
-To add one:
+World content is data, not code. Each pack is a self-contained folder
+under `world_packs/` with `pack.yaml`, personas, events, tiles (all
+YAML). Optional Chinese display overlays live under `locale/zh/`.
 
 ```bash
 mkdir -p world_packs/mypack/{personas,events,tiles}
-# then write pack.yaml, persona/event/tile files
-./lw run --packs mypack --days 10
-./lw dashboard   # select 'mypack' in sidebar
+# write pack.yaml, persona/event/tile files
+lw smoke --packs mypack --ticks 8
 ```
 
-See the existing `world_packs/scp/`, `world_packs/liaozhai/`, and `world_packs/cthulhu/` for complete reference packs.
+See `world_packs/scp/`, `world_packs/liaozhai/`, `world_packs/cthulhu/`
+for reference packs.
+
+---
+
+## Repository layout
+
+```
+living_world/         Python sim core (engine, agents, LLM, web API)
+tests/                Python tests (unit / property / invariant / smoke)
+packages/sim-core/    @living-world/sim-core — pure-function TS port
+                      (dice / heat / queries / socialMetrics)
+dashboard-tauri/      Tauri + Solid + Vite desktop UI
+api-schema/           OpenAPI schema (generated; cross-layer source of truth)
+world_packs/          YAML content packs (scp · liaozhai · cthulhu)
+scripts/              Maintenance scripts (e.g. dump_openapi.py)
+docs/                 In-repo docs (HISTORY.md so far; architecture.md TBD)
+reports/              Marimo notebooks for batch analysis
+```
 
 ---
 
 ## Where to find more
 
-All design documentation lives in [`$GDRIVE/Living-World/design/`]($GDRIVE/Living-World/design/):
-
-- `docs/product-direction.md` — positioning and direction rationale
-- `docs/architecture.md` — full system architecture
-- `docs/stat-machine-design.md` — consequence engine + tier routing
-- `docs/flow-loops.md` — runtime flow diagrams
-- `docs/tech-glossary.md` — terminology reference
-- `docs/mvp-roadmap.md` — Stage A/B/C/D roadmap
-- `docs/next-steps.md` — remaining Stage A work
-- `docs/ui-redesign-spec.md` — Canvas map spec (planned)
-- `docs/architecture-audit.md` / `docs/lbs-infrastructure.md` — deeper technical notes
-- `adr/` — architecture decision records
-
-Cross-project engineering principles live at [`$GDRIVE/Shared/`]($GDRIVE/Shared/).
+- [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) — open bugs + active backlog
+- [`docs/HISTORY.md`](docs/HISTORY.md) — phase log + design retrospectives
+- [`packages/sim-core/README.md`](packages/sim-core/README.md) — port rationale + parity-test workflow
+- External design vault: [`$GDRIVE/Living-World/design/`]($GDRIVE/Living-World/design/)
 
 ---
 
