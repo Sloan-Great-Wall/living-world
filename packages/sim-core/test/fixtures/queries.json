@@ -1,0 +1,429 @@
+[
+  {
+    "name": "empty",
+    "events": [],
+    "expected": {
+      "recentEvents_5": [],
+      "eventsByPack": {},
+      "eventsByDay": {},
+      "eventKindDistribution_3": [],
+      "diversitySummary": {
+        "total": 0,
+        "unique": 0,
+        "top_kind": null,
+        "top_pct": 0.0
+      }
+    }
+  },
+  {
+    "name": "mixed_packs_kinds",
+    "events": [
+      {
+        "eventId": "e1",
+        "tick": 1,
+        "packId": "scp",
+        "tileId": "t1",
+        "eventKind": "containment-test",
+        "outcome": "neutral",
+        "importance": 0.4,
+        "tierUsed": 1,
+        "isEmergent": false,
+        "participants": [
+          "a"
+        ]
+      },
+      {
+        "eventId": "e2",
+        "tick": 1,
+        "packId": "liaozhai",
+        "tileId": "t1",
+        "eventKind": "ghost-encounter",
+        "outcome": "neutral",
+        "importance": 0.4,
+        "tierUsed": 1,
+        "isEmergent": false,
+        "participants": [
+          "a"
+        ]
+      },
+      {
+        "eventId": "e3",
+        "tick": 2,
+        "packId": "scp",
+        "tileId": "t1",
+        "eventKind": "containment-test",
+        "outcome": "neutral",
+        "importance": 0.4,
+        "tierUsed": 1,
+        "isEmergent": false,
+        "participants": [
+          "a"
+        ]
+      },
+      {
+        "eventId": "e4",
+        "tick": 3,
+        "packId": "scp",
+        "tileId": "t1",
+        "eventKind": "meal-break",
+        "outcome": "neutral",
+        "importance": 0.4,
+        "tierUsed": 1,
+        "isEmergent": false,
+        "participants": [
+          "a"
+        ]
+      },
+      {
+        "eventId": "e5",
+        "tick": 3,
+        "packId": "liaozhai",
+        "tileId": "t1",
+        "eventKind": "ghost-encounter",
+        "outcome": "neutral",
+        "importance": 0.4,
+        "tierUsed": 1,
+        "isEmergent": false,
+        "participants": [
+          "a"
+        ]
+      },
+      {
+        "eventId": "e6",
+        "tick": 4,
+        "packId": "scp",
+        "tileId": "t1",
+        "eventKind": "containment-test",
+        "outcome": "neutral",
+        "importance": 0.4,
+        "tierUsed": 1,
+        "isEmergent": false,
+        "participants": [
+          "a"
+        ]
+      },
+      {
+        "eventId": "e7",
+        "tick": 5,
+        "packId": "scp",
+        "tileId": "t1",
+        "eventKind": "meal-break",
+        "outcome": "neutral",
+        "importance": 0.4,
+        "tierUsed": 1,
+        "isEmergent": false,
+        "participants": [
+          "a"
+        ]
+      }
+    ],
+    "expected": {
+      "recentEvents_5": [
+        {
+          "eventId": "e3",
+          "tick": 2,
+          "packId": "scp",
+          "tileId": "t1",
+          "eventKind": "containment-test",
+          "outcome": "neutral",
+          "importance": 0.4,
+          "tierUsed": 1,
+          "isEmergent": false,
+          "participants": [
+            "a"
+          ]
+        },
+        {
+          "eventId": "e4",
+          "tick": 3,
+          "packId": "scp",
+          "tileId": "t1",
+          "eventKind": "meal-break",
+          "outcome": "neutral",
+          "importance": 0.4,
+          "tierUsed": 1,
+          "isEmergent": false,
+          "participants": [
+            "a"
+          ]
+        },
+        {
+          "eventId": "e5",
+          "tick": 3,
+          "packId": "liaozhai",
+          "tileId": "t1",
+          "eventKind": "ghost-encounter",
+          "outcome": "neutral",
+          "importance": 0.4,
+          "tierUsed": 1,
+          "isEmergent": false,
+          "participants": [
+            "a"
+          ]
+        },
+        {
+          "eventId": "e6",
+          "tick": 4,
+          "packId": "scp",
+          "tileId": "t1",
+          "eventKind": "containment-test",
+          "outcome": "neutral",
+          "importance": 0.4,
+          "tierUsed": 1,
+          "isEmergent": false,
+          "participants": [
+            "a"
+          ]
+        },
+        {
+          "eventId": "e7",
+          "tick": 5,
+          "packId": "scp",
+          "tileId": "t1",
+          "eventKind": "meal-break",
+          "outcome": "neutral",
+          "importance": 0.4,
+          "tierUsed": 1,
+          "isEmergent": false,
+          "participants": [
+            "a"
+          ]
+        }
+      ],
+      "eventsByPack": {
+        "scp": [
+          {
+            "eventId": "e1",
+            "tick": 1,
+            "packId": "scp",
+            "tileId": "t1",
+            "eventKind": "containment-test",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          },
+          {
+            "eventId": "e3",
+            "tick": 2,
+            "packId": "scp",
+            "tileId": "t1",
+            "eventKind": "containment-test",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          },
+          {
+            "eventId": "e4",
+            "tick": 3,
+            "packId": "scp",
+            "tileId": "t1",
+            "eventKind": "meal-break",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          },
+          {
+            "eventId": "e6",
+            "tick": 4,
+            "packId": "scp",
+            "tileId": "t1",
+            "eventKind": "containment-test",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          },
+          {
+            "eventId": "e7",
+            "tick": 5,
+            "packId": "scp",
+            "tileId": "t1",
+            "eventKind": "meal-break",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          }
+        ],
+        "liaozhai": [
+          {
+            "eventId": "e2",
+            "tick": 1,
+            "packId": "liaozhai",
+            "tileId": "t1",
+            "eventKind": "ghost-encounter",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          },
+          {
+            "eventId": "e5",
+            "tick": 3,
+            "packId": "liaozhai",
+            "tileId": "t1",
+            "eventKind": "ghost-encounter",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          }
+        ]
+      },
+      "eventsByDay": {
+        "1": [
+          {
+            "eventId": "e1",
+            "tick": 1,
+            "packId": "scp",
+            "tileId": "t1",
+            "eventKind": "containment-test",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          },
+          {
+            "eventId": "e2",
+            "tick": 1,
+            "packId": "liaozhai",
+            "tileId": "t1",
+            "eventKind": "ghost-encounter",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          }
+        ],
+        "2": [
+          {
+            "eventId": "e3",
+            "tick": 2,
+            "packId": "scp",
+            "tileId": "t1",
+            "eventKind": "containment-test",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          }
+        ],
+        "3": [
+          {
+            "eventId": "e4",
+            "tick": 3,
+            "packId": "scp",
+            "tileId": "t1",
+            "eventKind": "meal-break",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          },
+          {
+            "eventId": "e5",
+            "tick": 3,
+            "packId": "liaozhai",
+            "tileId": "t1",
+            "eventKind": "ghost-encounter",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          }
+        ],
+        "4": [
+          {
+            "eventId": "e6",
+            "tick": 4,
+            "packId": "scp",
+            "tileId": "t1",
+            "eventKind": "containment-test",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          }
+        ],
+        "5": [
+          {
+            "eventId": "e7",
+            "tick": 5,
+            "packId": "scp",
+            "tileId": "t1",
+            "eventKind": "meal-break",
+            "outcome": "neutral",
+            "importance": 0.4,
+            "tierUsed": 1,
+            "isEmergent": false,
+            "participants": [
+              "a"
+            ]
+          }
+        ]
+      },
+      "eventKindDistribution_3": [
+        [
+          "containment-test",
+          3
+        ],
+        [
+          "ghost-encounter",
+          2
+        ],
+        [
+          "meal-break",
+          2
+        ]
+      ],
+      "diversitySummary": {
+        "total": 7,
+        "unique": 3,
+        "top_kind": "containment-test",
+        "top_pct": 42.857142857142854
+      }
+    }
+  }
+]

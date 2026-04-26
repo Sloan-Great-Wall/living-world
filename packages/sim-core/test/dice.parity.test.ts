@@ -17,6 +17,7 @@ import {
   scoreEventImportance,
   outcomeForRoll,
   environmentalModifiers,
+  requiredSlots,
   type AgentLite,
   type EventLite,
   type TemplateLite,
@@ -66,6 +67,25 @@ describe("dice.environmentalModifiers — parity", () => {
       expect(got).toBeCloseTo(c.expected, 10);
     });
   }
+});
+
+describe("dice.requiredSlots — Phase 3 port (?-leak guard)", () => {
+  it("returns 0 for templates with no slots", () => {
+    expect(requiredSlots("plain text")).toBe(0);
+    expect(requiredSlots("")).toBe(0);
+  });
+  it("detects $a slot", () => {
+    expect(requiredSlots("[$tile] $a does X.")).toBe(1);
+  });
+  it("detects ${b} slot (highest = 2)", () => {
+    expect(requiredSlots("[$tile] ${a} meets ${b}")).toBe(2);
+  });
+  it("detects all three slots", () => {
+    expect(requiredSlots("$a, $b and $c attend")).toBe(3);
+  });
+  it("returns highest slot, not count", () => {
+    expect(requiredSlots("$a and $a and $a")).toBe(1);
+  });
 });
 
 describe("dice — additional unit tests (TS-side invariants)", () => {

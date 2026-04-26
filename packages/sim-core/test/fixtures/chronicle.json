@@ -1,0 +1,44 @@
+[
+  {
+    "name": "empty_chapters",
+    "chapters": [],
+    "currentTick": 0,
+    "expected": "# (no chapters yet)\n\nThe chronicler hasn't fired in this run.\n"
+  },
+  {
+    "name": "two_packs_three_chapters",
+    "chapters": [
+      {
+        "tick": 14,
+        "packId": "scp",
+        "title": "Containment Holds",
+        "body": "A long-enough body about the breach.",
+        "eventIds": [
+          "e1",
+          "e2"
+        ]
+      },
+      {
+        "tick": 14,
+        "packId": "liaozhai",
+        "title": "Lantern Festival",
+        "body": "Lanterns. Tea. A whisper from the grove.",
+        "eventIds": [
+          "e3"
+        ]
+      },
+      {
+        "tick": 28,
+        "packId": "scp",
+        "title": "Bright at Work",
+        "body": "Bright signs the form, the form signs Bright.",
+        "eventIds": [
+          "e4",
+          "e5"
+        ]
+      }
+    ],
+    "currentTick": 30,
+    "expected": "# Chronicle\n\n_World ran 30 tick(s). 3 chapters across 2 pack(s)._\n\n## liaozhai\n\n### Day 14 — Lantern Festival\n\nLanterns. Tea. A whisper from the grove.\n\n## scp\n\n### Day 14 — Containment Holds\n\nA long-enough body about the breach.\n\n### Day 28 — Bright at Work\n\nBright signs the form, the form signs Bright.\n"
+  }
+]

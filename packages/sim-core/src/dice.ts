@@ -192,6 +192,28 @@ export function inventoryBonus(
 }
 
 /**
+ * Highest participant-slot index referenced by a template string
+ * (a→1, b→2, c→3). Returns 0 if no slots are referenced.
+ *
+ * Mirrors `EventResolver._required_slots`. Callers use this to drop a
+ * template whose narrative references more participants than were
+ * eligible — preventing "?"-leaking placeholders from reaching the
+ * narrative layer (regression: 2026-04-22 ?-bug).
+ */
+export function requiredSlots(templateStr: string): number {
+  if (!templateStr) return 0;
+  const slots: Array<[string, number]> = [
+    ["$a", 1], ["$b", 2], ["$c", 3],
+    ["${a}", 1], ["${b}", 2], ["${c}", 3],
+  ];
+  let needs = 0;
+  for (const [token, n] of slots) {
+    if (templateStr.includes(token)) needs = Math.max(needs, n);
+  }
+  return needs;
+}
+
+/**
  * Pure outcome-from-roll branch of `_roll_outcome`. Caller supplies the
  * raw d20 roll; we add stat-modifier + template `mod` + inventory cap
  * and compare to DC. Separating roll value from logic is what makes

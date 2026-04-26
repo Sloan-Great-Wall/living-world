@@ -337,6 +337,244 @@ def gen_social() -> list[dict]:
     return cases
 
 
+# ── 5. queries (Phase 3 port) ─────────────────────────────────────────
+
+def gen_queries() -> list[dict]:
+    """Fixture cases for queries.ts: build a tiny event list, run the
+    Python helpers, capture the expected output for the TS side.
+    """
+    from living_world.queries import (
+        diversity_summary,
+        event_kind_distribution,
+        events_by_day,
+        events_by_pack,
+        recent_events,
+    )
+
+    class _MiniWorld:
+        def __init__(self, evts: list[LegendEvent]) -> None:
+            self._evts = evts
+            self.current_tick = max((e.tick for e in evts), default=0)
+            self.chapters: list[dict] = []
+        def events_since(self, since: int) -> list[LegendEvent]:
+            return [e for e in self._evts if e.tick >= since]
+
+    def _ev(eid: str, tick: int, pack: str, kind: str, *, parts=("a",)) -> LegendEvent:
+        return LegendEvent(
+            event_id=eid, tick=tick, pack_id=pack, tile_id="t1",
+            event_kind=kind, participants=list(parts),
+            outcome="neutral", template_rendering="...", importance=0.4,
+        )
+
+    def _ev_to_lite(e: LegendEvent) -> dict:
+        return {
+            "eventId": e.event_id, "tick": e.tick, "packId": e.pack_id,
+            "tileId": e.tile_id, "eventKind": e.event_kind,
+            "outcome": e.outcome, "importance": e.importance,
+            "tierUsed": e.tier_used, "isEmergent": e.is_emergent,
+            "participants": list(e.participants),
+        }
+
+    cases: list[dict] = []
+
+    # Case 1: empty
+    w0 = _MiniWorld([])
+    cases.append({
+        "name": "empty",
+        "events": [],
+        "expected": {
+            "recentEvents_5": [],
+            "eventsByPack": {},
+            "eventsByDay": {},
+            "eventKindDistribution_3": [],
+            "diversitySummary": diversity_summary(w0),
+        },
+    })
+
+    # Case 2: 7 events across two packs and three kinds
+    evts = [
+        _ev("e1", 1, "scp", "containment-test"),
+        _ev("e2", 1, "liaozhai", "ghost-encounter"),
+        _ev("e3", 2, "scp", "containment-test"),
+        _ev("e4", 3, "scp", "meal-break"),
+        _ev("e5", 3, "liaozhai", "ghost-encounter"),
+        _ev("e6", 4, "scp", "containment-test"),
+        _ev("e7", 5, "scp", "meal-break"),
+    ]
+    w = _MiniWorld(evts)
+    cases.append({
+        "name": "mixed_packs_kinds",
+        "events": [_ev_to_lite(e) for e in evts],
+        "expected": {
+            "recentEvents_5": [_ev_to_lite(e) for e in recent_events(w, n=5)],
+            "eventsByPack": {
+                k: [_ev_to_lite(x) for x in v]
+                for k, v in events_by_pack(w).items()
+            },
+            "eventsByDay": {
+                str(k): [_ev_to_lite(x) for x in v]
+                for k, v in events_by_day(w).items()
+            },
+            "eventKindDistribution_3": [
+                [k, n] for k, n in event_kind_distribution(w, top_k=3)
+            ],
+            "diversitySummary": diversity_summary(w),
+        },
+    })
+
+    return cases
+
+
+def gen_chronicle() -> list[dict]:
+    """Fixture cases for exportChronicleMarkdown."""
+    from living_world.queries import export_chronicle_markdown
+
+    class _MiniWorld:
+        def __init__(self, chapters: list[dict], current_tick: int) -> None:
+            self.chapters = chapters
+            self.current_tick = current_tick
+
+    cases: list[dict] = []
+
+    cases.append({
+        "name": "empty_chapters",
+        "chapters": [],
+        "currentTick": 0,
+        "expected": export_chronicle_markdown(_MiniWorld([], 0)),
+    })
+
+    chs = [
+        {"tick": 14, "pack_id": "scp",
+         "title": "Containment Holds", "body": "A long-enough body about the breach.",
+         "event_ids": ["e1", "e2"]},
+        {"tick": 14, "pack_id": "liaozhai",
+         "title": "Lantern Festival", "body": "Lanterns. Tea. A whisper from the grove.",
+         "event_ids": ["e3"]},
+        {"tick": 28, "pack_id": "scp",
+         "title": "Bright at Work", "body": "Bright signs the form, the form signs Bright.",
+         "event_ids": ["e4", "e5"]},
+    ]
+    w = _MiniWorld(chs, 30)
+    cases.append({
+        "name": "two_packs_three_chapters",
+        "chapters": [{"tick": c["tick"], "packId": c["pack_id"],
+                       "title": c["title"], "body": c["body"],
+                       "eventIds": c["event_ids"]} for c in chs],
+        "currentTick": 30,
+        "expected": export_chronicle_markdown(w),
+    })
+
+    return cases
+
+
+# ── 6. heat (Phase 3 port) ────────────────────────────────────────────
+
+def gen_heat() -> list[dict]:
+    """Fixture cases for heat.ts. We pre-aggregate the inputs (residents
+    + recent_event_count) on the Python side so the TS port can be a
+    pure data-in/data-out reimplementation.
+    """
+    from living_world.core.tile import Tile
+    from living_world.rules.heat import hot_tiles, score_tile_heat
+
+    class _MiniWorld:
+        def __init__(self, tiles: list[Tile], agents: list[Agent],
+                     events: list[LegendEvent], current_tick: int) -> None:
+            self._tiles = tiles
+            self._agents = agents
+            self._events = events
+            self.current_tick = current_tick
+        def all_tiles(self):
+            return list(self._tiles)
+        def agents_in_tile(self, tile_id: str):
+            return [a for a in self._agents if a.current_tile == tile_id]
+        def events_since(self, since: int):
+            return [e for e in self._events if e.tick >= since]
+
+    def _tile(tid: str, primary_pack: str = "scp") -> Tile:
+        return Tile(tile_id=tid, display_name=tid.upper(),
+                    primary_pack=primary_pack, tile_type="lab")
+
+    def _agent_to_lite(a: Agent) -> dict:
+        return {
+            "agentId": a.agent_id,
+            "isHistoricalFigure": bool(a.is_historical_figure),
+            "affinityTo": {
+                tid: int(rel.affinity)
+                for tid, rel in a.relationships.items()
+            },
+        }
+
+    def _tile_to_lite(t: Tile, world: _MiniWorld, recent_ticks: int = 3) -> dict:
+        residents = world.agents_in_tile(t.tile_id)
+        since = max(1, world.current_tick - recent_ticks)
+        recent = sum(
+            1 for e in world.events_since(since) if e.tile_id == t.tile_id
+        )
+        return {
+            "tileId": t.tile_id,
+            "residents": [_agent_to_lite(a) for a in residents],
+            "recentEventCount": recent,
+        }
+
+    def _make_agent(aid: str, tile: str, *, hf: bool = False) -> Agent:
+        a = Agent(agent_id=aid, pack_id="scp", display_name=aid.title(),
+                  persona_card="x", current_tile=tile)
+        a.is_historical_figure = hf
+        return a
+
+    cases: list[dict] = []
+
+    # Case A: empty world
+    w_empty = _MiniWorld([], [], [], 0)
+    cases.append({
+        "name": "empty",
+        "tiles": [],
+        "expected": {
+            "scores": {},
+            "hot_tiles_default": [],
+        },
+    })
+
+    # Case B: hot tile with HF + strong pair + recent events
+    t1 = _tile("t-corridor")
+    t2 = _tile("t-cafeteria")
+    t3 = _tile("t-cell")  # cold (1 resident)
+    a1 = _make_agent("alice", "t-corridor", hf=True)
+    a2 = _make_agent("bob", "t-corridor", hf=False)
+    a3 = _make_agent("carol", "t-cafeteria")
+    a4 = _make_agent("dave", "t-cafeteria")
+    a5 = _make_agent("loner", "t-cell")
+    a1.relationships["bob"] = Relationship(target_id="bob", affinity=80)
+    a2.relationships["alice"] = Relationship(target_id="alice", affinity=80)
+    a3.relationships["dave"] = Relationship(target_id="dave", affinity=10)  # below 40
+    a4.relationships["carol"] = Relationship(target_id="carol", affinity=10)
+    evs = [
+        LegendEvent(event_id="x1", tick=8, pack_id="scp",
+                    tile_id="t-corridor", event_kind="x",
+                    participants=["alice"], outcome="neutral",
+                    template_rendering="."),
+        LegendEvent(event_id="x2", tick=9, pack_id="scp",
+                    tile_id="t-corridor", event_kind="x",
+                    participants=["bob"], outcome="neutral",
+                    template_rendering="."),
+    ]
+    w = _MiniWorld([t1, t2, t3], [a1, a2, a3, a4, a5], evs, current_tick=10)
+    tiles_lite = [_tile_to_lite(t, w) for t in [t1, t2, t3]]
+    expected_scores = {t.tile_id: score_tile_heat(t, w) for t in [t1, t2, t3]}
+    expected_hot = [t.tile_id for t in hot_tiles(w)]
+    cases.append({
+        "name": "mixed_heat",
+        "tiles": tiles_lite,
+        "expected": {
+            "scores": expected_scores,
+            "hot_tiles_default": expected_hot,
+        },
+    })
+
+    return cases
+
+
 def _metrics_to_json(m) -> dict:
     return {
         "nAgents": m.n_agents,
@@ -359,6 +597,9 @@ def main() -> None:
         "dice_outcome.json": gen_outcome(),
         "dice_modifiers.json": gen_modifiers(),
         "social_metrics.json": gen_social(),
+        "queries.json": gen_queries(),
+        "chronicle.json": gen_chronicle(),
+        "heat.json": gen_heat(),
     }
     for name, data in payloads.items():
         path = FIX_DIR / name

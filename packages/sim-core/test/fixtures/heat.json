@@ -1,0 +1,76 @@
+[
+  {
+    "name": "empty",
+    "tiles": [],
+    "expected": {
+      "scores": {},
+      "hot_tiles_default": []
+    }
+  },
+  {
+    "name": "mixed_heat",
+    "tiles": [
+      {
+        "tileId": "t-corridor",
+        "residents": [
+          {
+            "agentId": "alice",
+            "isHistoricalFigure": true,
+            "affinityTo": {
+              "bob": 80
+            }
+          },
+          {
+            "agentId": "bob",
+            "isHistoricalFigure": false,
+            "affinityTo": {
+              "alice": 80
+            }
+          }
+        ],
+        "recentEventCount": 2
+      },
+      {
+        "tileId": "t-cafeteria",
+        "residents": [
+          {
+            "agentId": "carol",
+            "isHistoricalFigure": false,
+            "affinityTo": {
+              "dave": 10
+            }
+          },
+          {
+            "agentId": "dave",
+            "isHistoricalFigure": false,
+            "affinityTo": {
+              "carol": 10
+            }
+          }
+        ],
+        "recentEventCount": 0
+      },
+      {
+        "tileId": "t-cell",
+        "residents": [
+          {
+            "agentId": "loner",
+            "isHistoricalFigure": false,
+            "affinityTo": {}
+          }
+        ],
+        "recentEventCount": 0
+      }
+    ],
+    "expected": {
+      "scores": {
+        "t-corridor": 6.1,
+        "t-cafeteria": 2.0,
+        "t-cell": 0.0
+      },
+      "hot_tiles_default": [
+        "t-corridor"
+      ]
+    }
+  }
+]

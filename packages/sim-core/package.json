@@ -8,7 +8,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./dice": "./src/dice.ts",
-    "./socialMetrics": "./src/socialMetrics.ts"
+    "./socialMetrics": "./src/socialMetrics.ts",
+    "./queries": "./src/queries.ts",
+    "./heat": "./src/heat.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
