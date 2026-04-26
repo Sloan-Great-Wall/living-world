@@ -8,7 +8,9 @@
     {"phase": "Phase 1.5 · monorepo consolidation",            "commit": "c11c826"},
     {"phase": "Phase 2 · Pydantic→OpenAPI→TS + uv",            "commit": "04b0d9f"},
     {"phase": "Phase 3 · sim-core port (queries/heat)",        "commit": "439469b"},
-    {"phase": "P0-P2 simplification audit cleanup",            "commit": "76e5deb"}
+    {"phase": "P0-P2 simplification audit cleanup",            "commit": "76e5deb"},
+    {"phase": "Docs refresh + API integration tests",          "commit": "205ee96"},
+    {"phase": "Tauri sidecar (one-command app launch, dev)",   "commit": "(this commit)"}
   ],
   "tasks": [
     {
@@ -28,6 +30,28 @@
         "living_world/agents/emergent.py"
       ],
       "effort": "5 min for prompt fix, up to 1 day for pseudo-agent option"
+    },
+    {
+      "id": "L-21",
+      "title": "Production app packaging (PyInstaller sidecar + signed .app/.exe)",
+      "status": "ready",
+      "tags": ["distribution", "tauri", "infra"],
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance_criteria": [
+        "PyInstaller produces a single binary that runs `lw serve` without a venv",
+        "tauri.conf.json bundle.externalBin points at the platform-specific binary (Tauri appends -aarch64-apple-darwin etc.)",
+        "Sidecar spawn falls into its own POSIX process group (setpgid) / Windows job object so the kernel reaps it on parent crash — fixes the dev-mode orphan leak noted in lib.rs",
+        "`tauri build` produces a runnable .app on macOS / .exe on Windows / .AppImage on Linux that needs no Python install",
+        "Ollama detection: friendly first-run prompt if `ollama` binary not on PATH"
+      ],
+      "description": "Today the Tauri sidecar spawns Python from .venv (dev only). To deliver the user's 'double-click to launch' goal in production, we need to bundle Python into the app. PyInstaller is the standard path: builds a single self-contained binary from the entrypoint module. Then the Tauri externalBin mechanism ships it alongside the desktop app. Also fixes the dev-mode orphan leak by giving the child its own process group.",
+      "files": [
+        "dashboard-tauri/src-tauri/tauri.conf.json",
+        "dashboard-tauri/src-tauri/src/lib.rs",
+        "scripts/build_sidecar.sh"
+      ],
+      "effort": "1-2 days for the dev-quality build; another 1-2 days for code-signing + notarization for distribution"
     },
     {
       "id": "L-20",

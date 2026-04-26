@@ -22,4 +22,9 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Sidecar: spawn the Python sim API on startup, kill it on shutdown.
+# `tokio` features are minimal — no HTTP client; readiness is a TCP-connect
+# probe to the sidecar port (uvicorn binds AFTER FastAPI is ready, so a
+# successful connect == app is up). Avoids pulling in reqwest's tree.
+tokio = { version = "1", features = ["rt-multi-thread", "process", "net", "time"] }
 

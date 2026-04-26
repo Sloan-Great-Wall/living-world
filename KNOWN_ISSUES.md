@@ -45,6 +45,26 @@ MemoryReflector). 20 lines, all-future-proofing.
 
 ---
 
+### #21 — Production app packaging (PyInstaller sidecar + signed .app/.exe)
+**Status**: dev-mode sidecar landed (`npm run tauri dev` auto-spawns
+Python). Production path still missing.
+
+**What's needed**:
+- PyInstaller produces a single binary from `living_world.web.server`
+- Tauri `bundle.externalBin` points at the platform-specific binary
+  (`-aarch64-apple-darwin` etc.)
+- Child process placed in its own POSIX process group (or Windows
+  job object) so the kernel reaps the sidecar if Tauri is SIGKILL'd
+  (today: orphans, holds :8765 until manually `kill`'d)
+- `tauri build` produces a runnable `.app` / `.exe` / `.AppImage`
+  with no Python install required on the user's machine
+- Ollama detection: friendly first-run prompt if `ollama` not on PATH
+
+**Effort**: 1-2 days for dev-quality build; another 1-2 days for
+code-signing + notarization (macOS).
+
+---
+
 ### #20 — Dashboard component tests (jsdom + vitest)
 **Why it matters**: Phase 3's client-side compute paths (TopBar
 diversity, SocialPanel) work but have no automated render test. A

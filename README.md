@@ -45,8 +45,7 @@ shot.
 
 ### Run the simulation
 
-There are three "complete simulation" entry points, in increasing
-fidelity:
+Three entry points, in increasing fidelity:
 
 ```bash
 # 1. Fastest — rules-only, no LLM, ~3 seconds, asserts 9 invariants
@@ -56,17 +55,26 @@ make smoke
 #    if up; rules-only otherwise). Streams events to terminal.
 lw smoke --ticks 8 --packs scp,liaozhai,cthulhu
 
-# 3. Full UI — Python sim + dashboard + live tick streaming
-ollama serve              &  # terminal A — start LLM daemon
-lw serve                  &  # terminal B — FastAPI sim API on :8000
-npm run tauri dev --workspace=dashboard-tauri  # terminal C — desktop UI
+# 3. Full UI — one command. Tauri auto-spawns the Python sim API
+#    as a sidecar; you only need to keep Ollama running yourself.
+ollama serve  &                                    # daemon (only manual step)
+npm run tauri dev --workspace=dashboard-tauri      # ← desktop UI + Python
 ```
+
+The dashboard waits for the sidecar's `/api/health` (TCP probe on
+`127.0.0.1:8765`) before showing the window. If the sidecar fails to
+start (e.g. you haven't run `make install`), the window still loads
+and falls back to a manual `lw serve` on `:8000` for power users.
 
 Once the dashboard is up:
 - Click **Bootstrap** with the packs you want loaded
 - Hit **Tick** or **Play** to advance days
 - Open **📚 Library** for the codex / chronicle / **Social** graph
   (Social tab runs entirely client-side via @living-world/sim-core)
+
+**Production** (`tauri build` → distributable `.app` / `.exe`): not yet
+shipped — see [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) #21 (PyInstaller
+sidecar). Dev mode is the supported path for now.
 
 ### Verify the whole repo
 
