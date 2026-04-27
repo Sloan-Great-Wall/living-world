@@ -6,6 +6,32 @@ bugs, in-flight backlog) live in `KNOWN_ISSUES.md` instead.
 
 ---
 
+## L-20 · Dashboard component test harness (2026-04-26)
+
+**What landed**: jsdom + `@solidjs/testing-library` + jest-dom matchers
+wired into `dashboard-tauri/`. New `vitest.config.ts` is separate from
+the Tauri dev `vite.config.ts` so test setup doesn't pollute the app
+launch path.
+
+**Tests** (6 passing):
+- `TopBar.test.tsx` × 5 — empty-world render, diversity pill hidden
+  when no events, diversity computed client-side from `recentEvents`,
+  API indicator color flip, signal reactivity end-to-end
+- `api.test.ts` × 1 — base-URL fallback to `localhost:8000` in plain-
+  browser dev (no `__TAURI_INTERNALS__`)
+
+`make check` now invokes `npm run test --workspace=dashboard-tauri`
+inside the `ts-dashboard` target. A broken `createMemo` or stale
+prop wiring fails CI before merge.
+
+**Pattern set**: each future Solid component gets one happy-path
+render test that pins the user-visible contract. Tests use the
+existing worldStore signals directly (no mocking framework
+required); cleanup between tests resets all signals to a known empty
+state.
+
+---
+
 ## L-05 · In-repo architecture docs + ADRs (2026-04-26)
 
 **What landed**: `docs/architecture.md` (the on-ramp for new readers)

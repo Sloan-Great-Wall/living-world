@@ -125,8 +125,9 @@ ts-sim-core:
 	@npm run test      --workspace=@living-world/sim-core
 
 ts-dashboard:
-	@echo '── dashboard-tauri: typecheck + build ──'
+	@echo '── dashboard-tauri: typecheck + component tests + build ──'
 	@npm run typecheck --workspace=dashboard-tauri
+	@npm run test      --workspace=dashboard-tauri
 	@npm run build     --workspace=dashboard-tauri > /tmp/lw-build.log 2>&1 \
 		|| (cat /tmp/lw-build.log; exit 1)
 

@@ -27,24 +27,6 @@ code-signing + notarization (macOS).
 
 ---
 
-### #20 — Dashboard component tests (jsdom + vitest)
-**Why it matters**: Phase 3's client-side compute paths (TopBar
-diversity, SocialPanel) work but have no automated render test. A
-broken `createMemo` or stale prop wiring would only show up by manual
-visual inspection.
-
-**Gap acknowledged 2026-04-26**: Phase 3 audit confirmed that
-`make check` covers Python sim + TS pure-function parity + cross-layer
-schema drift, but does NOT exercise the dashboard's actual rendering.
-
-**Fix**: add `@solidjs/testing-library` + jsdom; one happy-path test
-per panel (TopBar shows diversity pill / SocialPanel shows components).
-Reuse the existing fixture pattern from sim-core tests.
-
-**Effort**: ~half day for the harness + 5-6 component tests.
-
----
-
 ## 🚀 Feature backlog (ranked by ROI)
 
 ### #7 — Cross-pack bridge (shared tiles + migration events)

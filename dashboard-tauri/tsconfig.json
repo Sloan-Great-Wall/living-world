@@ -9,8 +9,9 @@
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "types": ["@testing-library/jest-dom", "vitest/globals"]
   },
-  "include": ["src"],
+  "include": ["src", "test"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
