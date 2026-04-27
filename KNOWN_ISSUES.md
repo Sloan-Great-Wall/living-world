@@ -45,16 +45,6 @@ Reuse the existing fixture pattern from sim-core tests.
 
 ---
 
-### #5 — In-repo design docs (architecture / ADRs)
-**Status**: `docs/HISTORY.md` exists (2026-04-26). Still missing:
-- `docs/architecture.md` — the 3-layer T-shape (Python sim · Rust
-  shell · TS UI) + phase pipeline
-- `docs/adr/0001-…` to record the major decisions retrospectively
-
-**Effort**: ~half day.
-
----
-
 ## 🚀 Feature backlog (ranked by ROI)
 
 ### #7 — Cross-pack bridge (shared tiles + migration events)

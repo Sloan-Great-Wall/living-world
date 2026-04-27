@@ -6,6 +6,25 @@ bugs, in-flight backlog) live in `KNOWN_ISSUES.md` instead.
 
 ---
 
+## L-05 · In-repo architecture docs + ADRs (2026-04-26)
+
+**What landed**: `docs/architecture.md` (the on-ramp for new readers)
++ five Architecture Decision Records:
+
+| ADR | Title | Locks in |
+|---|---|---|
+| 0001 | Three-layer T-shape | why Python + Rust + TS, not full-Python or full-TS |
+| 0002 | Tier 1 / 2 / 3 LLM routing | why three discrete tiers vs single-LLM or continuous |
+| 0003 | Conscience as system-2 | why a separate VETO/ADJUST layer between resolver and consequences |
+| 0004 | Chronicler non-interventionist | why 说书人 only describes, never steers |
+| 0005 | Typed cross-layer contract | why Pydantic → OpenAPI → TS instead of hand-maintained types |
+
+Each ADR records the rejected alternatives + the validation criteria
+that would trigger a revisit. New readers can clone the repo and read
+`docs/architecture.md` cold; that on-ramp didn't exist before.
+
+---
+
 ## Small fixes batch · L-19 + L-04 (2026-04-26)
 
 ### L-19 — Emergent SCP-as-participant prompt fix
