@@ -6,6 +6,42 @@ bugs, in-flight backlog) live in `KNOWN_ISSUES.md` instead.
 
 ---
 
+## Small fixes batch · L-19 + L-04 (2026-04-26)
+
+### L-19 — Emergent SCP-as-participant prompt fix
+**What landed**: `EmergentEventProposer.SYSTEM_PROMPT` now explicitly
+tells the LLM that SCP designations (SCP-173 / SCP-106 / SCP-035 /
+etc.), anomalies, and deities are NOT valid `participants`. Includes
+correct/wrong examples right in the schema description. The validator
+already drops unknown agent_ids; this just stops them showing up in
+the first place.
+
+**Regression test**: `tests/test_new_modules.py
+::test_emergent_drops_scp_designations_from_participants`. Asserts
+the proposal survives after SCP-035 is dropped from participants AND
+that the SCP reference still appears in the narrative.
+
+**Expected impact**: 30-tick run had 42% of emergent proposals
+rejected for this exact reason. With the prompt clarification, that
+should drop substantially. Re-measure on the next live smoke.
+
+### L-04 — `living_world/agents/__init__.py` public facade
+**What landed**: 16 public classes + 2 helpers re-exported from the
+agents package. Consumers can now write
+`from living_world.agents import AgentSelfUpdate, Narrator` instead
+of reaching into submodules. Future renames or splits only require
+editing `__init__.py`, not every consumer.
+
+**Regression test**: `test_agents_facade_exposes_public_surface`
+asserts every name in the expected set is in `__all__` AND resolves
+to a non-None object.
+
+**Note**: existing `from living_world.agents.<sub> import …` style
+imports still work — the facade is additive, not enforcing. We can
+tighten with a lint rule later if drift becomes a problem.
+
+---
+
 ## Phase 3 · sim-core 增量 port (2026-04-26)
 
 **What landed**: TypeScript ports of `living_world.queries`,

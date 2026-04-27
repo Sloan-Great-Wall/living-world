@@ -434,6 +434,61 @@ def test_emergent_injuries_skip_dead():
     assert out["injuries"] == []  # death takes precedence
 
 
+def test_agents_facade_exposes_public_surface():
+    """L-04 (2026-04-26): consumers MUST be able to write
+    `from living_world.agents import X` for every public class.
+    Guards against accidental removal during future module renames."""
+    from living_world import agents
+
+    expected = {
+        "Narrator",
+        "NarratorBudget",
+        "NarratorStats",
+        "Chronicler",
+        "Chapter",
+        "ConsciousnessLayer",
+        "ConsciousVerdict",
+        "DialogueGenerator",
+        "EmergentEventProposer",
+        "promote_emergent",
+        "prune_tail",
+        "LLMMoveAdvisor",
+        "SubjectivePerception",
+        "AgentSelfUpdate",
+        "AgentPlanner",
+        "MemoryReflector",
+    }
+    missing = expected - set(agents.__all__)
+    assert not missing, f"facade is missing: {missing}"
+    # Each name must actually resolve to an importable object.
+    for name in expected:
+        assert getattr(agents, name) is not None, f"agents.{name} is None"
+
+
+def test_emergent_drops_scp_designations_from_participants():
+    """Regression for L-19 (2026-04-26): the LLM occasionally writes
+    `participants: ["d-9001", "scp-035"]`. SCP-035 is an *anomaly*, not
+    an agent — the validator must drop it but keep the proposal so we
+    don't waste the LLM call. Prompt was clarified at the same time
+    (see EmergentEventProposer.SYSTEM_PROMPT) to make this rare; this
+    test guards against regressions on either side."""
+    from living_world.agents.emergent import _clamp_proposal
+
+    proposal = {
+        "event_kind": "containment-test",
+        "participants": ["d-9001", "scp-035", "dr-bright"],
+        "outcome": "failure",
+        "importance": 0.65,
+        "narrative": "D-9001 and Dr. Bright watched as SCP-035 watched back.",
+    }
+    out = _clamp_proposal(proposal, valid_agent_ids={"d-9001", "dr-bright"})
+    assert out is not None, "proposal must survive after SCP designation is dropped"
+    assert out["participants"] == ["d-9001", "dr-bright"]
+    # The narrative still mentions SCP-035 — that's correct; references
+    # belong in prose, not in the participants list.
+    assert "scp-035" in out["narrative"].lower()
+
+
 # ── Story-quality regressions (2026-04-22 6-tick run) ─────────────────────
 
 

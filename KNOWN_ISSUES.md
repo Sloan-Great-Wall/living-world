@@ -7,44 +7,6 @@ retrospectives live in [`docs/HISTORY.md`](docs/HISTORY.md).
 
 ## 🐞 Open issues
 
-### #19 — `EmergentEventProposer` puts SCP designations into `participants`
-**Surfaced**: 2026-04-22, 30-tick validation run.
-
-**Symptom**: ~42% of emergent proposals rejected because the LLM
-writes `participants: ["d-9045", "scp-035"]`. SCP-035 is an *anomaly*,
-not an agent; the validator correctly rejects unknown agent_ids.
-
-**Fix options** (cheapest first):
-1. **Prompt clarification** — tell the LLM that SCP designations are
-   not valid participants; refer to them inside `narrative` and
-   `belief_updates[].topic` instead. Add a correct-usage example.
-2. **Pseudo-agent option** — model SCP-173, Cthulhu, etc. as actual
-   `Agent` records (`tags={"anomaly"}`). Bigger refactor (~1 day) but
-   unlocks "the anomaly has feelings/affinity" scenarios.
-3. **Validator forgiveness** — drop unknown participants silently.
-   Cheap but lossy.
-
-**Recommendation**: option 1 first; escalate to option 2 if failure
-rate doesn't drop below 10%.
-
-**Effort**: 5 min for option 1; 1 day for option 2.
-
----
-
-### #4 — `agents/__init__.py` is empty; no facade
-**Why it matters**: every consumer imports
-`from living_world.agents.self_update import AgentSelfUpdate`. Renaming
-or splitting a module breaks every import.
-
-**Fix**: re-export the public classes (Narrator, AgentPlanner,
-AgentSelfUpdate, EmergentEventProposer, Chronicler, DialogueGenerator,
-ConsciousnessLayer, SubjectivePerception, LLMMoveAdvisor,
-MemoryReflector). 20 lines, all-future-proofing.
-
-**Effort**: 10 minutes.
-
----
-
 ### #21 — Production app packaging (PyInstaller sidecar + signed .app/.exe)
 **Status**: dev-mode sidecar landed (`npm run tauri dev` auto-spawns
 Python). Production path still missing.

@@ -39,6 +39,14 @@ RULES
 2. Fields:
      "event_kind":    a short hyphenated lowercase label (2-5 words via "-"), fresh.
      "participants":  agent_ids from the provided list, 1-4 of them.
+                      MUST be drawn from "PEOPLE CURRENTLY HERE" below.
+                      SCP designations (SCP-173, SCP-106, SCP-035, etc.),
+                      anomalies, deities, and other non-agent forces are
+                      NOT valid participants. Refer to them inside the
+                      `narrative` text and (if it matters) inside
+                      `belief_updates[].topic` instead.
+                      Example CORRECT: ["d-9001", "dr-bright"]
+                      Example WRONG:   ["d-9001", "scp-035"]   ← SCP-035 is an anomaly
      "outcome":       one of "success" | "failure" | "neutral".
      "importance":    float in [0.05, 0.95]. Ordinary moments sit near 0.15-0.3.
                       Life-or-death moments go to 0.7-0.95.
