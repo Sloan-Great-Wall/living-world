@@ -31,19 +31,21 @@ PYRIGHT := .venv/bin/basedpyright
 # so no system-level dep. Falls back to pip if uv missing (first-time bootstrap).
 UV      := .venv/bin/uv
 
-.PHONY: check fix py py-lint py-types py-tests ts ts-sim-core ts-dashboard ts-bundle ts-schema smoke clean help install schema schema-check
+.PHONY: check fix py py-lint py-types py-tests ts ts-sim-core ts-dashboard ts-bundle ts-schema smoke clean help install schema schema-check build-sidecar build-app
 
 help:
 	@echo 'Living World — verification gates'
 	@echo ''
-	@echo '  make install — npm install (root workspace) + pip install -e .[dev]'
-	@echo '  make check   — full gate (schema-check + lint + types + tests + build)'
-	@echo '  make py      — Python-only (ruff + basedpyright + pytest)'
-	@echo '  make ts      — TypeScript-only (schema-check + tsc + vitest + bundle)'
-	@echo '  make schema  — regenerate OpenAPI + TS types (commits required after)'
-	@echo '  make smoke   — quick rule-only sim run'
-	@echo '  make fix     — auto-fix lint/format'
-	@echo '  make clean   — remove caches + dist'
+	@echo '  make install        — npm install (root) + uv pip install -e .[dev]'
+	@echo '  make check          — full gate (schema + lint + types + tests + build)'
+	@echo '  make py             — Python-only (ruff + basedpyright + pytest)'
+	@echo '  make ts             — TypeScript-only (schema + tsc + vitest + bundle)'
+	@echo '  make schema         — regenerate OpenAPI + TS types'
+	@echo '  make smoke          — quick rule-only sim run'
+	@echo '  make fix            — auto-fix lint/format'
+	@echo '  make build-sidecar  — PyInstaller bundles Python sim API for Tauri'
+	@echo '  make build-app      — full prod app: build-sidecar + tauri build'
+	@echo '  make clean          — remove caches + dist'
 
 install:
 	@# Use uv if available (30× faster resolve); fall back to pip otherwise.
@@ -150,6 +152,26 @@ clean:
 	@rm -rf .pytest_cache .ruff_cache .basedpyright
 	@rm -rf node_modules packages/*/node_modules dashboard-tauri/node_modules
 	@rm -rf packages/*/dist dashboard-tauri/dist
+	@rm -rf .pyinstaller-build dashboard-tauri/src-tauri/binaries
 	@find . -name __pycache__ -type d -prune -exec rm -rf {} +
 	@find . -name '*.pyc' -delete
 	@echo '✓ cleaned'
+
+# ── Production build (L-21) ──
+#
+# `make build-sidecar` produces `dashboard-tauri/src-tauri/binaries/
+# lw-sidecar-<triple>{.exe}` via PyInstaller. Tauri then ships it as
+# `bundle.externalBin`. Each platform has to run this on its own host
+# (PyInstaller doesn't cross-compile cleanly).
+#
+# `make build-app` runs the full chain: sidecar build → tauri build,
+# producing a signed-but-not-notarized `.app` / `.exe` / `.AppImage`
+# in `dashboard-tauri/src-tauri/target/release/bundle/`.
+
+build-sidecar:
+	@echo '── PyInstaller: bundling Python sidecar ──'
+	@$(PY) scripts/build_sidecar.py
+
+build-app: build-sidecar
+	@echo '── tauri build: producing platform .app/.exe ──'
+	@npm run tauri --workspace=dashboard-tauri -- build

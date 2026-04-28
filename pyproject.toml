@@ -29,6 +29,11 @@ dev = [
     # basedpyright — stricter than mypy, faster, better diagnostics.
     # Replaces mypy in the `just check` pipeline.
     "basedpyright>=1.13",
+    # L-21: PyInstaller bundles `living_world.web` into a single binary
+    # for Tauri's `bundle.externalBin`. Dev-only because production
+    # users get the prebuilt binary inside the .app/.exe; only release
+    # engineers need to run `make build-sidecar` themselves.
+    "pyinstaller>=6.10",
 ]
 
 [project.scripts]

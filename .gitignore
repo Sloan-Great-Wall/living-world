@@ -32,3 +32,8 @@ dist/
 
 # uv cache (lockfile `uv.lock` IS committed — reproducibility)
 .uv-cache/
+
+# PyInstaller build artefacts (L-21)
+.pyinstaller-build/
+dashboard-tauri/src-tauri/binaries/
+*.spec

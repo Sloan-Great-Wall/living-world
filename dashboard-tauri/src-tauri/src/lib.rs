@@ -57,23 +57,52 @@ fn get_api_base(state: State<'_, SidecarState>) -> Option<String> {
     state.api_base.lock().ok().and_then(|g| g.clone())
 }
 
-fn resolve_python() -> PathBuf {
+/// Resolve which executable spawns the sim API.
+///
+/// Production (`tauri build`): prefer the PyInstaller-bundled binary
+/// next to the app executable. Tauri's `bundle.externalBin` ships the
+/// platform-specific `lw-sidecar-<triple>{.exe}` alongside Tauri's own
+/// binary; the OS resolves it via $PATH at launch time.
+///
+/// Dev (`tauri dev`): fall back to `python -m living_world.web` from
+/// the workspace venv. This avoids the multi-minute PyInstaller round-
+/// trip every time we touch a Python file.
+///
+/// Returns (executable_path, prefix_args). The `--module` form is the
+/// dev path; production passes no extra args because the binary is
+/// already a Python entry point.
+fn resolve_sidecar_command() -> (PathBuf, Vec<String>) {
+    // Manual override always wins (useful for CI / debugging).
     if let Ok(p) = std::env::var("LW_PYTHON") {
-        return PathBuf::from(p);
+        return (PathBuf::from(p), vec!["-m".into(), "living_world.web".into()]);
     }
-    // CARGO_MANIFEST_DIR points at .../dashboard-tauri/src-tauri at build time.
-    // Repo root is two parents up.
+    // Production binary check: Tauri places externalBin next to the
+    // running executable. We can't ask Tauri for the resource path
+    // synchronously here, so probe relative to current_exe.
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            #[cfg(target_os = "windows")]
+            let bin_name = "lw-sidecar.exe";
+            #[cfg(not(target_os = "windows"))]
+            let bin_name = "lw-sidecar";
+            let bundled = dir.join(bin_name);
+            if bundled.exists() {
+                return (bundled, vec![]);
+            }
+        }
+    }
+    // Dev fallback: project venv.
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let repo_root = manifest.parent().and_then(|p| p.parent()).unwrap_or(&manifest);
     let posix = repo_root.join(".venv/bin/python");
     if posix.exists() {
-        return posix;
+        return (posix, vec!["-m".into(), "living_world.web".into()]);
     }
     let windows = repo_root.join(".venv/Scripts/python.exe");
     if windows.exists() {
-        return windows;
+        return (windows, vec!["-m".into(), "living_world.web".into()]);
     }
-    PathBuf::from("python3")
+    (PathBuf::from("python3"), vec!["-m".into(), "living_world.web".into()])
 }
 
 async fn wait_for_port(host: &str, port: u16) -> bool {
@@ -94,27 +123,28 @@ async fn wait_for_port(host: &str, port: u16) -> bool {
 }
 
 async fn spawn_sidecar(app: AppHandle) -> Result<(), String> {
-    let py = resolve_python();
+    let (executable, args) = resolve_sidecar_command();
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let repo_root = manifest.parent().and_then(|p| p.parent()).unwrap_or(&manifest);
 
-    eprintln!("[sidecar] python: {}", py.display());
-    eprintln!("[sidecar] cwd:    {}", repo_root.display());
-    eprintln!("[sidecar] port:   {}", SIDECAR_PORT);
+    eprintln!("[sidecar] executable: {}", executable.display());
+    eprintln!("[sidecar] args:       {:?}", args);
+    eprintln!("[sidecar] cwd:        {}", repo_root.display());
+    eprintln!("[sidecar] port:       {}", SIDECAR_PORT);
 
-    let child = Command::new(&py)
-        .args([
-            "-m", "uvicorn", "living_world.web.server:app",
-            "--host", "127.0.0.1",
-            "--port", &SIDECAR_PORT.to_string(),
-            "--log-level", "warning",
-        ])
+    let child = Command::new(&executable)
+        .args(&args)
+        // Both dev (python -m) and prod (PyInstaller binary) read the
+        // same env vars; see living_world/web/__main__.py.
+        .env("LW_API_HOST", "127.0.0.1")
+        .env("LW_API_PORT", SIDECAR_PORT.to_string())
+        .env("LW_API_LOG_LEVEL", "warning")
         .current_dir(repo_root)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true)
         .spawn()
-        .map_err(|e| format!("failed to spawn sidecar ({}): {e}", py.display()))?;
+        .map_err(|e| format!("failed to spawn sidecar ({}): {e}", executable.display()))?;
 
     // Stash the child immediately so we can kill it even if /api/health never lands.
     let state = app.state::<SidecarState>();
